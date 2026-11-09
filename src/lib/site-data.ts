@@ -11,9 +11,10 @@ export async function getSite() {
   return entry.data;
 }
 
-/** `community.yaml` is optional until the owner supplies it; every field in it is optional too. */
 export async function getCommunity() {
-  return (await getEntry('community', 'community'))?.data;
+  const entry = await getEntry('community', 'community');
+  if (entry === undefined) throw new Error('src/data/community.yaml is missing');
+  return entry.data;
 }
 
 export interface JoinChannel {

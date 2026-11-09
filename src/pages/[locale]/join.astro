@@ -9,9 +9,10 @@ import Index from '../../components/Index.astro';
 import IndexSection from '../../components/IndexSection.astro';
 import RegisterList from '../../components/RegisterList.astro';
 import RegisterRow from '../../components/RegisterRow.astro';
+import RowLink from '../../components/RowLink.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { t } from '../../i18n/index.ts';
-import { LOCALES, isLocale } from '../../lib/routes.ts';
+import { LOCALES, isLocale, routePath } from '../../lib/routes.ts';
 import { channelPhrase, getJoinChannels, getSite } from '../../lib/site-data.ts';
 
 export const getStaticPaths = (() => LOCALES.map((locale) => ({ params: { locale } }))) satisfies GetStaticPaths;
@@ -51,13 +52,24 @@ const requestPhrase = channelPhrase(locale, channels, 'disjunction');
     <Index closed>
       <IndexSection title={t(locale, 'join.do.title')} rows>
         <RegisterList>
-          <RegisterRow name={t(locale, 'join.do.play.title')} description={t(locale, 'join.do.play.body')} />
+          <RegisterRow name={t(locale, 'join.do.play.title')} description={t(locale, 'join.do.play.body')} linksColumn>
+            <RowLink slot="links" href={routePath(locale, 'game-servers')} label={t(locale, 'home.servers.title')} />
+          </RegisterRow>
           <RegisterRow
             name={t(locale, 'join.do.request.title')}
             description={t(locale, 'join.do.request.body', { channels: requestPhrase })}
+            linksColumn
           />
-          <RegisterRow name={t(locale, 'join.do.contribute.title')} description={t(locale, 'join.do.contribute.body')} />
-          <RegisterRow name={t(locale, 'join.do.support.title')} description={t(locale, 'join.do.support.body')} />
+          <RegisterRow
+            name={t(locale, 'join.do.contribute.title')}
+            description={t(locale, 'join.do.contribute.body')}
+            linksColumn
+          >
+            <RowLink slot="links" href={site.links.github} label={t(locale, 'footer.github')} />
+          </RegisterRow>
+          <RegisterRow name={t(locale, 'join.do.support.title')} description={t(locale, 'join.do.support.body')} linksColumn>
+            <RowLink slot="links" href={routePath(locale, 'support')} label={t(locale, 'nav.support')} />
+          </RegisterRow>
         </RegisterList>
       </IndexSection>
 

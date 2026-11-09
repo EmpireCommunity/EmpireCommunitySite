@@ -155,9 +155,11 @@ describe('site and community data (site-data sections 4 and 5)', () => {
     });
   }
 
-  test('community needs no Discord count until the owner supplies a verified one, and never an unverified shape', () => {
-    assert.equal(CommunitySchema.safeParse({ foundedYear: 2022, whatsapp: { members: 60, asOf: '2026-11-09' } }).success, true);
+  test('community requires the verified Discord count, within bounds, and a real calendar date for WhatsApp', () => {
+    const discord = { membersBuiltIn: 888 };
+    assert.equal(CommunitySchema.safeParse({ foundedYear: 2022, discord, whatsapp: { members: 60, asOf: '2026-11-09' } }).success, true);
+    assert.equal(CommunitySchema.safeParse({ foundedYear: 2022 }).success, false);
     assert.equal(CommunitySchema.safeParse({ discord: { membersBuiltIn: 0 } }).success, false);
-    assert.equal(CommunitySchema.safeParse({ whatsapp: { members: 60, asOf: '2026-02-30' } }).success, false);
+    assert.equal(CommunitySchema.safeParse({ discord, whatsapp: { members: 60, asOf: '2026-02-30' } }).success, false);
   });
 });

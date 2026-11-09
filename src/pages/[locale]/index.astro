@@ -11,6 +11,7 @@ import IndexSection from '../../components/IndexSection.astro';
 import NumbersStrip from '../../components/NumbersStrip.astro';
 import RegisterList from '../../components/RegisterList.astro';
 import RegisterRow from '../../components/RegisterRow.astro';
+import RowLink from '../../components/RowLink.astro';
 import Status from '../../components/Status.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { t } from '../../i18n/index.ts';
@@ -35,17 +36,16 @@ const servers = serverEntries.map((entry) => entry.data);
 // WhatsApp count is a manual value and exists only for the locales whose audience includes that channel.
 const numbers = channels.flatMap((channel) => {
   const label = t(locale, 'count.members', { channel: channel.label });
-  if (channel.id === 'discord' && community?.discord !== undefined) {
+  if (channel.id === 'discord') {
     return [{ value: formatMembers(community.discord.membersBuiltIn, lang), label, live: true }];
   }
-  if (channel.id === 'whatsapp' && community?.whatsapp !== undefined) {
+  if (channel.id === 'whatsapp' && community.whatsapp !== undefined) {
     return [{ value: new Intl.NumberFormat(lang).format(community.whatsapp.members), label }];
   }
   return [];
 });
 
-const purpose = community?.purpose?.[locale];
-const rowLinks = 'link-text inline-flex min-h-[44px] items-center gap-8 text-body-sm whitespace-nowrap';
+const purpose = community.purpose?.[locale];
 ---
 
 <BaseLayout locale={locale} routeKey="home">
@@ -92,9 +92,7 @@ const rowLinks = 'link-text inline-flex min-h-[44px] items-center gap-8 text-bod
                 <RegisterRow name={project.name} description={project.summary[locale]}>
                   <Status slot="status" locale={locale} status={project.status} />
                   {project.status === 'live' && project.url !== undefined && (
-                    <a slot="links" href={project.url} class={rowLinks}>
-                      {t(locale, 'link.site')}
-                    </a>
+                    <RowLink slot="links" href={project.url} label={t(locale, 'link.site')} />
                   )}
                 </RegisterRow>
               ))}

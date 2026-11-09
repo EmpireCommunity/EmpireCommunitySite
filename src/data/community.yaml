@@ -11,4 +11,6 @@ purpose:
 whatsapp:
   members: 60
   asOf: 2026-11-09
-# discord.membersBuiltIn is not set: the owner has not supplied a verified reading (never invented).
+discord:
+  # Verified reading on 2026-11-09 from the approved invite (invite endpoint, guild matched). Refresh at each release.
+  membersBuiltIn: 888
