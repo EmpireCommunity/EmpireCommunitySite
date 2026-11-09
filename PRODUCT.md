@@ -18,7 +18,8 @@ Astro estático, TypeScript e Tailwind 4, sem React (ADR-0001).
 - **Quem pensa em entrar (a maioria):** brasileiros que jogam ou gostam de tecnologia. Querem entender o que é a
   comunidade e entrar no Discord ou no WhatsApp.
 - **Estrangeiros vindos do GitHub:** buscam colaboração ou suporte, em inglês, pelo Discord.
-- **Doadores e quem avalia a organização:** querem verificar se ela é confiável e como o dinheiro é usado.
+- **Quem avalia a organização:** quer verificar se ela é confiável e como se mantém. Doadores entram nesse grupo quando
+  as doações abrirem (D-28).
 
 ## Product Purpose
 
@@ -46,9 +47,11 @@ GitHub, muitas vezes pelo celular. O site é estático e funciona sem JavaScript
 - Infraestrutura só em nível geral: sem localização, especificação detalhada, portas, topologia, backup ou monitoramento.
 - Sem cookies próprios e sem registros de acesso na origem.
 
-**Em aberto:** doações. A chave Pix fixa saiu; a direção nova é gateway Mercado Pago com uma visão pública de
-transparência (saldo, total arrecadado, entradas, saídas e justificativas), sem meta final, porque os custos continuam.
-A pesquisa está em andamento, e a página Apoiar, sua copy e o trecho de terceiros da Privacidade ainda vão mudar.
+**Doações fora do lançamento (D-28):** o site abre sem receber dinheiro e sem indicar forma de enviar. Doações e o painel
+de transparência abrem juntos depois, com contrato, modelo de ameaças e revisão jurídica.
+
+**Direção para depois (D-21):** a chave Pix fixa foi descartada. As doações passarão pelo gateway Mercado Pago, com saldo,
+total arrecadado, entradas, saídas e justificativas públicos. A arquitetura depende de pesquisa e de decisões do dono.
 
 ## Brand Commitments
 
@@ -61,9 +64,9 @@ A pesquisa está em andamento, e a página Apoiar, sua copy e o trecho de tercei
 
 ## Evidence on Hand
 
-Situação dos projetos e servidores (arquitetura, §5), repositórios públicos no GitHub, número de membros do Discord e,
-quando houver, a transparência financeira. Faltam dados do dono, listados como P-01 a P-13 na arquitetura, §9. Nada
-disso pode ser inventado.
+Situação dos projetos e servidores (arquitetura, §5), repositórios públicos no GitHub e número de membros do Discord. A
+transparência financeira só existe depois da abertura das doações (D-28). Faltam dados do dono, listados na arquitetura,
+§9. Nada disso pode ser inventado.
 
 ## Product Principles
 

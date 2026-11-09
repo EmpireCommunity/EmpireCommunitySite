@@ -89,8 +89,9 @@ Estrutura e regras em [`docs/design/information-architecture.md`](../design/info
 | servers.title | Servidores de jogos | Game servers |
 | servers.request | Pedir um jogo | Request a game |
 | funding.title | Como nos mantemos | How we are funded |
-| funding.body | A EmpireCommunity vive de doações voluntárias por Pix. A meta atual é de R$ 3.000 para montar um servidor próprio, com Xeon e 128 GB de RAM, que vai hospedar mais servidores de jogos. | EmpireCommunity runs on voluntary donations through Pix, Brazil's instant payment system. Our current goal is R$ 3,000 to build our own server, with a Xeon and 128 GB of RAM, to host more game servers. |
-| funding.progress | {{arrecadado}} de R$ 3.000 `[PENDING P-03]` | {{raised}} of R$ 3,000 `[PENDING P-03]` |
+| funding.body | A EmpireCommunity vive de doações voluntárias. O primeiro marco é de R$ 3.000, para montar um servidor próprio, com Xeon e 128 GB de RAM, que vai hospedar mais servidores de jogos. Depois dele, continuam os custos da comunidade: energia dos servidores, melhorias, hospedagem e domínios. As doações em dinheiro ainda não estão abertas. | EmpireCommunity runs on voluntary donations. The first milestone is R$ 3,000, to build our own server, with a Xeon and 128 GB of RAM, to host more game servers. After that, community costs continue: server power, upgrades, hosting and domains. Money donations are not open yet. |
+| funding.progress | {{secured}} de R$ 3.000 `[PENDING P-03]` | {{secured}} of R$ 3,000 `[PENDING P-03]` |
+| funding.progress.criterion | O progresso conta o valor das peças já compradas ou doadas, não dinheiro recebido. | Progress counts the value of parts already bought or donated, not money received. |
 | funding.link | Apoiar | Support us |
 | join.title | Faça parte. | Join us. |
 | join.body | A entrada é gratuita. | Joining is free. |
@@ -117,7 +118,7 @@ Estrutura e regras em [`docs/design/information-architecture.md`](../design/info
 | open.github | Ver no GitHub | View on GitHub |
 | open.guides | Guias de colaboração | Contribution guides |
 | activity.title | Atividade recente | Recent activity |
-| activity.updated | Atualizado em {{data}} | Updated on {{date}} |
+| activity.updated | Atualizado em {{date}} | Updated on {{date}} |
 
 ## Infraestrutura e servidores de jogos
 
@@ -182,22 +183,16 @@ Estrutura e regras em [`docs/design/information-architecture.md`](../design/info
 | Id | pt-BR | en-US |
 |---|---|---|
 | meta.title | Apoiar: EmpireCommunity | Support us: EmpireCommunity |
-| meta.description | A meta da EmpireCommunity é de R$ 3.000 para montar um servidor próprio. Veja como doar e o que já foi feito. | EmpireCommunity's goal is R$ 3,000 to build its own server. See how to donate and what has been done so far. |
+| meta.description | O primeiro marco da EmpireCommunity é de R$ 3.000 para montar um servidor próprio. Veja as peças e o que já foi feito. | EmpireCommunity's first milestone is R$ 3,000 to build its own server. See the parts and what has been done so far. |
 | title | Apoiar | Support us |
 | lead | A EmpireCommunity é gratuita e vive de doações voluntárias. Doar nunca é obrigatório. | EmpireCommunity is free and runs on voluntary donations. Donating is never required. |
 | goal.title | Meta atual | Current goal |
 | goal.value | R$ 3.000 | R$ 3,000 |
-| goal.body | A meta é montar um servidor local, com Xeon e 128 GB de RAM, para hospedar mais servidores de jogos. Ele está em montagem e ainda não está em uso. | The goal is to build a local server, with a Xeon and 128 GB of RAM, to host more game servers. It is being built and is not in use yet. |
-| goal.progress | {{arrecadado}} de R$ 3.000 `[PENDING P-03]` | {{raised}} of R$ 3,000 `[PENDING P-03]` |
-| pix.title | Doar por Pix | Donate with Pix |
-| pix.key.label | Chave Pix | Pix key |
-| pix.key.value | `[PENDING P-01]` | `[PENDING P-01]` |
-| pix.name.label | Favorecido | Recipient |
-| pix.name.value | `[PENDING P-01]` | `[PENDING P-01]` |
-| pix.copy | Copiar chave | Copy key |
-| pix.copied | Chave copiada | Key copied |
-| pix.warning | Confira o nome do favorecido antes de confirmar. | Check the recipient's name before you confirm. |
-| pix.abroad | — | Pix is a Brazilian payment system and usually requires a Brazilian bank account. If you can't use it, the other options on this page are still open to you. |
+| goal.body | A meta é montar um servidor local, com Xeon e 128 GB de RAM, para hospedar mais servidores de jogos. Ele está em montagem e ainda não está em uso. Esse é o primeiro marco: depois dele, continuam os custos da comunidade, como energia dos servidores, melhorias, hospedagem e domínios. | The goal is to build a local server, with a Xeon and 128 GB of RAM, to host more game servers. It is being built and is not in use yet. This is the first milestone: after it, community costs continue, such as server power, upgrades, hosting and domains. |
+| goal.progress | {{secured}} de R$ 3.000 `[PENDING P-03]` | {{secured}} of R$ 3,000 `[PENDING P-03]` |
+| support.goal.reached | Este marco foi alcançado. Os custos da comunidade continuam: energia dos servidores, melhorias, hospedagem e domínios. | This milestone has been reached. Community costs continue: server power, upgrades, hosting and domains. |
+| support.progress.criterion | O progresso conta o valor das peças já compradas ou doadas, não dinheiro recebido. | Progress counts the value of parts already bought or donated, not money received. |
+| support.donations.notOpen | As doações em dinheiro ainda não estão abertas. O site não recebe dinheiro e não indica nenhuma forma de enviar. | Money donations are not open yet. This website does not receive money and does not give any way to send it. |
 | parts.title | Peças do servidor | Server parts |
 | parts.col.part | Peça | Part |
 | parts.col.value | Valor | Value |
@@ -212,8 +207,7 @@ Estrutura e regras em [`docs/design/information-architecture.md`](../design/info
 | other.body | Parte do nosso código é pública. Colaborações são bem-vindas no GitHub. | Part of our code is public. Contributions are welcome on GitHub. |
 | transparency.title | Transparência | Transparency |
 | transparency.sold | Nada é vendido. | Nothing is for sale. |
-| transparency.data | Dados de usuários não são vendidos nem divulgados. | User data is never sold or disclosed. |
-| transparency.perks | Recursos só para doadores podem existir na instância hospedada, por causa do custo de VPS. Eles nunca são retirados das versões self-hosted. | Donor-only features may exist on the hosted instance, because of VPS costs. They are never removed from self-hosted versions. |
+| transparency.data | Este site não vende dados de usuários e só os compartilha com os fornecedores necessários para funcionar, como explica a Política de Privacidade. | This website does not sell user data and shares it only with the providers needed to run it, as the Privacy Policy explains. |
 
 ## Organização
 
@@ -223,13 +217,13 @@ Estrutura e regras em [`docs/design/information-architecture.md`](../design/info
 | meta.description | Quem mantém a EmpireCommunity, como ela funciona e seus endereços oficiais. | Who runs EmpireCommunity, how it works, and its official addresses. |
 | title | Organização | Organization |
 | lead | A EmpireCommunity é uma comunidade de jogadores e aficionados por tecnologia, sediada no Brasil. | EmpireCommunity is a community of gamers and technology enthusiasts, based in Brazil. |
-| since | Desde {{ano}} `[PENDING P-06]` | Since {{year}} `[PENDING P-06]` |
+| since | Desde {{year}} `[PENDING P-06]` | Since {{year}} `[PENDING P-06]` |
 | purpose.title | Propósito | Purpose |
 | purpose.body | `[PENDING P-07]` | `[PENDING P-07]` |
 | how.title | Como funciona | How it works |
 | how.free | Tudo é gratuito e vive de doações voluntárias. | Everything is free and runs on voluntary donations. |
 | how.sold | Nada é vendido. | Nothing is for sale. |
-| how.data | Dados de usuários não são vendidos nem divulgados. | User data is never sold or disclosed. |
+| how.data | Este site não vende dados de usuários e só os compartilha com os fornecedores necessários para funcionar, como explica a Política de Privacidade. | This website does not sell user data and shares it only with the providers needed to run it, as the Privacy Policy explains. |
 | names.title | Nomes | Names |
 | names.community | **EmpireCommunity** é a organização e a comunidade, e dá nome ao servidor no Discord e ao grupo no WhatsApp. | **EmpireCommunity** is the organization and the community, and the name of its Discord server. |
 | names.hub | **EmpireHub** é o produto de jogos de mesa dentro do Discord. | **EmpireHub** is the tabletop games product inside Discord. |
@@ -278,11 +272,13 @@ Uma única versão, com os dois idiomas na mesma página (`routing-locale`).
 # Textos legais
 
 > **Rascunho para revisão do dono.** Linguagem simples, sem revisão de advogado. Os fatos vêm de `EMPIRECOMMUNITY.md`.
-> Cláusulas propostas, sem fato de origem: Termos 3 (doação por engano), 6, 8 e 9; Privacidade 9 e 12 (prazos de remoção
-> ficam de fora até o dono confirmá-los na revisão jurídica). Os dois idiomas têm o
-> mesmo conteúdo e, por isso, não citam o WhatsApp.
+> Cláusulas propostas, sem fato de origem: Termos 5, 7 e 8; Privacidade 8 e 11 (prazos de remoção ficam de fora até o dono
+> confirmá-los na revisão jurídica). Os dois idiomas têm o mesmo conteúdo e, por isso, não citam o WhatsApp.
 >
-> **Revisão jurídica necessária antes de receber doações:** Privacidade 2, 3 e 10. Não manter registros de acesso é
+> **No lançamento, Termos e Privacidade não descrevem doações, provedor de pagamento nem dados de pagamento** (D-28,
+> `site-data` §11). O contrato posterior de doações atualiza os dois textos, com nova versão e nova vigência.
+>
+> **Revisão jurídica necessária antes de receber doações:** Privacidade 2, 3 e 9. Não manter registros de acesso é
 > exceção decidida pelo dono (D-20) e precisa ser conferida diante do Marco Civil da Internet.
 
 ## Termos de Uso (pt-BR)
@@ -296,31 +292,27 @@ sediada no Brasil. Ao usar o site, você concorda com estes termos.
 
 **2. Gratuidade.** O site e os serviços da comunidade são gratuitos. Nada é vendido.
 
-**3. Doações.** Doações são voluntárias e não são condição para participar da comunidade. Recursos só para doadores
-podem existir na instância hospedada, por causa do custo de VPS, e nunca são retirados das versões self-hosted. Se você
-doou por engano, escreva para legal@empirecommunity.org; cada caso é avaliado individualmente. `[PENDING P-13]`
-
-**4. Informações do site.** Procuramos manter status, metas e demais informações atualizados, mas eles podem mudar sem
+**3. Informações do site.** Procuramos manter status, metas e demais informações atualizados, mas eles podem mudar sem
 aviso.
 
-**5. Serviços, canais e links de terceiros.** O site aponta para serviços e canais de terceiros, como plataformas de
+**4. Serviços, canais e links de terceiros.** O site aponta para serviços e canais de terceiros, como plataformas de
 conversa e o GitHub, que têm regras próprias. Os serviços hospedados pela EmpireCommunity podem ter termos próprios.
 
-**6. Disponibilidade.** Servidores de jogos e projetos são mantidos pela comunidade e podem mudar, ser interrompidos ou
+**5. Disponibilidade.** Servidores de jogos e projetos são mantidos pela comunidade e podem mudar, ser interrompidos ou
 encerrados.
 
-**7. Marcas e conteúdo.** Marcas e assets da EmpireCommunity pertencem ao seu fundador, Leonne Martins. O código de cada
+**6. Marcas e conteúdo.** Marcas e assets da EmpireCommunity pertencem ao seu fundador, Leone Santos Martins. O código de cada
 projeto segue a licença do respectivo repositório.
 
-**8. Uso adequado.** Não use o site para atacar, sobrecarregar ou tentar burlar a segurança dele ou de terceiros, nem
+**7. Uso adequado.** Não use o site para atacar, sobrecarregar ou tentar burlar a segurança dele ou de terceiros, nem
 para se passar pela EmpireCommunity.
 
-**9. Responsabilidade.** O site é oferecido como está, na medida permitida pela lei.
+**8. Responsabilidade.** O site é oferecido como está, na medida permitida pela lei.
 
-**10. Lei aplicável e foro.** Valem as leis do Brasil, em especial a Lei Geral de Proteção de Dados (LGPD) e o Marco
+**9. Lei aplicável e foro.** Valem as leis do Brasil, em especial a Lei Geral de Proteção de Dados (LGPD) e o Marco
 Civil da Internet. Fica eleito o foro de Goiânia-GO.
 
-**11. Alterações e contato.** Estes termos podem mudar, e a data de vigência será atualizada. Dúvidas:
+**10. Alterações e contato.** Estes termos podem mudar, e a data de vigência será atualizada. Dúvidas:
 legal@empirecommunity.org.
 
 ## Terms of Use (en-US)
@@ -334,32 +326,28 @@ in Brazil. By using the website, you agree to these terms.
 
 **2. Free of charge.** The website and the community's services are free. Nothing is for sale.
 
-**3. Donations.** Donations are voluntary and are not a condition for taking part in the community. Donor-only features
-may exist on the hosted instance, because of VPS costs, and are never removed from self-hosted versions. If you donated
-by mistake, write to legal@empirecommunity.org; each case is assessed individually. `[PENDING P-13]`
-
-**4. Website information.** We try to keep statuses, goals and other information up to date, but they may change without
+**3. Website information.** We try to keep statuses, goals and other information up to date, but they may change without
 notice.
 
-**5. Third-party services, channels and links.** The website points to third-party services and channels, such as chat
+**4. Third-party services, channels and links.** The website points to third-party services and channels, such as chat
 platforms and GitHub, which have their own rules. Services hosted by EmpireCommunity may have their own terms.
 
-**6. Availability.** Game servers and projects are maintained by the community and may change, be interrupted or be
+**5. Availability.** Game servers and projects are maintained by the community and may change, be interrupted or be
 discontinued.
 
-**7. Trademarks and content.** EmpireCommunity's trademarks and assets belong to its founder, Leonne Martins. Each
+**6. Trademarks and content.** EmpireCommunity's trademarks and assets belong to its founder, Leone Santos Martins. Each
 project's code follows the license of its repository.
 
-**8. Acceptable use.** Do not use the website to attack, overload or try to bypass the security of the website or of
+**7. Acceptable use.** Do not use the website to attack, overload or try to bypass the security of the website or of
 third parties, or to impersonate EmpireCommunity.
 
-**9. Liability.** The website is provided as is, to the extent permitted by law.
+**8. Liability.** The website is provided as is, to the extent permitted by law.
 
-**10. Governing law and venue.** The laws of Brazil apply, in particular the General Data Protection Law (LGPD) and the
+**9. Governing law and venue.** The laws of Brazil apply, in particular the General Data Protection Law (LGPD) and the
 Brazilian Civil Rights Framework for the Internet (Marco Civil da Internet). The courts of Goiânia-GO, Brazil, have
 jurisdiction.
 
-**11. Changes and contact.** These terms may change, and the effective date will be updated. Questions:
+**10. Changes and contact.** These terms may change, and the effective date will be updated. Questions:
 legal@empirecommunity.org.
 
 ## Política de Privacidade (pt-BR)
@@ -368,11 +356,11 @@ Meta: título "Política de Privacidade: EmpireCommunity"; descrição "Quais da
 
 Vigência: `[PENDING P-12]`
 
-**1. Quem é responsável.** A controladora dos dados é a equipe administrativa da EmpireCommunity. `[PENDING P-11]`
-Esta política vale para o site empirecommunity.org. Os demais serviços da comunidade têm políticas próprias.
+**1. Quem é responsável.** O controlador dos dados, nos termos da LGPD, é Leone Santos Martins, pessoa física. Contato:
+legal@empirecommunity.org. Esta política vale para o site empirecommunity.org. Os demais serviços da comunidade têm políticas próprias.
 
 **2. O que este site não faz.** O site não tem formulários, contas ou cadastro, não define cookies próprios, não mantém
-registros de acesso e não vende nem divulga dados de usuários.
+registros de acesso e não vende dados de usuários. O item 7 diz com quem os dados são compartilhados.
 
 **3. Registros técnicos.** O servidor do site não mantém registros de acesso. Ele guarda apenas registros mínimos de
 erro, para diagnóstico. Esses registros podem conter o endereço de conexão de quem acessava o site quando o erro
@@ -380,39 +368,37 @@ ocorreu, são substituídos em rotação curta e se perdem quando o servidor do 
 atualiza o número de membros armazena apenas esse número da comunidade e dados técnicos da própria atualização, sem
 nenhum dado de visitantes.
 
-**4. Estatísticas de uso.** Usamos o Cloudflare Web Analytics para saber quantas visitas cada página recebe. Essa
-ferramenta não usa cookies nem armazenamento local no seu navegador e não identifica pessoas.
+**4. Estatísticas de uso.** Usamos o Cloudflare Web Analytics para saber quantas visitas as páginas do site recebem. A
+página Apoiar e a página de redirecionamento para o Discord não usam essa ferramenta, e as visitas a elas não são
+contadas. Essa ferramenta não usa cookies nem armazenamento local no seu navegador e não identifica pessoas.
 
 **5. Escolha de idioma.** Ao acessar o endereço principal, a Cloudflare identifica o país da conexão para enviar você à
 versão em português ou em inglês. O site não guarda essa informação.
 
 **6. Contato por e-mail.** Se você nos escrever, usaremos o que você enviar para responder.
 
-**7. Doações.** O Pix é feito no aplicativo do seu banco, e o site não recebe dados dessa operação. Quem recebe a doação
-vê as informações que o banco mostrar, como o nome de quem pagou.
+**7. Com quem os dados são compartilhados.** Apenas com os fornecedores necessários para o site funcionar: a hospedagem
+e a Cloudflare. A Cloudflare processa a conexão entre você e o site e mantém registros próprios, fora do controle deste
+site. Os serviços externos para os quais o site aponta têm termos e políticas de privacidade próprios.
 
-**8. Com quem os dados são compartilhados.** Apenas com os fornecedores necessários para o site funcionar: a hospedagem
-e a Cloudflare. A Cloudflare processa as requisições como intermediária, nos próprios termos, e mantém registros
-próprios, fora do controle deste site. Links para outras plataformas seguem as políticas delas.
-
-**9. Base legal.** Tratamos registros de erro e estatísticas com base em legítimo interesse, para manter o site
+**8. Base legal.** Tratamos registros de erro e estatísticas com base em legítimo interesse, para manter o site
 funcionando e seguro, e mensagens para atender ao seu pedido de contato.
 
-**10. Por quanto tempo.** O servidor do site não guarda registros de acesso, e os registros de erro são substituídos em
+**9. Por quanto tempo.** O servidor do site não guarda registros de acesso, e os registros de erro são substituídos em
 rotação curta. Os demais dados ficam enquanto estiverem em uso e são apagados a pedido, exceto o que a lei obrigar a
 guardar.
 
-**11. Seus direitos.** Pela LGPD, você pode pedir confirmação do tratamento, acesso, correção, anonimização, portabilidade
+**10. Seus direitos.** Pela LGPD, você pode pedir confirmação do tratamento, acesso, correção, anonimização, portabilidade
 ou eliminação dos seus dados. Basta escrever para legal@empirecommunity.org.
 
-**12. Pessoas listadas no site.** Só aparecem na página Organização pessoas maiores de idade que deram consentimento
+**11. Pessoas listadas no site.** Só aparecem na página Organização pessoas maiores de idade que deram consentimento
 registrado, e somente com os dados que cada uma autorizou. Para retirar o consentimento ou pedir a remoção, escreva para
 legal@empirecommunity.org; removemos esses dados do site e dos arquivos que publicamos. O código e os dados deste site
 ficam em um repositório público no GitHub, que guarda o histórico de todas as alterações. Por isso, mesmo depois da
 remoção, o que já foi publicado continua nesse histórico e em cópias do repositório feitas por outras pessoas. Cada
 pessoa é avisada disso antes de ser listada.
 
-**13. Alterações.** Esta política pode mudar, e a data de vigência será atualizada.
+**12. Alterações.** Esta política pode mudar, e a data de vigência será atualizada.
 
 ## Privacy Policy (en-US)
 
@@ -420,18 +406,19 @@ Meta: title "Privacy Policy: EmpireCommunity"; description "What data the Empire
 
 Effective date: `[PENDING P-12]`
 
-**1. Who is responsible.** The data controller is the administrative team of EmpireCommunity. `[PENDING P-11]` This
-policy applies to the empirecommunity.org website. The community's other services have their own policies.
+**1. Who is responsible.** The data controller under the LGPD is Leone Santos Martins, a natural person. Contact:
+legal@empirecommunity.org. This policy applies to the empirecommunity.org website. The community's other services have their own policies.
 
 **2. What this website does not do.** The website has no forms, accounts or registration, sets no cookies of its own,
-keeps no access logs, and does not sell or disclose user data.
+keeps no access logs, and does not sell user data. Item 7 says who data is shared with.
 
 **3. Technical records.** The website's server keeps no access logs. It keeps only minimal error records, for diagnosis.
 These records may contain the connection address of whoever was accessing the website when the error occurred, are
 replaced on a short rotation, and are lost when the website's server is recreated. The automated service that updates
 the member count stores only that community number and technical data about its own update, with no visitor data.
 
-**4. Usage statistics.** We use Cloudflare Web Analytics to learn how many visits each page receives. This tool does not
+**4. Usage statistics.** We use Cloudflare Web Analytics to learn how many visits the website's pages receive. The
+Support page and the Discord redirect page do not use this tool, and visits to them are not counted. This tool does not
 use cookies or local storage in your browser and does not identify people.
 
 **5. Language selection.** When you open the main address, Cloudflare identifies the country of your connection to send
@@ -439,27 +426,24 @@ you to the Portuguese or English version. The website does not keep this informa
 
 **6. Contact by email.** If you write to us, we will use what you send in order to reply.
 
-**7. Donations.** Pix payments are made in your bank's app, and the website receives no data about them. The recipient
-sees whatever the bank displays, such as the payer's name.
+**7. Who data is shared with.** Only the providers needed to run the website: the hosting provider and Cloudflare.
+Cloudflare processes the connection between you and the website and keeps its own records, outside this website's
+control. External services linked from the website have their own terms and privacy policies.
 
-**8. Who data is shared with.** Only the providers needed to run the website: the hosting provider and Cloudflare.
-Cloudflare processes requests as an intermediary, on its own terms, and keeps its own records, outside this website's
-control. Links to other platforms follow those platforms' policies.
-
-**9. Legal basis.** We process error records and statistics on the basis of legitimate interest, to keep the website
+**8. Legal basis.** We process error records and statistics on the basis of legitimate interest, to keep the website
 running and secure, and messages to respond to your contact request.
 
-**10. How long.** The website's server keeps no access logs, and error records are replaced on a short rotation. Other
+**9. How long.** The website's server keeps no access logs, and error records are replaced on a short rotation. Other
 data is kept while in use and is deleted on request, except what the law requires us to keep.
 
-**11. Your rights.** Under the LGPD, you may request confirmation of processing, access, correction, anonymization,
+**10. Your rights.** Under the LGPD, you may request confirmation of processing, access, correction, anonymization,
 portability or deletion of your data. Just write to legal@empirecommunity.org.
 
-**12. People listed on the website.** Only adults who have given recorded consent appear on the Organization page, and
+**11. People listed on the website.** Only adults who have given recorded consent appear on the Organization page, and
 only with the data each person has authorized. To withdraw consent or request removal, write to
 legal@empirecommunity.org; we remove that data from the website and from the files we publish. This website's code and
 data are in a public repository on GitHub, which keeps the history of every change. Because of this, even after removal,
 what was already published remains in that history and in copies of the repository made by other people. Each person is
 told this before being listed.
 
-**13. Changes.** This policy may change, and the effective date will be updated.
+**12. Changes.** This policy may change, and the effective date will be updated.

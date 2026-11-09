@@ -3,7 +3,7 @@
 - Version: 1. Owner: Alicerce. Consumers: Vitral (pages, selector, head tags), Forja (nginx, build scripts), Guindaste
   (Cloudflare rules, compose), Ensaio (C-3, C-5, C-8), Sentinela (headers, CSP).
 - Decisions: D-2 (two locales), D-3 (WhatsApp pt-BR only), D-8 (sitemap, robots, llms.txt, Web Analytics), D-15
-  (country-based root). Rationale for the root: [ADR-0002](../adr/0002-locale-entry-routing.md).
+  (country-based root), D-29 (`/discord` served by the site). Rationale for the root: [ADR-0002](../adr/0002-locale-entry-routing.md).
 
 ## 1. URL space
 
@@ -32,16 +32,38 @@ Locale path segments are `pt-br` and `en-us`; the `lang` attribute and `hreflang
 | Path | Owner | Behavior |
 |---|---|---|
 | `/` | Cloudflare rules, origin fallback | 302 to a locale tree (section 3). Origin serves the chooser page with HTTP 200 if the rules are off. |
-| `/discord` | Cloudflare redirect rule (approved, not yet applied) | Redirect to the current invite. Recommended 302 (the invite may change). The site never links anywhere else for Discord. nginx has no rule for it. |
+| `/discord` | build (static page, D-29) | Invite page served by the site, HTTP 200, live with the site. **No Cloudflare rule and no nginx rule.** See "The `/discord` page" below. The site never links anywhere else for Discord. |
 | `/data/members.json` | Worker, origin fallback | [members-json](members-json.md) |
 | `/sitemap-index.xml`, `/sitemap-0.xml` | build | section 5 |
 | `/robots.txt`, `/llms.txt` | build | section 5 |
 | `/healthz` | nginx | `200 ok`, `Cache-Control: no-store`, not logged |
-| `/404.html` | build | neutral bilingual page with links to both locales, served with status 404 for any unknown path |
+| `/404.html` | build | neutral bilingual page (`<html lang="en-US">`, other language marked per element) with links to both locales, served with status 404 for any unknown path |
 | `/_astro/*` | build | hashed assets |
 | `/favicon.ico`, `/favicon.svg`, `/apple-touch-icon.png`, `/manifest.webmanifest` | build (`public/`) | static |
 
 A path without a locale prefix (for example `/projects/`) is a 404. There are no redirects from old or guessed URLs.
+`/discord` is the one deliberate exception to the locale prefix.
+
+### The `/discord` page (D-29)
+
+A static page built to `dist/discord/index.html`. nginx serves `/discord` and `/discord/` through the existing
+`try_files $uri $uri/index.html`, so no redirect rule is added anywhere and the page goes live with the site.
+
+- **One source for the invite.** The invite code comes only from `src/data/site.yaml` (`discord.inviteCode`, site-data
+  section 4), the approved invite. The page, the Worker (members-json 2.6) and the integrity check read that one
+  value; no other file holds a code or an invite URL. The superseded invite is not kept anywhere in the repository.
+- **Works without JavaScript.** The page has no script. It carries `<meta http-equiv="refresh" content="0;url=...">`
+  and a visible link with the same target as the fallback, with a short text in both languages (`<html lang="en-US">`,
+  each element in the other language with its own `lang`). The target is `https://discord.com/invite/<inviteCode>`, fixed at build time.
+- **Language-neutral and query-blind.** One URL for both locales, no locale prefix and no `hreflang`. The page is
+  static, so a query string on `/discord` is ignored and **never forwarded** to the target.
+- **Not an indexable page:** `<meta name="robots" content="noindex">`, absent from the sitemap, no canonical to a
+  locale page. No analytics snippet and no script of any kind on it. It uses the default headers and CSP of section 6.
+- **Changing the invite** is a pull request that changes `discord.inviteCode`, merged and deployed through
+  [deploy](deploy.md); the Worker follows through its own deploy (members-json 2.6). No dashboard step.
+- Checks: the build scan of site-data section 12 (the invite URL pattern appears only in this page and only with the
+  configured code), the HTTP test of section 6 (`/discord` answers 200, no `Location` header), and the
+  integrity monitor of [deploy](deploy.md) section 8.
 
 ## 2. Language selector (no cookie)
 
@@ -57,7 +79,7 @@ A path without a locale prefix (for example `/projects/`) is a 404. There are no
 ## 3. Root `/`: language by visitor country (D-15)
 
 Implemented as two **Cloudflare Single Redirects** on the zone `empirecommunity.org` (Rules > Redirect Rules, Free
-plan allows 10; this uses 2, plus 1 for `/discord`). Status code **302**, **preserve query string: on**.
+plan allows 10; this uses 2, and `/discord` needs none, D-29). Status code **302**, **preserve query string: on**.
 
 | # | Expression (rules language) | Target (static) |
 |---|---|---|
@@ -75,8 +97,9 @@ plan allows 10; this uses 2, plus 1 for `/discord`). Status code **302**, **pres
   US, and reach `/pt-br/` through the sitemap, internal links and `hreflang`.
 - **Fallback chooser** (`src/pages/index.astro`, outside the locale folders, `redirectToDefaultLocale` left at its
   default `false`): static page, HTTP 200, two links (`/pt-br/`, `/en-us/`) with names in their own language, a
-  `<link rel="alternate" hreflang="x-default" href="https://empirecommunity.org/">`, `lang` unset on the container
-  and set per link. No script. It is shown only when the rules are off or on direct origin access.
+  `<link rel="alternate" hreflang="x-default" href="https://empirecommunity.org/">`, `<html lang="en-US">` (the
+  `x-default` language, so the page has a language as WCAG 3.1.1 requires) and a `lang` on every link or text in the
+  other language. The bilingual 404 page and the `/discord` page follow the same rule. No script. It is shown only when the rules are off or on direct origin access.
 - **Source of truth:** these expressions. The dashboard is not versioned, so Guindaste copies them into the Ops
   Runbook with the date applied; any change is made here first.
 - **Test plan (C-8):** from a Brazilian network, `curl -sI https://empirecommunity.org/?utm_source=t` must answer
@@ -108,13 +131,13 @@ plan allows 10; this uses 2, plus 1 for `/discord`). Status code **302**, **pres
 - **llms.txt:** one file at the root, English, describing the community and linking the en-US pages. No WhatsApp.
 - **Cloudflare Web Analytics:** use the **manual JS snippet** in the layout (the token is public), never automatic
   injection, so the CSP can be tested before deploy. The snippet is **not included on the support pages**
-  (`/pt-br/support/`, `/en-us/support/`), which carry the payment key. Never send `Cache-Control: ... no-transform`
+  (`/pt-br/support/`, `/en-us/support/`), which are the pages that will carry payment-related content once donations open (D-28); the strict setting applies from launch so opening them later loosens nothing. Never send `Cache-Control: ... no-transform`
   (it blocks automatic injection per Cloudflare's FAQ; harmless here but keep it out).
 - **Cloudflare features that rewrite HTML are off for the zone** (a required setup item, copied by Guindaste into the
   Ops Runbook with the date): **Email Address Obfuscation** (it replaces visible e-mail addresses in the HTML, which
-  would alter an e-mail Pix key and contact addresses), **Rocket Loader** (it rewrites script loading and conflicts with
+  would alter contact addresses), **Rocket Loader** (it rewrites script loading and conflicts with
   the CSP), and **automatic Web Analytics injection**. Any other feature that modifies delivered HTML is also off.
-  The integrity check in [deploy](deploy.md) section 8 compares the delivered Pix block with the built one, so a
+  The integrity check in [deploy](deploy.md) section 8 checks the delivered support page for the expected state block and no payment marker, so a
   re-enabled feature is detected.
 
 ## 6. nginx (`nginxinc/nginx-unprivileged`, port 8080)
@@ -139,22 +162,30 @@ gzip_static on;                   # build precompresses .gz; Cloudflare adds bro
 error_page 404 /404.html;
 
 location = /healthz {
+  include snippets/limit-methods.conf;
   include snippets/security-headers.conf;
-  add_header Cache-Control "no-store" always; return 200 "ok\n";
+  add_header Cache-Control "no-store" always; default_type text/plain; return 200 "ok\n";
 }
 location /_astro/ {
+  include snippets/limit-methods.conf;
   include snippets/security-headers.conf;
   add_header Cache-Control "public, max-age=31536000, immutable" always; try_files $uri =404;
 }
 location = /data/members.json {
   if ($args != "") { return 404; }          # a query string never reaches the file (members-json 2.9)
+  include snippets/limit-methods.conf;
   include snippets/security-headers.conf;
   add_header Cache-Control "public, max-age=300" always; try_files $uri =404;
 }
-location / {
-  limit_except GET HEAD { deny all; }
+location = /discord {                       # D-29: served directly, 200, no redirect
+  include snippets/limit-methods.conf;
   include snippets/security-headers.conf;
-  add_header Cache-Control "no-cache" always; try_files $uri $uri/index.html =404;
+  add_header Cache-Control "no-cache" always; try_files /discord/index.html =404;
+}
+location / {
+  include snippets/limit-methods.conf;
+  include snippets/security-headers.conf;
+  add_header Cache-Control "no-cache" always; try_files $uri $uri/ =404;   # directory URLs without a slash are redirected
 }
 ```
 
@@ -165,6 +196,16 @@ Therefore **no header is set at server level**: `snippets/security-headers.conf`
 and **every location that sets any header includes it**, as above. `always` is used so that error responses carry
 the headers too, and the `404.html` page is served from a location that includes it. A new location is not accepted
 without the include; the HTTP test below enforces it.
+
+`snippets/limit-methods.conf` (included first in every location):
+
+```
+if ($request_method !~ ^(GET|HEAD)$) { return 405; }
+```
+
+It is an `if` with `return`, not `limit_except`: nginx runs the rewrite-module directives of a location (including
+`return`) in sequence before the access phase, so `limit_except` cannot protect a location that answers with `return`
+(such as `/healthz`), and it answers 403 rather than 405.
 
 `snippets/security-headers.conf`:
 
@@ -182,8 +223,8 @@ add_header Cross-Origin-Opener-Policy "same-origin" always;
 | `^/(pt-br\|en-us)/support/` | `default-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'` |
 
 - The support pages have **no Cloudflare analytics hosts** in their CSP and carry no beacon. `data:` is **not** allowed
-  in `img-src` anywhere; an inline `<svg>` element (for example a generated QR code) is markup, not an image
-  request, and is not affected.
+  in `img-src` anywhere; an inline `<svg>` element is markup, not an image request, and is not affected. The
+  support-page policy is the baseline for the later donation contract; any loosening belongs to that contract.
 - The Cloudflare hosts in the default policy are what the Web Analytics beacon uses to load and report; Cloudflare's
   documentation checked here does not list them, so Ensaio verifies C-5 against the real snippet and adjusts.
 - The proxy layer in front of the origin adds `X-Content-Type-Options: nosniff`, `Referrer-Policy:
@@ -192,7 +233,11 @@ add_header Cross-Origin-Opener-Policy "same-origin" always;
 - A strict CSP without `unsafe-inline` requires: no inline `<style>` or `style=""`, no inline `<script>` (JSON-LD
   `application/ld+json` blocks are data and allowed). Enforced by the Astro settings in ADR-0001 plus a post-build
   check that fails on inline executable scripts or style attributes in `dist/**/*.html`.
-- Only `GET` and `HEAD`. No directory listing, no `autoindex`, no proxying, no upstream.
+- Only `GET` and `HEAD`, enforced in **every** location by `snippets/limit-methods.conf` (405, below). No directory
+  listing, no `autoindex`, no proxying, no upstream.
+- **Trailing slash.** A locale URL without the slash (`/pt-br/join`) gets nginx's directory redirect to the slash form
+  (`try_files $uri $uri/ =404`; relative `Location`, because `absolute_redirect off`). `/discord` has its own exact
+  location and is served directly with 200 and no redirect.
 
 ### Logging (D-20)
 
@@ -204,13 +249,15 @@ add_header Cross-Origin-Opener-Policy "same-origin" always;
 ### HTTP header test (required check)
 
 Run in CI against the built image, and again against the public URL after a deploy. For each of `/pt-br/`,
-`/en-us/support/`, an unknown path (status 404), a hashed file under `/_astro/`, `/data/members.json` and `/healthz`,
+`/en-us/support/`, `/discord`, an unknown path (status 404), a hashed file under `/_astro/`, `/data/members.json` and `/healthz`,
 assert:
 
 - `Content-Security-Policy` is present and equals the policy for that path (the support pages have no Cloudflare
   hosts), `Permissions-Policy` and `Cross-Origin-Opener-Policy` are present;
 - `Cache-Control` matches the location's value;
-- `/data/members.json?x=1` returns 404 and a non-GET method returns 405;
+- `/data/members.json?x=1` returns 404 and a non-GET method returns 405 on every path tested, including `POST /healthz`;
+  `/pt-br/join` (no slash) answers a redirect to `/pt-br/join/` and `/pt-br/join/` answers 200; `/discord` returns 200 with no `Location`
+  header and its page has the same link target with or without a query string;
 - no `Server` version string and no `Set-Cookie` anywhere;
 - against the public URL: `X-Content-Type-Options`, `Referrer-Policy` and `Strict-Transport-Security` are present.
 

@@ -1,6 +1,7 @@
 ---
 // Neutral bilingual page served with status 404 for any unknown path (routing-locale section 1).
 import '../styles/global.css';
+import { t } from '../i18n/index.ts';
 import { routePath } from '../lib/routes.ts';
 ---
 
@@ -10,19 +11,19 @@ import { routePath } from '../lib/routes.ts';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
-    <title>Página não encontrada · Page not found</title>
+    <title>{t('pt-br', 'notFound.title')} · {t('en-us', 'notFound.title')}</title>
   </head>
   <body>
     <main id="content">
       <section lang="pt-BR">
-        <h1>Página não encontrada</h1>
-        <p>Este endereço não existe ou mudou de lugar.</p>
-        <p><a href={routePath('pt-br', 'home')}>Ir para o início</a></p>
+        <h1>{t('pt-br', 'notFound.title')}</h1>
+        <p>{t('pt-br', 'notFound.body')}</p>
+        <p><a href={routePath('pt-br', 'home')}>{t('pt-br', 'notFound.home')}</a></p>
       </section>
       <section lang="en-US">
-        <h1>Page not found</h1>
-        <p>This address does not exist or has moved.</p>
-        <p><a href={routePath('en-us', 'home')}>Go to the home page</a></p>
+        <h1>{t('en-us', 'notFound.title')}</h1>
+        <p>{t('en-us', 'notFound.body')}</p>
+        <p><a href={routePath('en-us', 'home')}>{t('en-us', 'notFound.home')}</a></p>
       </section>
     </main>
   </body>

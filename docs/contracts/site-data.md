@@ -2,10 +2,11 @@
 
 - Version: 1. Owner: Alicerce. Consumers: Vitral (pages and components), Forja (loaders, build checks, CI), Ensaio
   (C-1 to C-4), Sentinela (money and personal data surfaces), Regente (content intake from the owner).
-- Decisions: D-2, D-3, D-5, D-6, D-7, D-14, D-16. Stack: [ADR-0001](../adr/0001-stack.md). Routes and locales:
+- Decisions: D-2, D-3, D-5, D-6, D-7, D-14, D-21, D-22, D-23, D-28, D-29 (D-16 is superseded by D-21). Stack: [ADR-0001](../adr/0001-stack.md). Routes and locales:
   [routing-locale](routing-locale.md). Member count endpoint: [members-json](members-json.md).
-- Risk: **High** for `support.yaml` (money, a public payment key) and `team.yaml` (personal data). The other files are
-  Low or Medium.
+- Risk: **High** for `team.yaml` (personal data). `support.yaml` is **Medium at launch**: public goal figures and a
+  "donations not open" state, no payment instruction (D-28). The change that opens donations is High and has its own
+  contract. The other files are Low or Medium.
 - Examples below are **illustrative placeholders**, not facts. Real values come from the owner; nothing is invented
   and a section with no real data is not rendered (C-4).
 
@@ -14,15 +15,16 @@
 ```
 src/
   content.config.ts            # collections and Zod schemas below (Zod as exposed by Astro)
-  i18n/messages/pt-br.ts       # master locale for UI strings
-  i18n/messages/en-us.ts       # must satisfy the type of pt-br.ts
+  i18n/messages/pt-br.json     # master locale for UI strings
+  i18n/messages/en-us.json     # same key set as pt-br.json (type assertion in i18n/index.ts, plus a test)
+  i18n/index.ts                # Messages type, t() helper
   data/site.yaml               # one document
   data/community.yaml          # one document
   data/projects.yaml           # collection
   data/game-servers.yaml       # collection
   data/join-channels.yaml      # collection
   data/team.yaml               # collection
-  data/support.yaml            # one document, read only through src/lib/support.ts
+  data/support.yaml            # one document (goal, parts, donations state), read only through src/lib/support.ts
   content/legal/pt-br/terms-of-service.md   privacy-policy.md
   content/legal/en-us/terms-of-service.md   privacy-policy.md
   lib/routes.ts  lib/members.ts  lib/support.ts
@@ -65,16 +67,24 @@ const Image = z.object({ src: z.string(), alt: Localized(140), decorative: z.boo
 
 ## 3. UI strings
 
-`src/i18n/messages/pt-br.ts` exports a `const` object (flat keys with dotted namespaces) and its type `Messages`.
-`en-us.ts` is declared `satisfies Messages` with the same keys, so a missing or extra key is a type error.
+`src/i18n/messages/pt-br.json` and `en-us.json` are flat JSON objects (dotted namespaces in the keys). `pt-br.json` is the
+master: `src/i18n/index.ts` derives `Messages` and `MessageKey` from it. **Key parity is enforced twice**: a
+compile-time assertion in `index.ts` (a missing or extra key in `en-us.json` is a type error) and a unit test in
+`tests/i18n.test.ts`, so a JSON file that bypasses the type check still fails CI.
 
-- Value is `string` or `{ one: string; other: string }` (selected with `Intl.PluralRules`). Placeholders are
-  `{name}`; a unit test checks both locales use the same placeholder set per key.
+- Value is a `string`. Placeholders are `{name}`; a unit test checks both locales use the same placeholder set per
+  key. A plural form (`{ one: string; other: string }`, selected with `Intl.PluralRules`) is allowed only when a
+  message first needs it, together with the change to `t()` and the parity test.
 - Required namespaces: `nav.*`, `selector.*`, `a11y.*`, `status.live`, `status.inDevelopment`, `status.comingSoon`,
   `meta.<routeKey>.title`, `meta.<routeKey>.description` (one pair per route key), `home.*`, `projects.*`,
   `servers.*`, `join.*`, `support.*`, `organization.*`, `team.*`, `legal.*`, `footer.*`, `notFound.*`.
-- **No key mentions WhatsApp.** WhatsApp text comes from the `whatsapp` entry of `join-channels.yaml`, which has
-  `audience: [pt-br]`.
+- **No key name mentions WhatsApp**, so the two locales always have the same key set (C-1). WhatsApp content comes
+  from the `whatsapp` entry of `join-channels.yaml`, which has `audience: [pt-br]`. **One exception for text, not
+  for keys:** the pt-BR **value** of `meta.join.description` may name WhatsApp, because it describes the join page,
+  whose pt-BR content lists that channel. It is the only message allowed to, the en-US value of the same key must
+  not (C-1 scan of the built en-US output), and no other key, in either locale, names WhatsApp in its value. The
+  two values of that key therefore differ in content, as the join page does by audience (routing-locale section 1).
+  The i18n test enforces the allowlist on the JSON files.
 - A `t(locale, key, params)` helper returns the string; an unknown key is a type error, not a runtime fallback.
 
 ## 4. `site.yaml`
@@ -89,10 +99,16 @@ contact:
 links:
   discord: https://empirecommunity.org/discord      # literal; the only Discord link allowed on the site
   github: https://github.com/EmpireCommunity
+discord:                                            # the one place the invite is defined (D-29)
+  inviteCode: <approved invite code>                # 2 to 32 characters, letters, digits and hyphen
+  guildId: "<server id>"                            # 17 to 20 digits, quoted so it stays a string
 ```
 
-`links.discord` is a literal in the schema. A search over `src/` fails the build if any other Discord invite URL
-(`discord.gg/...`, `discord.com/invite/...`) appears.
+`links.discord` is a literal in the schema. `discord.inviteCode` and `discord.guildId` are the **only** place the
+approved invite is defined: the `/discord` page ([routing-locale](routing-locale.md)), the Worker
+([members-json](members-json.md) 2.6) and the integrity check read them. A search over `src/` fails the build if any
+Discord invite URL (`discord.gg/...`, `discord.com/invite/...`) or any other copy of the code appears. The built
+`/discord` page is the one place an invite URL exists in `dist/`.
 
 ## 5. `community.yaml`
 
@@ -240,22 +256,25 @@ Target: live removal within 72 hours of a valid request, and purge of published 
    explicit OK and is never a force-push to `main` without that OK.
 8. Close the request in the private register with the completion dates and answer the requester.
 
-## 10. `support.yaml` and the support module (money, High; D-6, D-16)
+## 10. `support.yaml` and the support module (Medium at launch; D-6, D-21, D-22, D-28)
 
-The Support page reads **only** `getSupport()` from `src/lib/support.ts`, never the YAML. Today the data comes from
-`support.yaml`; a payment gateway (D-16, out of this delivery) would replace the implementation behind the same
-function and type, with no change in components.
+**At launch the site receives no money and shows no way to send any (D-28).** The Support page shows the community
+goal, the server parts and a plain "donations are not open yet" state. Opening donations, the payment gateway, the
+transparency panel and anything about a ledger are a **later contract**, written after the site launches and subject
+to its own threat model and legal review. This document designs none of them, and nothing in it may be read as a
+payment instruction.
+
+The Support page reads **only** `getSupport()` from `src/lib/support.ts`, never the YAML. The module loads
+`support.yaml`, validates it and derives the totals. It holds no payment, account or donor data of any kind.
 
 ```ts
-interface SupportSource { load(): Promise<SupportSnapshot> }   // today: FileSupportSource (support.yaml)
 type SupportSnapshot = {
+  donations: { status: 'not-open' };
   goal: { id: string; title: Localized; description: Localized; targetCents: number;
           securedCents: number; remainingCents: number; progress: number /* 0..1 */ };
   specs: { label: Localized; value: string }[];                  // optional highlights, e.g. RAM
-  pix: PixKey | null;
   parts: Part[];
   partDonations: { accepted: boolean; how: Localized } | null;
-  source: 'file';                                                // 'gateway' later
 };
 ```
 
@@ -264,18 +283,15 @@ type SupportSnapshot = {
 ```yaml
 schemaVersion: 1
 verified: { on: 2026-11-10, by: owner }       # REQUIRED; review trail, not displayed
+donations:
+  status: not-open                             # the only value schema version 1 accepts (D-28)
 goal:
   id: xeon-server
   title: { pt-br: ..., en-us: ... }
   description: { pt-br: ..., en-us: ... }
-  targetCents: 300000                          # R$ 3,000.00 (D-6)
+  targetCents: 300000                          # R$ 3,000.00, the first milestone (D-6, D-22)
 specs:                                         # optional
   - { label: { pt-br: Memória RAM, en-us: RAM }, value: 128 GB }
-pix:                                           # optional; section hidden if absent
-  keyType: random                              # random | email | cnpj
-  key: <the real key, supplied by the owner>   # placeholders are rejected by the build (rules below)
-  recipientName: <name as the bank shows it>   # 3 to 60 characters, required
-  showWhenGoalMet: false                       # optional; owner decision, see rules
 parts:
   - id: example-part
     name: { pt-br: ..., en-us: ... }
@@ -283,9 +299,9 @@ parts:
     quantity: 1                                # integer 1 to 99
     unitPriceCents: 0
     status: needed                             # needed | purchased | donated
-    acquiredOn: 2026-11-10                     # required iff purchased or donated, forbidden if needed
+    # acquiredOn: 2026-11-10                   # required iff purchased or donated, forbidden if needed (a needed part has none)
     photo: { src: ../assets/xeon/part.jpg, alt: { pt-br: ..., en-us: ... } }   # optional
-partDonations:
+partDonations:                                 # optional; a physical part, not money
   accepted: true
   how: { pt-br: ..., en-us: ... }              # route to offer a part (Discord or e-mail), max 200
 ```
@@ -295,42 +311,43 @@ Rules:
 - **Money:** integer cents only (`Cents`). Derived at load, never stored: `securedCents = sum(quantity * unitPriceCents)`
   over parts with status `purchased` or `donated`; `remainingCents = max(0, targetCents - securedCents)`;
   `progress = min(1, securedCents / targetCents)`. `targetCents` is greater than 0. Currency is BRL (site.yaml).
-- **Pix key:** `keyType` is `random`, `email` or `cnpj`. `cpf` and `phone` are not in the enum, so they cannot be
-  published (personal data). Validation by type, and **placeholders are rejected**: `random` must be a UUID v4
-  (version and variant bits correct) with at least 8 distinct hex digits and not on a denylist of obvious fillers;
-  `email` must not use `example.*`, `.test`, `.invalid`, `.local` or similar; `cnpj` must have valid check digits and
-  not be a repeated digit. `recipientName` is required (3 to 60 characters), no placeholder text, and is what the
-  bank shows (the owner decides whether that is a person or an organization). `quantity` is an integer from 1 to 99.
-- **The key reaches the page in one place only.** It is rendered as text with a copy control inside one element marked
-  `data-pix`, byte-identical to the YAML value. A post-build scan fails if the exact key, or anything matching the
-  UUID or CNPJ key patterns, appears in `dist/` outside that element, if an e-mail address outside the `site.yaml`
-  contact allowlist appears, or if the key in the element differs from the YAML. A QR code, if shown, is **generated
-  at build time by repository code from the validated key** (its payload checksum is validated); an uploaded QR image
-  is not accepted by the schema.
-- **Donor safeguards in the text.** Messages `support.pix.checkRecipient` (tells donors to check the recipient name in
-  their bank app before confirming) and `support.progress.criterion` (states that the progress counts the value of
-  parts already acquired, bought or donated, not money received) are required in both locales and rendered on the
-  page. The owner also pins the key on the official Discord as an independent reference (depends on the owner).
-- **Goal met.** When `remainingCents` is 0 the Pix block is hidden, unless the owner sets `pix.showWhenGoalMet: true`
-  (owner decision).
+  `quantity` is an integer from 1 to 99.
+- **Donations state.** `donations.status` is the literal `not-open`; any other value fails the build with the message
+  that donations are opened by a later contract. The schema is **strict**: an unknown key (`pix`, a gateway or payment
+  field, a recipient) fails the build, so payment data cannot enter the file without changing this contract. The
+  Support page renders one block marked `data-donations="not-open"` with the message `support.donations.notOpen`
+  (required in both locales). The message says that donations are not open yet; it gives **no payment instruction, no
+  account data and no link to a payment provider**. No other page, `llms.txt` or structured data states or suggests
+  that a donation can be made now; that part is a human review of the copy in the PR.
+- **Goal is a milestone, not an end (D-22).** Reaching it (`remainingCents` is 0) switches the progress text to the
+  required message `support.goal.reached`; nothing is hidden, closed or marked as complete. Ongoing community costs
+  (power, upgrades, hosting, domains) are part of the same later donation contract.
+- **Progress criterion.** The required message `support.progress.criterion` (both locales) states that the progress
+  counts the value of parts already acquired, bought or donated, not money received.
+- **Payment guard (build and CI).** The build fails if the content files or `dist/` contain: the attribute `data-pix`;
+  a payment-provider host or short link (`mercadopago`, `mpago.la`); the Pix BR Code marker `br.gov.bcb.pix` (case-insensitive); a string
+  shaped like a random Pix key (UUID) or a CNPJ; or an e-mail address outside the `site.yaml` contact allowlist. The
+  word "Pix" and "Mercado Pago" in any page text are reported as a **warning** with their locations, for the PR
+  reviewer to confirm they do not suggest a donation can be made now. The scheduled integrity check applies the same
+  rules to the delivered pages ([deploy](deploy.md) section 8).
 - **No analytics beacon on the support pages**, and their CSP omits the Cloudflare analytics hosts (routing-locale
-  section 6); Cloudflare HTML-rewriting features are off site-wide (routing-locale section 5) so the key is delivered
-  exactly as built.
-- **No donor data anywhere:** no donor names, amounts per person, receipts or messages. If the gateway stores receipts
-  later, that is its own contract and plan (D-16).
+  section 6); Cloudflare HTML-rewriting features are off site-wide (routing-locale section 5). This setting is kept
+  from launch so that the later donation contract starts from the strict baseline; any change to it belongs to that
+  contract.
+- **No payment or donor data anywhere:** no keys, accounts, donor names, amounts per person, receipts or messages.
 - **Verification:** `verified.on` and `verified.by` are required (never publish unverified data). A warning is raised
   when `verified.on` is older than 90 days. Neither is displayed.
-- **Change control (public repository, High risk files):** every change to any path reaches `main` only through a
-  pull request, with the required status checks of [deploy](deploy.md) passing, and with no direct or force push to
-  `main`. A `CODEOWNERS` file naming the owner for the whole tree is kept for future use; **no approval count is
-  specified** (D-17). Compensating controls: the published Pix key is compared with `support.yaml` by the scheduled
-  integrity check ([deploy](deploy.md) section 8); the key is pinned on the official Discord; donors are told to check
-  the recipient name; the owner uses strong authentication on the accounts involved. Residual risk is accepted by the
-  owner.
-- Part photos and `alt` follow section 2. Part names are Localized; `acquiredOn` is not displayed unless the owner
-  asks.
+- **Change control (public repository):** every change to any path reaches `main` only through a pull request, with
+  the required status checks of [deploy](deploy.md) passing, and with no direct or force push to `main`. A
+  `CODEOWNERS` file naming the owner for the whole tree is kept for future use; **no approval count is specified**
+  (D-17). Compensating controls: the payment guard above, the scheduled integrity check, and the owner's strong
+  authentication on the accounts involved. Residual risk is accepted by the owner.
+- **Part donations are not money.** `partDonations` is the route to offer a physical part (Discord or e-mail) and
+  **stays available at launch by default**, because a physical part handles no money. The owner can reverse this by
+  setting `accepted: false` or omitting the key. Part photos and `alt` follow
+  section 2. Part names are Localized; `acquiredOn` is not displayed unless the owner asks.
 - The page shows: goal title and description, progress (secured of target), parts with status, what was bought, part
-  donation route, Pix block. Same content in both locales (C-3).
+  donation route (if shown), and the donations-not-open block. Same content in both locales (C-3).
 
 ## 11. Legal pages (Terms and Privacy)
 
@@ -356,7 +373,7 @@ effectiveDate: 2026-12-01       # identical in both locales
   ADR-0001 and routing-locale section 6). The Privacy text must say exactly that and must not promise a fixed
   retention period for access logs, and no contract for this site may state one. This was decided by the owner
   (D-20), and a legal review of the log-keeping obligations that may apply to the site (Marco Civil da Internet) is to be done before
-  donations are enabled (depends on the owner).
+  donations open (D-28; depends on the owner).
 - Other processors keep their own records outside this site's control (Cloudflare for the connection, the edge proxy
   layer in front of the origin); the Privacy text says so plainly without describing their internals.
 - Content requirements for the drafter (the drafter is not the architect and the owner is not a lawyer, so Regente
@@ -369,10 +386,14 @@ effectiveDate: 2026-12-01       # identical in both locales
   appears only in pt-BR (C-1), so any WhatsApp mention would break one of the two rules. External services are
   covered by the generic clause above; Discord may be named because it is offered in both locales. The C-1 scan
   covers `src/content/legal/**` and the built legal pages in both locales.
-- **Controller identification (depends on the owner and a lawyer).** The text must identify a controller that is a
-  natural or legal person; "the administrative team" alone is not enough for LGPD. Which person or entity, and its
-  tax identification if one exists, is an owner decision (P-11); until then this item stays open and blocks
-  publishing the Privacy page.
+- **Controller identification (D-23).** The controller is the owner as a natural person. The Privacy text shows the
+  legal name and a contact e-mail address **only**; the owner supplies both in the pull request for the text, and the
+  legal name may differ from the public name used elsewhere on the site. The **tax identification is never written in
+  the repository, in a note or in a message, and the text does not print it.** Publishing the Privacy page waits for
+  the owner to supply the name and the e-mail (depends on the owner).
+- **No payments at launch (D-28).** The Privacy and Terms texts at launch do not describe donations, a payment
+  provider or payment data, because the site neither receives money nor offers a way to send it. The later donation
+  contract updates both texts, with a new `version` and `effectiveDate`, before donations open.
 - Cloudflare Web Analytics is described as cookieless by Cloudflare; the drafter confirms the statement against
   Cloudflare's current documentation before publishing (not verified here).
 - JSON-LD and any other JSON embedded in HTML is serialized with `<`, `>`, `&`, U+2028 and U+2029 escaped; a fixture
@@ -386,26 +407,27 @@ effectiveDate: 2026-12-01       # identical in both locales
 | `Localized` complete, `audience` keys exact, `pt-br`/`en-us` message type parity and placeholder parity | yes | C-3 |
 | Route keys exist in both locales | yes | C-3 |
 | Team consent rules, empty collections not rendered | yes | C-4 |
-| WhatsApp absent from en-US output, `llms.txt`, root page **and from the legal Markdown and built legal pages in both locales**; only `https://empirecommunity.org/discord` as Discord link | yes | C-1 |
+| WhatsApp absent from en-US output, `llms.txt`, root page **and from the legal Markdown and built legal pages in both locales**; only `https://empirecommunity.org/discord` as Discord link; in `dist/` the invite URL appears only in `discord/index.html` and only with the configured code; that page has no script | yes | C-1 |
 | Legal parity (ids, version, effective date) | yes | C-3 |
 | No inline executable script or `style=` in built HTML; inline `ld+json` allowed | yes | C-5 |
 | `hreflang` reciprocity, sitemap content, canonical present | yes | C-5 |
 | Images: metadata absent (backstop; the primary control is the pre-commit step), size, alt | yes | privacy |
 | Team: opaque ids, scope rules, `dist` person markers and team images only from validated entries | yes | C-4, privacy |
-| Support: Pix type and placeholder rules, cents, derived totals, `verified` present, key only inside `data-pix` and equal to the YAML, required donor messages | yes | High |
+| Support: strict keys, `donations.status` is `not-open`, cents, derived totals, `verified` present, required messages (`support.donations.notOpen`, `support.goal.reached`, `support.progress.criterion`), payment guard on sources and `dist/` (section 10) | yes | money |
 | Legal Markdown has no raw HTML; JSON-LD escaping fixtures | yes | security |
 | `verify-links`: external URLs answer, repos public (network job) | yes in CI, not in local build | C-2 |
-| Stale `whatsapp.asOf`, `verified.on`, `reviewOn` | warning | review |
+| Stale `whatsapp.asOf`, `verified.on`, `reviewOn`; the words "Pix" or "Mercado Pago" in page text | warning | review |
 
 ## 13. Open questions (content, none blocks implementation)
 
-1. Pix: key, type and `recipientName` (owner). Whether the recipient is a person or an organization.
+1. Donations (gateway, transparency panel, ledger): **not a launch question**. A later contract after the site launches
+   (D-28); it also takes the accountant guidance and the legal review (D-26).
 2. Xeon parts, prices, what was bought, photos (owner).
 3. Team: members, nicknames, roles and consent records (owner).
 4. Projects list and statuses for each of the Empire projects (owner confirms; EmpireBot and EmpireHub are not live).
 5. Publish game server addresses? Default no.
 6. GitHub activity as a credibility item: source not decided (build-time public data or static).
 7. Year the community started and its purpose text (owner is writing).
-8. Depends on the owner: controller identity for the Privacy page (section 11); withdrawal deadlines (9.1); whether
-   the Pix block stays visible after the goal is met (`showWhenGoalMet`); pinning the key on the official Discord;
-   strong authentication on the accounts involved; the legal review of log obligations before donations are enabled.
+8. Depends on the owner: legal name and contact e-mail for the Privacy page (section 11, D-23); withdrawal deadlines
+   (9.1); confirming the approved invite code (section 4); strong authentication on the accounts involved; the legal review
+   of log obligations before donations open.

@@ -48,8 +48,9 @@ file in it is empty and its `package.json` has no dependencies.
   `nginxinc/nginx-unprivileged:1.30-alpine-slim` (pinned tag plus digest; stable branch, about 7 MB, a few MB of RAM).
   No Node at runtime.
 - **The build runs in GitHub Actions, never on the host** (D-10). CI runs lint, `astro check`, tests, build and the
-  content checks in site-data. **Only a push to `main` publishes** an image to GHCR (public package), with a build
-  provenance attestation; pull requests and forks never publish and never see a secret. The host pulls **by digest**
+  content checks in site-data. **Only a release tag `vX.Y.Z` on a commit of `main` publishes** an image `X.Y.Z` to GHCR (public package; a merge to
+  `main` never builds one, D-24), with a build provenance attestation; pull requests and forks never publish and never
+  see a secret. The host pulls **by digest**
   and verifies the attestation first; **CI holds no SSH key or any credential for the host** (pull model).
   The image must carry **no `traefik.*` label** (inherited or added), and CI fails if it does. All of this, with the
   workflow hygiene rules and the owner-approved deploy step, is specified in [deploy](../contracts/deploy.md).
@@ -66,12 +67,12 @@ file in it is empty and its `package.json` has no dependencies.
 
 ### 4. Content and data modeling
 
-Full schemas are in [site-data](../contracts/site-data.md). Summary: UI strings are typed files with one master
-locale; entities (projects, game servers, team, Xeon parts) are YAML files validated by Zod through Astro content
+Full schemas are in [site-data](../contracts/site-data.md). Summary: UI strings are JSON files with one master
+locale (type assertion plus test for key parity); entities (projects, game servers, team, Xeon parts) are YAML files validated by Zod through Astro content
 collections, with translatable fields as `{ pt-br, en-us }` objects and everything else stated once; legal pages are
 Markdown per locale with a parity check; the build fails on missing data, missing translations or missing consent.
-Money is stored as integer cents. Support data is read through a single module so a payment gateway can replace the
-file later (D-16).
+Money is stored as integer cents. Support data (goal and parts) is read through a single module. At launch the site
+receives no money and carries no payment data (D-28); donations and the transparency panel are a later contract (D-21).
 
 ### 5. Live member count
 

@@ -50,11 +50,17 @@ com worktrees e o mapa de risco, em [`AGENTS.md`](AGENTS.md).
 
 Antes de enviar alterações, consulte nossas diretrizes de engenharia e fluxo de trabalho no repositório [`.github`](https://github.com/Empire-Community/.github).
 
+A raiz do repositório fica sempre na `main`: o trabalho acontece em um worktree, em uma branch `tipo/nome-curto`.
+
 ```bash
-git checkout -b feat/minha-feature
+git worktree add worktrees/feat-minha-feature -b feat/minha-feature main
+cd worktrees/feat-minha-feature
 git commit -m "feat(portal): adicionar nova secao"
-git push origin feat/minha-feature
+git push -u origin feat/minha-feature
 ```
+
+Push, PR e merge têm autorização permanente do dono (decisão D-31); nunca na `main` direto. Releases e deploys exigem a
+aprovação explícita do dono a cada vez.
 
 ## 📜 Licença
 
