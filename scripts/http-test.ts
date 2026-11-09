@@ -43,7 +43,8 @@ async function checkPath(expected: Expectation, init: RequestInit = {}): Promise
 
 const home = await checkPath({ path: '/pt-br/', status: [200], csp: DEFAULT_CSP, cache: NO_CACHE });
 await checkPath({ path: '/en-us/support/', status: [200], csp: SUPPORT_CSP, cache: NO_CACHE });
-await checkPath({ path: '/en-us/support', status: [200], csp: SUPPORT_CSP, cache: NO_CACHE });
+// Slashless: redirected, and the redirect already carries the support-page CSP.
+await (await checkPath({ path: '/en-us/support', status: [301], csp: SUPPORT_CSP, cache: NO_CACHE })).arrayBuffer();
 await checkPath({ path: '/no-such-page/', status: [404], csp: DEFAULT_CSP, cache: NO_CACHE });
 await checkPath({ path: '/healthz', status: [200], csp: DEFAULT_CSP, cache: 'no-store' });
 // members.json is served by the Worker in production; the origin fallback may not exist yet. Either way the headers
@@ -62,6 +63,20 @@ else await checkPath({ path: asset, status: [200], csp: DEFAULT_CSP, cache: 'pub
 
 const post = await checkPath({ path: '/pt-br/', status: [405], csp: DEFAULT_CSP, cache: NO_CACHE }, { method: 'POST', body: 'x' });
 await post.arrayBuffer();
+
+// The method rule covers every location, healthz included (routing-locale section 6).
+const healthPost = await checkPath({ path: '/healthz', status: [405], csp: DEFAULT_CSP, cache: 'no-store' }, { method: 'POST', body: 'x' });
+await healthPost.arrayBuffer();
+
+// A locale URL without the trailing slash is redirected (relative Location), the slash form answers 200.
+const slashless = await checkPath({ path: '/pt-br/projects', status: [301], csp: DEFAULT_CSP, cache: NO_CACHE });
+await slashless.arrayBuffer();
+if (slashless.status === 301 && slashless.headers.get('location') !== '/pt-br/projects/') {
+  fail('GET /pt-br/projects', `Location is ${slashless.headers.get('location')}, expected /pt-br/projects/`);
+}
+const slashed = await fetch(`${base}/pt-br/projects/`, { redirect: 'manual' });
+await slashed.arrayBuffer();
+if (slashed.status !== 200) fail('GET /pt-br/projects/', `status ${slashed.status}, expected 200`);
 
 // /discord answers 200 with no Location header, with or without a query string (D-29).
 for (const path of ['/discord', '/discord/?utm_source=ci']) {

@@ -17,6 +17,10 @@ export function checkWorkflow(file: string, workflow: Workflow): WorkflowFinding
   for (const forbidden of ['pull_request_target', 'workflow_run']) {
     if (triggers.includes(forbidden)) fail(`trigger ${forbidden} is not allowed`);
   }
+  // ADR-0003: environment secrets are open to any job naming the environment, so only worker-deploy.yml may name it.
+  if (!/(^|\/)worker-deploy\.ya?ml$/.test(file) && JSON.stringify(workflow).includes('worker-production')) {
+    fail('only worker-deploy.yml may name the environment worker-production (ADR-0003)');
+  }
   if (workflow.permissions === undefined) fail('top-level permissions block is missing');
   for (const [name, job] of Object.entries(workflow.jobs ?? {})) {
     if (job['timeout-minutes'] === undefined) fail(`job ${name}: timeout-minutes is missing`);

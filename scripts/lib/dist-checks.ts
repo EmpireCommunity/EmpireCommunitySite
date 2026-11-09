@@ -119,3 +119,22 @@ export function hreflangReciprocity(pages: ReadonlyMap<string, string>, origin: 
   }
   return findings;
 }
+
+/** Origin fallback of the member count (members-json sections 2 and 4): the schema, built-in source, bounds. */
+export function membersFallback(text: string, file: string): Finding[] {
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return [err(file, 'is not valid JSON')];
+  }
+  const root = data as { schema?: unknown; discord?: { members?: unknown; updatedAt?: unknown; source?: unknown } };
+  const discord = root.discord;
+  const members = discord?.members;
+  const valid =
+    root.schema === 1 &&
+    typeof members === 'number' && Number.isInteger(members) && members >= 1 && members <= 1_000_000 &&
+    typeof discord?.updatedAt === 'string' && !Number.isNaN(Date.parse(discord.updatedAt)) &&
+    discord.source === 'built-in';
+  return valid ? [] : [err(file, 'does not match members.json v1 (schema 1, integer members 1..1000000, date-time updatedAt, source built-in)')];
+}

@@ -9,9 +9,11 @@ Account and platform settings that exist today live in the private runbook, not 
 2. Release PR `chore/release-X.Y.Z`: move `[Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD` and set the tag part of the
    `image:` line in `deploy/compose.yml` to `X.Y.Z` (the digest stays a placeholder; the real one is filled on the host).
    Never straight to `main`.
-3. After the merge and a green `CI` run on `main`, the owner creates an **annotated** tag on the merge commit:
+3. After the merge and a green `CI` run on `main`, with **no other merge in between**, the owner creates an
+   **annotated** tag on that commit, which must be the tip of `main` (if another merge landed first, tag the newest
+   commit or ship the next patch version):
    `git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z`. `-rc.N` tags are for a rehearsal only.
-4. `release.yml` runs the guards (tag format, annotated, commit in `origin/main`, push `CI` run succeeded on that commit,
+4. `release.yml` runs the guards (tag format, annotated, commit is the tip of `origin/main`, push `CI` run succeeded on that commit,
    CHANGELOG section dated and non-empty, compose names the version, no flag in `scripts/lib/pending.ts` is true, image for the version does not exist), then
    builds, pushes `ghcr.io/empirecommunity/empirecommunitysite:X.Y.Z` (SBOM and provenance attached), attests the
    digest and creates the GitHub Release with the CHANGELOG notes and `image-digest.txt`. The digest is also in the

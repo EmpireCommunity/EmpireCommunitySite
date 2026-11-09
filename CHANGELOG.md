@@ -15,4 +15,5 @@ release happens and which version it gets. The release PR (`chore/release-X.Y.Z`
 - Container image on `nginx-unprivileged` (non-root, port 8080, `/healthz`, no access log, `/data/` query blocked).
 - Tag-driven release pipeline with guards, SBOM, provenance and a build provenance attestation.
 - Release guard: `release.yml` fails while any flag in `scripts/lib/pending.ts` is true. `CODEOWNERS` added.
+- Release guard: the tag must be the tip of `origin/main`. nginx redirects slashless locale URLs and serves `/discord` directly (200). HTTP test covers `POST /healthz`, slashless redirect and `/discord`. Workflow lint: only `worker-deploy.yml` may name `worker-production`. `dist` check for the member-count fallback (pending flag `membersFallback`).
 - Deploy compose template with image `tag@sha256` and the proxy network labels.

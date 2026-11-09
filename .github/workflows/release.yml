@@ -49,7 +49,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: The tag is annotated and its commit is on origin/main
+      - name: The tag is annotated and its commit is the tip of origin/main
         env:
           TAG: ${{ github.ref_name }}
         run: |
@@ -58,8 +58,8 @@ jobs:
             exit 1
           fi
           git fetch --no-tags origin main:refs/remotes/origin/main
-          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
-            echo "::error::The commit of '$TAG' is not in origin/main."
+          if [ "$GITHUB_SHA" != "$(git rev-parse refs/remotes/origin/main)" ]; then
+            echo "::error::The commit of '$TAG' is not the tip of origin/main. Releases are cut from the newest commit only: tag the newest commit of main, or ship the next patch version."
             exit 1
           fi
 

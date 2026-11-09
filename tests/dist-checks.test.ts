@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  discordLinks, hreflangReciprocity, inlineExecutable, paymentGuard, whatsappAbsent,
+  discordLinks, hreflangReciprocity, inlineExecutable, membersFallback, paymentGuard, whatsappAbsent,
 } from '../scripts/lib/dist-checks.ts';
 import { checkWorkflow } from '../scripts/lib/workflow-rules.ts';
 
@@ -56,4 +56,19 @@ test('workflow hygiene: unpinned action, missing permissions and pull_request_ta
   assert.equal(checkWorkflow('w', good).length, 0);
   const bad = { on: { pull_request_target: {} }, jobs: { a: { steps: [{ uses: 'x/y@v1' }, { run: 'echo ${{ github.event.pull_request.title }}' }] } } };
   assert.equal(checkWorkflow('w', bad).length, 5);
+});
+
+test('workflow rule: only worker-deploy.yml may name the worker-production environment', () => {
+  const wf = { on: 'push', permissions: {}, jobs: { a: { 'timeout-minutes': 1, environment: 'worker-production', steps: [] } } };
+  assert.equal(checkWorkflow('.github/workflows/worker-deploy.yml', wf).length, 0);
+  assert.equal(checkWorkflow('.github/workflows/ci.yml', wf).length, 1);
+});
+
+test('members fallback validates the members.json v1 shape and the built-in source', () => {
+  const ok = { schema: 1, discord: { members: 888, updatedAt: '2026-11-09T00:00:03.120Z', source: 'built-in' } };
+  assert.equal(membersFallback(JSON.stringify(ok), 'm').length, 0);
+  for (const bad of [{ ...ok, schema: 2 }, { ...ok, discord: { ...ok.discord, members: 0 } }, { ...ok, discord: { ...ok.discord, source: 'x' } }]) {
+    assert.equal(membersFallback(JSON.stringify(bad), 'm').length, 1);
+  }
+  assert.equal(membersFallback('{', 'm').length, 1);
 });
