@@ -208,7 +208,7 @@ Desktop 1440
 │                      │ Project Zomboid                Em breve         │
 │                      │ Factorio                       Em breve         │
 ├──────────────────────┼─────────────────────────────────────────────────┤
-│  Como nos mantemos   │ Texto + R$ 3.000                     Apoiar →   │
+│  Como nos mantemos   │ Texto                                Apoiar →   │
 ├──────────────────────┴─────────────────────────────────────────────────┤
 │  Faça parte.                [ Discord ]      [ WhatsApp (pt) ]         │
 ├────────────────────────────────────────────────────────────────────────┤
