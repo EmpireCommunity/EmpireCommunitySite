@@ -15,7 +15,7 @@ Account and platform settings that exist today live in the private runbook, not 
    `git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z`. `-rc.N` tags are for a rehearsal only.
 4. `release.yml` runs the guards (tag format, annotated, commit is the tip of `origin/main`, push `CI` run succeeded on that commit,
    CHANGELOG section dated and non-empty, compose names the version, no flag in `scripts/lib/pending.ts` is true, image for the version does not exist), then
-   builds, pushes `ghcr.io/empirecommunity/empirecommunitysite:X.Y.Z` (SBOM and provenance attached), attests the
+   builds, pushes `docker.io/or4cu1o/empirecommunitysite:X.Y.Z` (SBOM and provenance attached), attests the
    digest and creates the GitHub Release with the CHANGELOG notes and `image-digest.txt`. The digest is also in the
    run summary.
 5. A failed guard publishes nothing: fix the cause and push a new tag name only if the old tag never produced an image.
@@ -23,22 +23,26 @@ Account and platform settings that exist today live in the private runbook, not 
 
 ## First publication (owner action, once)
 
-GHCR creates a new package as **private**. `release.yml` does not change visibility, and Guindaste does not either:
-that is a package setting the owner changes.
+The image goes to Docker Hub, where a public repository is anonymous-pull by default (owner rule: public projects on
+Docker Hub, private ones on GHCR). `release.yml` logs in with the org secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`
+(names only; the values never appear in the repository, a log or a report) and does not change repository settings.
 
-1. After the first successful `release.yml` run (whichever tag publishes first creates the package, an `-rc.N`
-   rehearsal included), the owner opens the package settings of `empirecommunitysite` on GitHub and sets the visibility
-   to **public**.
-2. Verify an anonymous pull from a machine with no GHCR login before any deploy:
-   `docker logout ghcr.io; docker pull ghcr.io/empirecommunity/empirecommunitysite@sha256:<digest>`. A failure
-   ("unauthorized" or "denied") means the package is still private: do not deploy.
+1. Before the first tag, confirm that the account behind the token can push to the `or4cu1o` namespace, and that the
+   repository `or4cu1o/empirecommunitysite` is **public** (create it public on Docker Hub, or check its visibility
+   after the first publication; a push creates it with the namespace default). The workflow cannot check this.
+2. After the first successful `release.yml` run (an `-rc.N` rehearsal included), verify an anonymous pull from a
+   machine with no Docker Hub login before any deploy:
+   `docker logout; docker pull docker.io/or4cu1o/empirecommunitysite@sha256:<digest>`. A failure ("denied" or
+   "requested access to the resource is denied") means the repository is private or wrong: do not deploy.
+3. Optional, an owner setting on Docker Hub: immutable tags for the repository. The workflow already refuses to
+   publish a version whose tag exists.
 
 ## Deploy (Guindaste, only with the owner's OK for that deploy)
 
-1. Take the digest from the release (`image-digest.txt`) or the run summary. The package must already be public
+1. Take the digest from the release (`image-digest.txt`) or the run summary. The repository must already be public
    (see First publication); the host pulls without a credential.
 2. Verify before pulling (on the owner's machine if the host should not hold a GitHub credential):
-   `gh attestation verify oci://ghcr.io/empirecommunity/empirecommunitysite@sha256:<digest> --repo EmpireCommunity/EmpireCommunitySite --cert-identity https://github.com/EmpireCommunity/EmpireCommunitySite/.github/workflows/release.yml@refs/tags/vX.Y.Z --cert-oidc-issuer https://token.actions.githubusercontent.com`.
+   `gh attestation verify oci://docker.io/or4cu1o/empirecommunitysite@sha256:<digest> --repo EmpireCommunity/EmpireCommunitySite --cert-identity https://github.com/EmpireCommunity/EmpireCommunitySite/.github/workflows/release.yml@refs/tags/vX.Y.Z --cert-oidc-issuer https://token.actions.githubusercontent.com`.
    Any failure aborts.
 3. On the host: dated backup of the compose file beside it, set `image:` to `...:X.Y.Z@sha256:<digest>`,
    `docker compose up -d --wait`, then run the HTTP header test against the public URL

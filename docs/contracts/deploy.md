@@ -27,7 +27,7 @@
 | File | Trigger | Does | Permissions | Secrets |
 |---|---|---|---|---|
 | `ci.yml` | `pull_request`, push to `main` | lint, typecheck, tests, build, content and `dist` checks (section 4), image build and image checks, HTTP header test, worker config check (arrives with the Worker, T-14), workflow lint, secret scan | `contents: read` | none |
-| `release.yml` | push of a tag `vX.Y.Z` (or `vX.Y.Z-rc.N`, a rehearsal) | **guards** (section 5), then build the image, push `X.Y.Z` (`X.Y.Z-rc.N` for a rehearsal) to GHCR with SBOM and provenance, create the attestation, create the GitHub Release with the changelog notes and `image-digest.txt`, print the digest in the run summary | `permissions: {}` at top; guards job `contents: read`; publish job adds `packages: write`, `id-token: write`, `attestations: write`; release job `contents: write` | none (uses the run's token) |
+| `release.yml` | push of a tag `vX.Y.Z` (or `vX.Y.Z-rc.N`, a rehearsal) | **guards** (section 5), then build the image, push `X.Y.Z` (`X.Y.Z-rc.N` for a rehearsal) to Docker Hub with SBOM and provenance, create the attestation, create the GitHub Release with the changelog notes and `image-digest.txt`, print the digest in the run summary | `permissions: {}` at top; guards job `contents: read`; publish job adds `id-token: write`, `attestations: write` (no `packages`, nothing is published to GHCR); release job `contents: write` | `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (org secrets), read only by the login step of the publish job |
 | `worker-deploy.yml` | push to `main` touching `worker/**` or `src/data/site.yaml` (the invite, members-json 2.6), manual dispatch from `main` | deploys the Worker behind the protected environment | per ADR-0003 | environment secrets only |
 | `integrity.yml` | schedule, manual | checks the live site for invariants the release guards cannot see (section 8); not written yet | `contents: read` | none |
 
@@ -64,7 +64,7 @@ permission, it is a separate job with its own `permissions` block.
   if any key starts with `traefik.`. The Dockerfile has no `LABEL` with that prefix. Routing labels exist **only** in
   the compose template (below), never in an image, so an inherited label cannot route another host name.
 - **Compose template validation.** `deploy/compose.yml` is the template for the host. CI parses it and fails unless
-  the `image` line has the form `ghcr.io/empirecommunity/empirecommunitysite:X.Y.Z@sha256:<64 hex>` (the digest in the
+  the `image` line has the form `docker.io/or4cu1o/empirecommunitysite:X.Y.Z@sha256:<64 hex>` (the digest in the
   repository is a **placeholder that is never deployed**) and the only `traefik.*` keys are `traefik.enable`,
   `traefik.docker.network`, one router rule that is exactly ``Host(`empirecommunity.org`)`` (the host name in backticks, as Traefik's rule
   syntax requires), and one service port (8080).
@@ -106,10 +106,10 @@ withdrawal ([site-data](site-data.md) 9.1) images already published with the dat
 never a rollback or deploy target. If the image was published and a later
 step fails, the run is not repeated: the next patch version ships.
 
-**Publication.** The image is `ghcr.io/empirecommunity/empirecommunitysite:X.Y.Z` (`:X.Y.Z-rc.N` for a rehearsal). **No mutable tag (`latest`, a
+**Publication.** Owner rule: a public project publishes on Docker Hub, a private one on GHCR. This repository is public (D-45), so the image is `docker.io/or4cu1o/empirecommunitysite:X.Y.Z` (`:X.Y.Z-rc.N` for a rehearsal). **No mutable tag (`latest`, a
 branch name or a commit tag) is used for deployment**; the deploy reference is the digest in `image-digest.txt` of
 the GitHub Release and in the run summary. The job attaches SBOM and provenance and creates a build provenance
-attestation for that digest with the official GitHub attestation action (pinned by SHA).
+attestation for that digest with the official GitHub attestation action (pinned by SHA), with `subject-name` `docker.io/or4cu1o/empirecommunitysite` (the form GitHub's docs require for Docker Hub) and the attestation also pushed to the registry. The verification in section 6 reads GitHub's attestation store by digest.
 
 **Identity.** The attestation of a valid release has the identity
 `https://github.com/EmpireCommunity/EmpireCommunitySite/.github/workflows/release.yml@refs/tags/vX.Y.Z`. An image built
@@ -120,7 +120,7 @@ deployable by the procedure below.
 
 1. Take the digest from the release (`image-digest.txt`) or the `release.yml` run summary for the tag.
 2. **Verify the attestation before pulling**, for example
-   `gh attestation verify oci://ghcr.io/empirecommunity/empirecommunitysite@sha256:<digest> --repo EmpireCommunity/EmpireCommunitySite --cert-identity https://github.com/EmpireCommunity/EmpireCommunitySite/.github/workflows/release.yml@refs/tags/vX.Y.Z --cert-oidc-issuer https://token.actions.githubusercontent.com`
+   `gh attestation verify oci://docker.io/or4cu1o/empirecommunitysite@sha256:<digest> --repo EmpireCommunity/EmpireCommunitySite --cert-identity https://github.com/EmpireCommunity/EmpireCommunitySite/.github/workflows/release.yml@refs/tags/vX.Y.Z --cert-oidc-issuer https://token.actions.githubusercontent.com`
    (the runbook's `--signer-workflow` plus `--source-ref refs/tags/vX.Y.Z` form is equivalent). Any failure aborts the
    deploy. The identity pins the workflow **and** the tag. Whether the verifying tool needs a read-only token on the
    host is **not verified**; if it does, verify on the owner's machine and carry only the verified digest, so the
