@@ -1,5 +1,5 @@
 # Catalog verified on 2026-11-08 (docs/design/information-architecture.md section 5). A link exists only for what works
-# today (D-7). github-worker-relay is left out until the owner answers P-10 (is it in production?).
+# today (D-7). github-worker-relay is in production (owner, P-10 closed).
 - id: empiremuse
   name: EmpireMuse
   kind: bot
@@ -10,6 +10,15 @@
   url: https://muse.empirecommunity.org
   repo: EmpireCommunity/EmpireMuse
   order: 10
+- id: github-worker-relay
+  name: github-worker-relay
+  kind: infrastructure
+  status: live
+  summary:
+    pt-br: "Cloudflare Worker que anuncia no Discord as novas versões dos projetos da organização."
+    en-us: "Cloudflare Worker that announces the organization's releases on Discord."
+  repo: EmpireCommunity/github-worker-relay
+  order: 20
 - id: empirecommunitysite
   name: EmpireCommunitySite
   kind: site
@@ -18,7 +27,7 @@
     pt-br: "Este site."
     en-us: "This website."
   repo: EmpireCommunity/EmpireCommunitySite
-  order: 20
+  order: 30
 - id: empirehub
   name: EmpireHub
   kind: tool
@@ -26,7 +35,7 @@
   summary:
     pt-br: "Jogos de mesa, tabuleiro e cartas dentro do Discord, como Discord Activity."
     en-us: "Tabletop, board and card games inside Discord, as a Discord Activity."
-  order: 30
+  order: 40
 - id: empirebot
   name: EmpireBot
   kind: bot
@@ -34,7 +43,7 @@
   summary:
     pt-br: "Integra o Discord aos servidores de jogos: vínculo de conta, whitelist e cargos."
     en-us: "Connects Discord to game servers: account linking, whitelist and roles."
-  order: 40
+  order: 50
 - id: empirecraft
   name: EmpireCraft
   kind: mod
@@ -42,4 +51,4 @@
   summary:
     pt-br: "Mod para Minecraft."
     en-us: "A Minecraft mod."
-  order: 50
+  order: 60

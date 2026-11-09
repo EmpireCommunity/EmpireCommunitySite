@@ -133,5 +133,6 @@
   "organization.contact.legal": "Legal matters and personal data",
   "organization.addresses.col.address": "Address",
   "organization.addresses.col.purpose": "Purpose",
-  "organization.addresses.col.status": "Status"
+  "organization.addresses.col.status": "Status",
+  "projects.open.guides": "Contribution guides"
 }

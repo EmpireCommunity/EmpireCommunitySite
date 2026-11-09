@@ -57,8 +57,9 @@ const projects = (await getCollection('projects'))
     <Index closed>
       <IndexSection title={t(locale, 'projects.open.title')}>
         <p class="max-w-[68ch] text-body text-papel-suave">{t(locale, 'projects.open.body')}</p>
-        <div class="mt-16">
+        <div class="mt-16 flex flex-wrap gap-x-24">
           <ArrowLink href={site.links.github} label={t(locale, 'footer.github')} />
+          <ArrowLink href={site.links.contributing} label={t(locale, 'projects.open.guides')} />
         </div>
       </IndexSection>
     </Index>
