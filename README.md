@@ -19,9 +19,24 @@ Este repositório armazena o código-fonte, layout e documentações do portal p
 
 ## 🛠️ Stack Tecnológica
 
-- **Framework Web**: Astro / React
-- **Estilização**: Tailwind CSS
+- **Framework Web**: Astro 7 (site estático), TypeScript, sem React
+- **Estilização**: Tailwind CSS 4, com os tokens de design em `@theme`
+- **Gerenciador de pacotes**: pnpm (Node 24 LTS)
 - **CI/CD**: GitHub Actions
+
+## 🚀 Desenvolvimento
+
+```bash
+pnpm install --frozen-lockfile
+pnpm dev      # servidor local
+pnpm build    # gera dist/
+pnpm check    # astro check
+pnpm lint
+pnpm test
+```
+
+Rotas em `/pt-br/` e `/en-us/` (ver `docs/contracts/routing-locale.md`). Regras para quem contribui, incluindo o fluxo
+com worktrees e o mapa de risco, em [`AGENTS.md`](AGENTS.md).
 
 ## 🤝 Contribuição
 

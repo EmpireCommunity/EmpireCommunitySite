@@ -1,0 +1,23 @@
+---
+// One page per inner route key and locale: 7 keys x 2 locales. Slugs come from src/lib/routes.ts.
+import type { GetStaticPaths } from 'astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { t } from '../../i18n/index.ts';
+import type { MessageKey } from '../../i18n/index.ts';
+import { INNER_ROUTE_KEYS, LOCALES, isLocale, routeKeyFromSlug, slugOf } from '../../lib/routes.ts';
+
+export const getStaticPaths = (() =>
+  LOCALES.flatMap((locale) =>
+    INNER_ROUTE_KEYS.map((routeKey) => ({ params: { locale, route: slugOf(routeKey) } })),
+  )) satisfies GetStaticPaths;
+
+const { locale, route } = Astro.params;
+const routeKey = route === undefined ? undefined : routeKeyFromSlug(route);
+if (!isLocale(locale) || routeKey === undefined) throw new Error(`unexpected route: ${locale}/${route}`);
+---
+
+<BaseLayout locale={locale} routeKey={routeKey}>
+  <main id="content">
+    <h1>{t(locale, `meta.${routeKey}.title` as MessageKey)}</h1>
+  </main>
+</BaseLayout>

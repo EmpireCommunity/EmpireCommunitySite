@@ -1,0 +1,28 @@
+---
+// Fallback chooser: shown only when the Cloudflare redirect rules are off or on direct origin access
+// (docs/contracts/routing-locale.md section 3). Static, HTTP 200, no script, `lang` unset on the container.
+import '../styles/global.css';
+import { routePath } from '../lib/routes.ts';
+
+const site = Astro.site;
+if (site === undefined) throw new Error('`site` must be set in astro.config.ts');
+---
+
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EmpireCommunity</title>
+    <link rel="alternate" hreflang="x-default" href={new URL('/', site).href} />
+  </head>
+  <body>
+    <main id="content">
+      <h1>EmpireCommunity</h1>
+      <ul>
+        <li><a href={routePath('pt-br', 'home')} lang="pt-BR" hreflang="pt-BR">Português (Brasil)</a></li>
+        <li><a href={routePath('en-us', 'home')} lang="en-US" hreflang="en-US">English</a></li>
+      </ul>
+    </main>
+  </body>
+</html>
