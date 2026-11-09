@@ -25,3 +25,19 @@ Copied into `src/components/Icon.astro` (nothing installed), monochrome, `curren
 | Discord, WhatsApp marks | Simple Icons 16.37.0 (`discord`, `whatsapp`) | CC0 1.0 |
 
 The brand marks stay trademarks of their owners; they are used only to name the channel a button leads to.
+
+## Brand (logo and icons)
+
+**The MIT license of this repository covers the code only. It does not apply to the brand files.** The Rack mark, the
+lockup, the wordmark as a logo, the icon set and the share image are copyright EmpireCommunity, all rights reserved
+(owner decision D-46). No license is granted to copy, modify, redistribute or use them, and the MIT terms do not extend to
+them. They are published in this repository only because the site needs them to render.
+
+Files covered:
+
+- `src/assets/brand/` (the lockup, inlined by `Wordmark.astro`);
+- in `public/`: `favicon.svg`, `favicon.ico`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png` and `og-image.png`.
+
+The word in the lockup is the text `EmpireCommunity` set in Source Serif 4 (weight 600) and converted to outlines. The font
+itself stays under SIL OFL 1.1 (license text in `public/fonts/OFL-source-serif-4.txt`), which allows this use; the OFL
+does not make the logo free to reuse.

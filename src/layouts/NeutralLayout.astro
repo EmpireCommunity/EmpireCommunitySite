@@ -4,6 +4,7 @@
 // is met) and every element in the other language carries its own `lang`. There is no locale header, selector or
 // footer here, and no script; the skip link is in English, the page language. Extra head tags (for example the x-default alternate) go in the `head` slot.
 import '../styles/global.css';
+import BrandHead from '../components/BrandHead.astro';
 import FontPreload from '../components/FontPreload.astro';
 import SkipLink from '../components/SkipLink.astro';
 import Wordmark from '../components/Wordmark.astro';
@@ -25,6 +26,7 @@ const { title, noindex = false } = Astro.props;
     {noindex && <meta name="robots" content="noindex" />}
     <title>{title}</title>
     <slot name="head" />
+    <BrandHead />
     <FontPreload />
   </head>
   <body class="flex min-h-screen flex-col">

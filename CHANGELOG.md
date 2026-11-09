@@ -11,6 +11,7 @@ release happens and which version it gets. The release PR (`chore/release-X.Y.Z`
 
 ### Added
 
+- Brand swap (T-3f, D-40, D-42): `Wordmark.astro` now inlines the approved Rack lockup (`src/assets/brand/lockup-header.svg`, 242 x 28, `currentColor` ink, accessible name on the SVG; 22 px high below 376 px, replacing the 20 px text rule). Favicon set in `public/` (`favicon.svg`, `favicon.ico`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`) linked from both layouts through `BrandHead.astro`, and `og-image.png` (1200 x 630) as the default Open Graph image, on locale and neutral pages alike (the root chooser, the 404 and /discord keep their own `noindex` rules). Static images only: the Discord GIFs are not on the site (WCAG 2.2.2). `check-dist` fails when one of those files is not built.
 - CI for the site (quality, build and `dist` checks, image and HTTP header checks, workflow lint, secret scan).
 - Container image on `nginx-unprivileged` (non-root, port 8080, `/healthz`, no access log, `/data/` query blocked).
 - Tag-driven release pipeline with guards, SBOM, provenance and a build provenance attestation.

@@ -1,10 +1,22 @@
 ---
-// LOGO SWAP POINT (the only one). The owner has not approved the final logo (T-3, D-4), so the header shows the
-// text wordmark from the design record: Source Serif 4, 400, 22 px, papel. When the approved SVG exists, replace the
-// <span> below with it (inline SVG in `currentColor` or an <img>; keep the accessible name, which comes from the
-// link in SiteHeader and the `a11y.logo` message, not from this file). Nothing else in the header changes.
-// Below 360 px the size drops to 20 px so the wordmark and the Menu button do not touch at 320 px.
-// Do not use any draft from the logo folder.
+// LOGO SWAP POINT (the only one): the approved Rack lockup (D-40, D-42), `src/assets/brand/lockup-header.svg`, 242 x 28.
+// It is inlined, so the bars and the word take the text colour (`currentColor`, papel here) and the two LEDs keep their
+// fixed colours; an <img> could not inherit the colour. There is no inline style or script: size comes from classes.
+// Height 28 px, 22 px below 376 px (`max-[376px]`: Tailwind 4 `max-*` is a strict "less than") (the lockup's minimum height), which also keeps it clear of the Menu button at 320 px.
+// The name is on the SVG (`role="img"`), so it is announced alone on the neutral pages; inside the header link the
+// link's own `aria-label` (`a11y.logo`) takes over, as before.
+import lockup from '../assets/brand/lockup-header.svg?raw';
+
+interface Props {
+  /** Accessible name of the mark (the brand name is not translated). */
+  label?: string;
+}
+
+const { label = 'EmpireCommunity' } = Astro.props;
+const svg = lockup.replace(
+  /<svg\b[^>]*>/,
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 242 28" role="img" aria-label="${label}" focusable="false" class="block h-[28px] w-auto shrink-0 text-papel max-[376px]:h-[22px]">`,
+);
 ---
 
-<span class="font-display text-[22px] max-[359px]:text-[20px] leading-tight font-normal text-papel [overflow-wrap:anywhere]">EmpireCommunity</span>
+<Fragment set:html={svg} />

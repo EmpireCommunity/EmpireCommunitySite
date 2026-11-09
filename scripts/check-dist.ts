@@ -44,6 +44,11 @@ const files = listFiles(distDir);
 const htmlFiles = files.filter((file) => file.endsWith('.html'));
 const localePages = htmlFiles.filter((file) => /^(pt-br|en-us)\//.test(file) && file.endsWith('/index.html'));
 
+// Brand set (D-40, D-42): the files the head links and the Open Graph image point to are built.
+for (const file of ['favicon.ico', 'favicon.svg', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'og-image.png']) {
+  if (!files.includes(file)) add({ level: 'error', file, message: 'brand file is not built (public/)' });
+}
+
 // C-3: the same pages exist in both locales.
 const stripLocale = (file: string) => file.replace(/^(pt-br|en-us)\//, '');
 for (const locale of ['pt-br', 'en-us']) {
