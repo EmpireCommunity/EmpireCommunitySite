@@ -86,7 +86,8 @@ for (const file of whatsappScope) {
 for (const file of listFiles('src/content/legal')) add(...whatsappAbsent(read('src/content/legal', file), `src/content/legal/${file}`));
 
 // D-41: the WhatsApp community link is read only by the /discord page.
-for (const file of files.filter((f) => TEXT_EXTENSIONS.test(f))) {
+// Stylesheets are scanned here too (a URL in `content:` or `url()` would publish the link); the other scans keep TEXT_EXTENSIONS.
+for (const file of files.filter((f) => TEXT_EXTENSIONS.test(f) || f.endsWith('.css'))) {
   add(...whatsappInviteLink(read(distDir, file), file, file === 'discord/index.html'));
 }
 

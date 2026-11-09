@@ -22,7 +22,7 @@ release happens and which version it gets. The release PR (`chore/release-X.Y.Z`
 - Sitemap through `@astrojs/sitemap` 3.7.4 (MIT), locale pages only with `hreflang` pairs. `dist` checks for `html lang` and for the language selector targets.
 - Home and Como participar pages (T-8): hero, numbers strip, purpose, what we do, funding and join sections; the projects and game-server sections appear when `projects.yaml` and `game-servers.yaml` have entries. Join page with one channel block per channel of the locale, a "what you can do" list and a native `<details>` FAQ. Every channel button and footer link goes to `/discord` (R-5, D-41).
 - Components: channel button and pair, ruled line, Índice with A Margem (draws once on the Home), numbers strip, FAQ item, arrow link, icons (Lucide ISC, Simple Icons CC0, recorded in `LICENSES.md`).
-- Member count: shared display rule (`src/lib/members.ts`) and an external script that swaps the built-in Discord value for `/data/members.json` and does nothing on any failure. The Discord figure is rendered only when `community.yaml` has a verified `discord.membersBuiltIn`, which the owner has not supplied.
+- Member count: shared display rule (`src/lib/members.ts`) and an external script that swaps the built-in Discord value for `/data/members.json` and does nothing on any failure.
 - Data: `community.yaml` (founded 2022, purpose, WhatsApp 60 members), `join-channels.yaml` (Discord, WhatsApp pt-BR only), `site.yaml` `discord.inviteCode` and `discord.guildId`, with the schema for them.
 - `dist` checks: the WhatsApp community link may appear only on the `/discord` page; legal pages are scanned for WhatsApp on their `<main>` (the pt-BR footer lists the channel).
 
