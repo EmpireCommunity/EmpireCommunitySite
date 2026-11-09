@@ -25,3 +25,10 @@ Copied into `src/components/Icon.astro` (nothing installed), monochrome, `curren
 | Discord, WhatsApp marks | Simple Icons 16.37.0 (`discord`, `whatsapp`) | CC0 1.0 |
 
 The brand marks stay trademarks of their owners; they are used only to name the channel a button leads to.
+
+## Brand (logo and icons)
+
+The Rack mark, the lockup and the icon set are the project's own artwork (owner-approved, D-40 and D-42), shipped from
+`src/assets/brand/lockup-header.svg` (inlined by `Wordmark.astro`) and `public/` (favicon, touch and manifest icons,
+Open Graph image). The word in the lockup is the text `EmpireCommunity` set in Source Serif 4 (weight 600) and converted
+to outlines; the font is SIL OFL 1.1 (license text in `public/fonts/OFL-source-serif-4.txt`), which allows this use.
