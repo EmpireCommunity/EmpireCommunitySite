@@ -1,0 +1,69 @@
+---
+// Infraestrutura e servidores de jogos (information-architecture section 7.3): game servers, request a game, where
+// everything runs (general level only, R-13), our own server. Servers carry no link: access is through Discord (D-37).
+// The request sentence names the channels from the join-channels data, so WhatsApp reaches pt-BR only (C-1).
+import type { GetStaticPaths } from 'astro';
+import { getCollection } from 'astro:content';
+import ArrowLink from '../../components/ArrowLink.astro';
+import Index from '../../components/Index.astro';
+import IndexSection from '../../components/IndexSection.astro';
+import RegisterList from '../../components/RegisterList.astro';
+import RegisterRow from '../../components/RegisterRow.astro';
+import Status from '../../components/Status.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { t } from '../../i18n/index.ts';
+import { LOCALES, isLocale, routePath } from '../../lib/routes.ts';
+import { channelPhrase, getJoinChannels, sortGameServers } from '../../lib/site-data.ts';
+
+export const getStaticPaths = (() => LOCALES.map((locale) => ({ params: { locale } }))) satisfies GetStaticPaths;
+
+const { locale } = Astro.params;
+if (!isLocale(locale)) throw new Error(`unexpected locale: ${locale}`);
+
+const channels = await getJoinChannels(locale);
+const servers = sortGameServers((await getCollection('gameServers')).map((entry) => entry.data));
+---
+
+<BaseLayout locale={locale} routeKey="game-servers">
+  <div class="frame pt-64 lg:pt-96">
+    <h1 class="font-display text-display text-papel">{t(locale, 'servers.title')}</h1>
+    <p class="mt-24 max-w-[56ch] pb-48 text-lead text-papel-suave lg:pb-64">{t(locale, 'servers.lead')}</p>
+
+    <Index closed>
+      {
+        servers.length > 0 && (
+          <IndexSection title={t(locale, 'home.servers.title')} rows>
+            <RegisterList>
+              {servers.map((server) => (
+                <RegisterRow name={server.name} description={server.howToJoin?.[locale]}>
+                  <Status slot="status" locale={locale} status={server.status} />
+                </RegisterRow>
+              ))}
+            </RegisterList>
+          </IndexSection>
+        )
+      }
+
+      <IndexSection title={t(locale, 'home.servers.request')}>
+        <p class="max-w-[68ch] text-body text-papel-suave">
+          {t(locale, 'servers.request.body', { channels: channelPhrase(locale, channels, 'disjunction') })}
+        </p>
+        <div class="mt-16">
+          <ArrowLink href={routePath(locale, 'join')} label={t(locale, 'nav.join')} />
+        </div>
+      </IndexSection>
+
+      <IndexSection title={t(locale, 'servers.where.title')}>
+        <p class="max-w-[68ch] text-body text-papel-suave">{t(locale, 'servers.where.body')}</p>
+      </IndexSection>
+
+      <IndexSection title={t(locale, 'servers.own.title')}>
+        <p class="text-label text-status-em-breve">{t(locale, 'servers.own.status')}</p>
+        <p class="mt-8 max-w-[68ch] text-body text-papel-suave">{t(locale, 'servers.own.body')}</p>
+        <div class="mt-16">
+          <ArrowLink href={routePath(locale, 'support')} label={t(locale, 'servers.own.link')} />
+        </div>
+      </IndexSection>
+    </Index>
+  </div>
+</BaseLayout>

@@ -42,3 +42,38 @@ export function channelPhrase(locale: Locale, channels: readonly JoinChannel[], 
     channels.map((channel) => t(locale, 'channel.in', { channel: channel.label })),
   );
 }
+
+export interface TeamPerson {
+  id: string;
+  name: string | undefined;
+  nickname: string | undefined;
+  role: string;
+  bio: string | undefined;
+  githubUrls: string[];
+}
+
+/**
+ * The only read of `team.yaml` (personal data, site-data section 9). The collection schema has already refused an entry
+ * without a valid consent block or with a field outside `consent.scope`, so everything returned here was consented to.
+ * Photos are not rendered yet: an entry with one fails the build instead of dropping it silently.
+ */
+export async function getTeam(locale: Locale): Promise<{ founder: TeamPerson | undefined; members: TeamPerson[] }> {
+  const people = (await getCollection('team')).map(({ data }): TeamPerson & { isFounder: boolean } => {
+    if (data.photo !== undefined) throw new Error(`team ${data.id}: rendering a photo is not built yet (needs the image pipeline)`);
+    return {
+      id: data.id,
+      isFounder: data.isFounder,
+      name: data.name,
+      nickname: data.nickname,
+      role: data.role[locale],
+      bio: data.bio?.[locale],
+      githubUrls: (data.links ?? []).map((link) => link.url),
+    };
+  });
+  return { founder: people.find((person) => person.isFounder), members: people.filter((person) => !person.isFounder) };
+}
+
+/** Live servers first, then the others by name: the data collection has no order field and the store does not keep file order. */
+export function sortGameServers<T extends { name: string; status: string }>(servers: readonly T[]): T[] {
+  return [...servers].sort((a, b) => Number(a.status !== 'live') - Number(b.status !== 'live') || a.name.localeCompare(b.name));
+}

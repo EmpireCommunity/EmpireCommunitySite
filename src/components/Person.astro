@@ -1,0 +1,35 @@
+---
+// One person of the Organization page (personal data, High risk, site-data section 9). The marker `data-person-id` lets
+// the post-build check prove that every name and nickname in `dist/` sits inside a validated entry. Only the fields the
+// person consented to are ever passed in (the collection schema enforces it), so each one is shown when present.
+import type { TeamPerson } from '../lib/site-data.ts';
+import { t } from '../i18n/index.ts';
+import type { Locale } from '../lib/routes.ts';
+
+interface Props {
+  locale: Locale;
+  person: TeamPerson;
+  /** The Founder block shows the bio; the Team list stays one line per person. */
+  full?: boolean;
+}
+
+const { locale, person, full = false } = Astro.props;
+---
+
+<article data-person-id={person.id} class="flex flex-col gap-8">
+  <p class="font-display text-title text-papel">
+    {person.name}
+    {person.nickname !== undefined && <span class="text-papel-suave">{person.name !== undefined ? `“${person.nickname}”` : person.nickname}</span>}
+  </p>
+  <p class="text-body-sm text-papel-suave">{person.role}</p>
+  {full && person.bio !== undefined && <p class="max-w-[68ch] text-body text-papel-suave">{person.bio}</p>}
+  {
+    person.githubUrls.length > 0 && (
+      <p class="flex flex-wrap gap-x-24">
+        {person.githubUrls.map((url) => (
+          <a href={url} class="link-text inline-flex min-h-[44px] items-center text-body-sm">{t(locale, 'footer.github')}</a>
+        ))}
+      </p>
+    )
+  }
+</article>

@@ -11,13 +11,12 @@ import IndexSection from '../../components/IndexSection.astro';
 import NumbersStrip from '../../components/NumbersStrip.astro';
 import RegisterList from '../../components/RegisterList.astro';
 import RegisterRow from '../../components/RegisterRow.astro';
-import RowLink from '../../components/RowLink.astro';
 import Status from '../../components/Status.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { t } from '../../i18n/index.ts';
 import { formatMembers } from '../../lib/members.ts';
 import { LOCALES, HTML_LANG, isLocale, routePath } from '../../lib/routes.ts';
-import { channelPhrase, getCommunity, getJoinChannels } from '../../lib/site-data.ts';
+import { channelPhrase, getCommunity, getJoinChannels, sortGameServers } from '../../lib/site-data.ts';
 
 export const getStaticPaths = (() => LOCALES.map((locale) => ({ params: { locale } }))) satisfies GetStaticPaths;
 
@@ -30,7 +29,7 @@ const [projectEntries, serverEntries] = await Promise.all([getCollection('projec
 const projects = projectEntries
   .map((entry) => entry.data)
   .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
-const servers = serverEntries.map((entry) => entry.data);
+const servers = sortGameServers(serverEntries.map((entry) => entry.data));
 
 // Numbers: only figures with real data. The Discord count is the verified built-in reading, never invented; the
 // WhatsApp count is a manual value and exists only for the locales whose audience includes that channel.
@@ -91,9 +90,6 @@ const purpose = community.purpose?.[locale];
               {projects.map((project) => (
                 <RegisterRow name={project.name} description={project.summary[locale]}>
                   <Status slot="status" locale={locale} status={project.status} />
-                  {project.status === 'live' && project.url !== undefined && (
-                    <RowLink slot="links" href={project.url} label={t(locale, 'link.site')} />
-                  )}
                 </RegisterRow>
               ))}
             </RegisterList>

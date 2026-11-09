@@ -66,6 +66,28 @@ export function whatsappInviteLink(text: string, file: string, isInvitePage: boo
   return !isInvitePage && /chat\.whatsapp\.com/i.test(decodeReferences(text)) ? [err(file, 'the WhatsApp community link may appear only on the /discord page (D-41)')] : [];
 }
 
+const PERSON_BLOCK = /<article\b[^>]*\bdata-person-id=[^>]*>[\s\S]*?<\/article>/gi;
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * Team data is personal data (site-data section 9, C-4). Every `data-person-id` in a page must be an id of a validated
+ * `team.yaml` entry, and no name or nickname of that file may appear outside such a block.
+ */
+export function personData(text: string, file: string, people: readonly { id: string; names: readonly string[] }[]): Finding[] {
+  const findings: Finding[] = [];
+  const known = new Set(people.map((person) => person.id));
+  for (const match of text.matchAll(/\bdata-person-id="([^"]*)"/g)) {
+    if (!known.has(match[1] ?? '')) findings.push(err(file, `person marker ${match[1]} has no entry in team.yaml (C-4)`));
+  }
+  const outside = text.replace(PERSON_BLOCK, '');
+  for (const name of people.flatMap((person) => person.names)) {
+    if (new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegExp(name)}(?![\\p{L}\\p{N}])`, 'u').test(outside)) {
+      findings.push(err(file, 'a name or nickname of team.yaml appears outside a person block (C-4)'));
+    }
+  }
+  return findings;
+}
+
 const DISCORD_URL = /(?:https?:)?\/\/(?:[a-z0-9-]+\.)*discord(?:app)?\.(?:com|gg)(?:\/[^\s"'<>)]*)?/gi;
 
 /**

@@ -4,7 +4,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { parse } from 'yaml';
 import {
-  discordLinks, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, mainContent, membersFallback, paymentGuard, paymentWords,
+  discordLinks, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, mainContent, membersFallback, paymentGuard, paymentWords, personData,
   whatsappAbsent, whatsappInviteLink,
   type Finding,
 } from './lib/dist-checks.ts';
@@ -95,6 +95,14 @@ for (const file of listFiles('src/content/legal')) add(...whatsappAbsent(read('s
 for (const file of files.filter((f) => TEXT_EXTENSIONS.test(f) || f.endsWith('.css'))) {
   add(...whatsappInviteLink(read(distDir, file), file, file === 'discord/index.html'));
 }
+
+// C-4: personal data of team.yaml appears only inside validated person blocks.
+const team = (parse(read('src/data', 'team.yaml')) ?? []) as { id: string; name?: string; nickname?: string }[];
+const people = team.map((person) => ({
+  id: person.id,
+  names: [person.name, person.nickname].filter((name): name is string => typeof name === 'string' && name !== ''),
+}));
+for (const file of files.filter((f) => TEXT_EXTENSIONS.test(f))) add(...personData(read(distDir, file), file, people));
 
 // D-29: one Discord link; the invite only in /discord and only with the configured code, with no script.
 const invitePage = 'discord/index.html';

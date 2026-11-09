@@ -1,1 +1,45 @@
-[]
+# Catalog verified on 2026-11-08 (docs/design/information-architecture.md section 5). A link exists only for what works
+# today (D-7). github-worker-relay is left out until the owner answers P-10 (is it in production?).
+- id: empiremuse
+  name: EmpireMuse
+  kind: bot
+  status: live
+  summary:
+    pt-br: "Bot de música para Discord, com player interativo e painel web. Obra derivada do MuseHeart-MusicBot, de zRitsu (GPL-2.0)."
+    en-us: "Music bot for Discord, with an interactive player and a web panel. Derivative work of MuseHeart-MusicBot, by zRitsu (GPL-2.0)."
+  url: https://muse.empirecommunity.org
+  repo: EmpireCommunity/EmpireMuse
+  order: 10
+- id: empirecommunitysite
+  name: EmpireCommunitySite
+  kind: site
+  status: live
+  summary:
+    pt-br: "Este site."
+    en-us: "This website."
+  repo: EmpireCommunity/EmpireCommunitySite
+  order: 20
+- id: empirehub
+  name: EmpireHub
+  kind: tool
+  status: in-development
+  summary:
+    pt-br: "Jogos de mesa, tabuleiro e cartas dentro do Discord, como Discord Activity."
+    en-us: "Tabletop, board and card games inside Discord, as a Discord Activity."
+  order: 30
+- id: empirebot
+  name: EmpireBot
+  kind: bot
+  status: in-development
+  summary:
+    pt-br: "Integra o Discord aos servidores de jogos: vínculo de conta, whitelist e cargos."
+    en-us: "Connects Discord to game servers: account linking, whitelist and roles."
+  order: 40
+- id: empirecraft
+  name: EmpireCraft
+  kind: mod
+  status: in-development
+  summary:
+    pt-br: "Mod para Minecraft."
+    en-us: "A Minecraft mod."
+  order: 50

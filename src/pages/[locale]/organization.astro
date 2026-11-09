@@ -1,0 +1,167 @@
+---
+// Organização (information-architecture section 7.6): how it started (the owner's text, D-39, D-44), how it works, names,
+// founder, team, official addresses, contact. The Founder and Team blocks come only from validated, consented entries in
+// team.yaml (personal data, C-4) and are not rendered when there is none (R-6). Names that mention a channel are built
+// from the join-channels data, so WhatsApp reaches pt-BR only (C-1). An address that does not answer yet has no link.
+import type { GetStaticPaths } from 'astro';
+import { getCollection } from 'astro:content';
+import ArrowLink from '../../components/ArrowLink.astro';
+import Index from '../../components/Index.astro';
+import IndexSection from '../../components/IndexSection.astro';
+import Person from '../../components/Person.astro';
+import RegisterList from '../../components/RegisterList.astro';
+import RegisterRow from '../../components/RegisterRow.astro';
+import Status from '../../components/Status.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { t } from '../../i18n/index.ts';
+import type { MessageKey } from '../../i18n/index.ts';
+import { LOCALES, isLocale } from '../../lib/routes.ts';
+import type { DataStatus } from '../../lib/status.ts';
+import { getCommunity, getJoinChannels, getSite, getTeam } from '../../lib/site-data.ts';
+
+export const getStaticPaths = (() => LOCALES.map((locale) => ({ params: { locale } }))) satisfies GetStaticPaths;
+
+const { locale } = Astro.params;
+if (!isLocale(locale)) throw new Error(`unexpected locale: ${locale}`);
+
+const [site, community, channels, team, projects] = await Promise.all([
+  getSite(),
+  getCommunity(),
+  getJoinChannels(locale),
+  getTeam(locale),
+  getCollection('projects'),
+]);
+
+// The first channel names the server ("no Discord"); every other channel of this locale adds "and the community on ...".
+const [mainChannel, ...otherChannels] = channels;
+const communityName =
+  (mainChannel === undefined ? '' : t(locale, 'organization.names.community', { channel: mainChannel.label })) +
+  otherChannels.map((channel) => t(locale, 'organization.names.also', { channel: channel.label })).join('') +
+  '.';
+
+// Official addresses protect against imitation. The EmpireMuse address comes from its project entry; the game-server
+// status site is not up yet (empirecommunity.cloud answers 404), so it is listed without a link and as coming soon.
+const muse = projects.map((entry) => entry.data).find((project) => project.id === 'empiremuse' && project.url !== undefined);
+interface Address {
+  purpose: MessageKey;
+  host: string;
+  status: DataStatus;
+  url?: string;
+}
+const addresses: Address[] = [
+  { purpose: 'organization.addresses.main', host: new URL(site.origin).hostname, status: 'live' },
+  ...(muse?.url === undefined ? [] : [{ purpose: 'organization.addresses.muse' as const, host: new URL(muse.url).hostname, status: muse.status, url: muse.url }]),
+  { purpose: 'organization.addresses.cloud', host: 'empirecommunity.cloud', status: 'coming-soon' },
+  { purpose: 'organization.addresses.github', host: new URL(site.links.github).host + new URL(site.links.github).pathname, status: 'live', url: site.links.github },
+];
+---
+
+<BaseLayout locale={locale} routeKey="organization">
+  <div class="frame pt-64 lg:pt-96">
+    <h1 class="font-display text-display text-papel">{t(locale, 'organization.title')}</h1>
+    <p class="mt-24 max-w-[56ch] text-lead text-papel-suave">{t(locale, 'organization.lead')}</p>
+    {
+      community.foundedYear !== undefined && (
+        <p class="mt-16 text-label text-papel-suave">{t(locale, 'organization.since', { year: community.foundedYear })}</p>
+      )
+    }
+    <div class="pb-48 lg:pb-64"></div>
+
+    <Index closed>
+      <IndexSection title={t(locale, 'organization.origin.title')}>
+        <div class="flex max-w-[68ch] flex-col gap-16 text-body text-papel-suave">
+          <p>{t(locale, 'organization.origin.p1')}</p>
+          <p>{t(locale, 'organization.origin.p2')}</p>
+        </div>
+      </IndexSection>
+
+      <IndexSection title={t(locale, 'organization.how.title')}>
+        <div class="flex max-w-[68ch] flex-col gap-16 text-body text-papel-suave">
+          <p>{t(locale, 'organization.how.free')}</p>
+          <p>{t(locale, 'organization.how.sold')}</p>
+          <p>{t(locale, 'organization.how.data')}</p>
+        </div>
+      </IndexSection>
+
+      <IndexSection title={t(locale, 'organization.names.title')} rows>
+        <RegisterList>
+          <RegisterRow name="EmpireCommunity" description={communityName} />
+          <RegisterRow name="EmpireHub" description={t(locale, 'organization.names.hub')} />
+        </RegisterList>
+      </IndexSection>
+
+      {
+        team.founder !== undefined && (
+          <IndexSection title={t(locale, 'organization.founder.title')}>
+            <Person locale={locale} person={team.founder} full />
+          </IndexSection>
+        )
+      }
+
+      {
+        team.members.length > 0 && (
+          <IndexSection title={t(locale, 'organization.team.title')}>
+            <ul class="flex flex-col gap-24">
+              {team.members.map((person) => (
+                <li>
+                  <Person locale={locale} person={person} />
+                </li>
+              ))}
+            </ul>
+          </IndexSection>
+        )
+      }
+
+      <IndexSection title={t(locale, 'organization.addresses.title')} rows>
+        <table class="w-full text-left">
+          <thead class="max-md:sr-only">
+            <tr class="text-label text-papel-suave">
+              <th scope="col" class="py-16 pr-16 font-normal">{t(locale, 'organization.addresses.col.address')}</th>
+              <th scope="col" class="py-16 pr-16 font-normal">{t(locale, 'organization.addresses.col.purpose')}</th>
+              <th scope="col" class="py-16 font-normal">{t(locale, 'organization.addresses.col.status')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              addresses.map((address) => (
+                <tr class="border-t border-pauta max-md:grid max-md:gap-y-8 max-md:py-24">
+                  <th scope="row" class="py-12 pr-16 align-middle text-body-sm font-normal text-papel [overflow-wrap:anywhere] max-md:py-0">
+                    {address.url === undefined ? (
+                      address.host
+                    ) : (
+                      <a href={address.url} class="link-text inline-flex min-h-[44px] items-center">{address.host}</a>
+                    )}
+                  </th>
+                  <td class="py-12 pr-16 align-middle text-body-sm text-papel-suave max-md:py-0">{t(locale, address.purpose)}</td>
+                  <td class="py-12 align-middle max-md:py-0">
+                    <Status locale={locale} status={address.status} />
+                  </td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+        <div class="border-t border-pauta">
+          <p class="max-w-[68ch] py-24 text-body-sm text-papel-suave">{t(locale, 'organization.addresses.note')}</p>
+        </div>
+      </IndexSection>
+
+      <IndexSection title={t(locale, 'organization.contact.title')}>
+        <p class="max-w-[68ch] text-body text-papel-suave">{t(locale, 'organization.contact.discord')}</p>
+        <div class="mt-16">
+          <ArrowLink href={site.links.discord} label={t(locale, 'cta.join', { channel: 'Discord' })} />
+        </div>
+        <dl class="mt-24 flex flex-col gap-16">
+          <div>
+            <dt class="text-label text-papel-suave">{t(locale, 'organization.contact.general')}</dt>
+            <dd><a href={`mailto:${site.contact.general}`} class="link-text inline-flex min-h-[44px] items-center text-body">{site.contact.general}</a></dd>
+          </div>
+          <div>
+            <dt class="text-label text-papel-suave">{t(locale, 'organization.contact.legal')}</dt>
+            <dd><a href={`mailto:${site.contact.legal}`} class="link-text inline-flex min-h-[44px] items-center text-body">{site.contact.legal}</a></dd>
+          </div>
+        </dl>
+      </IndexSection>
+    </Index>
+  </div>
+</BaseLayout>
