@@ -201,8 +201,9 @@ whatsapp:                                 # pt-BR only; optional
   `links.discord`, whichever channel it names: the destination is the `/discord` page, where the visitor reads the
   rules and ticks the box before the real links appear. The `discord` entry's `url` is therefore the page address, as
   before. The `whatsapp` entry's `url` (the community link, D-37) is **read only by the `/discord` page**, inside its pt-BR
-  container; no other page, component, head tag or data file renders it, and it exists nowhere else in the
-  repository. That is its one source. The Discord invite has one source too (`site.yaml`, section 4). Whether the
+  container; no other page, component, head tag or data file renders it, and no other application source holds it
+  (`src/` outside `join-channels.yaml`, `worker/`, `scripts/`). Documentation examples, such as the one above, are not
+  sources and may show it; in `dist/` it appears only on `/discord` (section 12). That is its one source. The Discord invite has one source too (`site.yaml`, section 4). Whether the
   pt-BR join page shows one button or one per channel is a layout choice (Bússola); either way every `href` is
   `links.discord`.
 - Equal weight in pt-BR (D-3): the two channels share the same component, size, and prominence, ordered by the order
@@ -429,8 +430,8 @@ effectiveDate: 2026-12-01       # identical in both locales
 | `Localized` complete, `audience` keys exact, `pt-br`/`en-us` message type parity and placeholder parity | yes | C-3 |
 | Route keys exist in both locales | yes | C-3 |
 | Team consent rules, empty collections not rendered | yes | C-4 |
-| WhatsApp absent from en-US output, `llms.txt`, root page **and from the legal Markdown and the `<main>` element of the built legal pages in both locales** (the legal text, not the shared footer, which lists WhatsApp in pt-BR; en-US pages are scanned whole by the en-US rule; scope otherwise unchanged by D-41); only `https://empirecommunity.org/discord` as Discord link; in `dist/` the invite URL appears only in `discord/index.html` and only with the configured code (it may appear once per language container; the one other Discord URL allowed on that page is the plain-text `https://discord.com/terms` of rule 5, section 14); the WhatsApp community URL appears in `dist/` only in `discord/index.html`, only once, only as `join-channels.yaml` defines it, and no WhatsApp reference there has a nearest ancestor `lang` other than `pt-BR` or sits in the `<head>` | yes | C-1 |
-| `/discord` page structure (D-41): `<html lang="en-US">`; exactly two language containers; one checkbox per container (no `name`, `autocomplete="off"`, a matching `<label for>`) followed by that container's join links; the en-US container has the Discord link and no WhatsApp; the pt-BR container has the Discord and the WhatsApp link; no `<script>`, `<form>`, `<noscript>`, `style=` or `http-equiv="refresh"`; `noindex`; rules text and `updatedOn` rendered from `community-rules.yaml`; absent from the sitemap | yes | C-1, C-5 |
+| WhatsApp absent from en-US output, `llms.txt`, root page **and from the legal Markdown and the `<main>` element of the built legal pages in both locales** (the legal text, not the shared footer, which lists WhatsApp in pt-BR; en-US pages are scanned whole by the en-US rule; scope otherwise unchanged by D-41); only `https://empirecommunity.org/discord` as Discord link; in `dist/` the invite URL appears only in `discord/index.html` and only with the configured code (it may appear once per language container). **Terms URL exception:** the exact string `https://discord.com/terms` (rule 5, section 14) is accepted only as text content, never inside an attribute, only in `discord/index.html`, and at most once per language container; it is rejected in any attribute and on every other page, and every other Discord URL on any page still fails; the WhatsApp community URL appears in `dist/` only in `discord/index.html`, only once, only as `join-channels.yaml` defines it, and no WhatsApp reference there has a nearest ancestor `lang` other than `pt-BR` or sits in the `<head>` | yes | C-1 |
+| `/discord` page structure (D-41): `<html lang="en-US">`; exactly two language containers; one checkbox per container (no `name`, `autocomplete="off"`, a matching `<label for>`) followed by that container's join links; the en-US container has the Discord link and no WhatsApp; the pt-BR container has the Discord and the WhatsApp link; no `<script>`, `<form>`, `<noscript>`, `style=` or `http-equiv="refresh"`; `noindex`; rules text and `updatedOn` rendered from `community-rules.yaml`; absent from the sitemap. Blocking from the PR that builds the page: until then it only warns through `PENDING.discordPage` ([deploy](deploy.md)) | yes | C-1, C-5 |
 | Legal parity (ids, version, effective date) | yes | C-3 |
 | No inline executable script or `style=` in built HTML; inline `ld+json` allowed | yes | C-5 |
 | `hreflang` reciprocity, sitemap content, canonical present | yes | C-5 |
@@ -478,9 +479,11 @@ closing: { pt-br: ..., en-us: ... }       # optional, max 200; the final sentenc
 - Strict keys. `Localized` on every text, so a missing translation fails the build (C-3). Plain text only (`Text`
   rule, no markup): the page renders it as text, never as HTML.
 - **Plain-text address.** A rule may carry an address inside its `body` (rule 5 carries `https://discord.com/terms`).
-  It is text: there is no `url` field, the page renders no link or autolink for it, and it is not in an `href`. The
-  Discord URL scans of section 12 accept exactly that address, in text only, on the `/discord` page; any other
-  Discord URL in the rules text, or any Discord URL in an attribute that is not the invite, still fails the build.
+  It is text: there is no `url` field, the page renders no link or autolink for it, and it is not in an `href`. It is
+  written exactly as `https://discord.com/terms`, with no trailing punctuation (the scan's URL match would take a
+  trailing character into the URL and fail the page). The Discord URL scan accepts it under the **Terms URL
+  exception** of the section 12 C-1 row (text only, `/discord` only); any other Discord URL in the rules text fails the
+  build. The `src/` invite search of section 4 matches invite URLs only, so this address does not trigger it.
 - **No text names WhatsApp, in either locale** (a schema refinement), for the reason the legal text does not
   (section 11): the two locales carry identical content and WhatsApp appears only in pt-BR (C-1).
 - `updatedOn` changes only when the rules text changes, in the same pull request. The page shows this date, not a build
