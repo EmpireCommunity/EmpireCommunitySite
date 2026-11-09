@@ -405,7 +405,9 @@ effectiveDate: 2026-12-01       # identical in both locales
 - **The legal text does not name WhatsApp** (Regente ruling). The two locales carry identical content and WhatsApp
   appears only in pt-BR (C-1), so any WhatsApp mention would break one of the two rules. External services are
   covered by the generic clause above; Discord may be named because it is offered in both locales. The C-1 scan
-  covers `src/content/legal/**` and the built legal pages in both locales.
+  covers `src/content/legal/**` and, in the built legal pages of both locales, the `<main>` element only: the legal
+  text itself, not the shared site footer or header, which the pt-BR pages may use to list WhatsApp. The en-US pages
+  stay covered whole by the en-US rule below.
 - **Controller identification (D-23).** The controller is the owner as a natural person. The Privacy text shows the
   legal name and a contact e-mail address **only**; the owner supplies both in the pull request for the text, and the
   legal name may differ from the public name used elsewhere on the site. The **tax identification is never written in
@@ -427,7 +429,7 @@ effectiveDate: 2026-12-01       # identical in both locales
 | `Localized` complete, `audience` keys exact, `pt-br`/`en-us` message type parity and placeholder parity | yes | C-3 |
 | Route keys exist in both locales | yes | C-3 |
 | Team consent rules, empty collections not rendered | yes | C-4 |
-| WhatsApp absent from en-US output, `llms.txt`, root page **and from the legal Markdown and built legal pages in both locales** (scope unchanged by D-41); only `https://empirecommunity.org/discord` as Discord link; in `dist/` the invite URL appears only in `discord/index.html` and only with the configured code (it may appear once per language container; the one other Discord URL allowed on that page is the plain-text `https://discord.com/terms` of rule 5, section 14); the WhatsApp community URL appears in `dist/` only in `discord/index.html`, only once, only as `join-channels.yaml` defines it, and no WhatsApp reference there has a nearest ancestor `lang` other than `pt-BR` or sits in the `<head>` | yes | C-1 |
+| WhatsApp absent from en-US output, `llms.txt`, root page **and from the legal Markdown and the `<main>` element of the built legal pages in both locales** (the legal text, not the shared footer, which lists WhatsApp in pt-BR; en-US pages are scanned whole by the en-US rule; scope otherwise unchanged by D-41); only `https://empirecommunity.org/discord` as Discord link; in `dist/` the invite URL appears only in `discord/index.html` and only with the configured code (it may appear once per language container; the one other Discord URL allowed on that page is the plain-text `https://discord.com/terms` of rule 5, section 14); the WhatsApp community URL appears in `dist/` only in `discord/index.html`, only once, only as `join-channels.yaml` defines it, and no WhatsApp reference there has a nearest ancestor `lang` other than `pt-BR` or sits in the `<head>` | yes | C-1 |
 | `/discord` page structure (D-41): `<html lang="en-US">`; exactly two language containers; one checkbox per container (no `name`, `autocomplete="off"`, a matching `<label for>`) followed by that container's join links; the en-US container has the Discord link and no WhatsApp; the pt-BR container has the Discord and the WhatsApp link; no `<script>`, `<form>`, `<noscript>`, `style=` or `http-equiv="refresh"`; `noindex`; rules text and `updatedOn` rendered from `community-rules.yaml`; absent from the sitemap | yes | C-1, C-5 |
 | Legal parity (ids, version, effective date) | yes | C-3 |
 | No inline executable script or `style=` in built HTML; inline `ld+json` allowed | yes | C-5 |
