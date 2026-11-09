@@ -4,7 +4,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { parse } from 'yaml';
 import {
-  discordLinks, hreflangReciprocity, inlineExecutable, membersFallback, paymentGuard, paymentWords, whatsappAbsent,
+  discordLinks, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, membersFallback, paymentGuard, paymentWords, whatsappAbsent,
   type Finding,
 } from './lib/dist-checks.ts';
 import { PENDING } from './lib/pending.ts';
@@ -58,6 +58,19 @@ for (const file of htmlFiles) add(...inlineExecutable(read(distDir, file), file)
 const pageMap = new Map(localePages.map((file) => [`/${file.replace(/index\.html$/, '')}`, read(distDir, file)] as const));
 // x-default of the home pages is the root chooser page (not a locale page, so no reciprocity is asked of it).
 add(...hreflangReciprocity(pageMap, ORIGIN, new Set(files.includes('index.html') ? ['/'] : [])));
+
+// WCAG 3.1.1 and the language selector (routing-locale sections 1 to 3): locale pages carry their locale and a selector
+// to the equivalent page; the chooser, the 404 and /discord are en-US.
+for (const file of localePages) {
+  const [locale, ...rest] = file.replace(/index\.html$/, '').split('/');
+  const html = read(distDir, file);
+  add(...htmlLang(html, file, locale === 'pt-br' ? 'pt-BR' : 'en-US'));
+  add(...languageSelector(html, file, locale === 'pt-br' ? 'pt-br' : 'en-us', rest.join('/')));
+}
+if (!files.includes('404.html')) add({ level: 'error', file: '404.html', message: 'the 404 page is not built' });
+for (const file of ['index.html', '404.html', 'discord/index.html'].filter((f) => files.includes(f))) {
+  add(...htmlLang(read(distDir, file), file, 'en-US'));
+}
 
 // C-1: WhatsApp absent from en-US output, llms.txt, the root page and the legal pages of both locales.
 const whatsappScope = files.filter(

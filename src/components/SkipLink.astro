@@ -1,0 +1,19 @@
+---
+// Skip link (DESIGN.md "Pular para o conteúdo"): off screen until it receives focus, then the first thing on the page.
+// The target is the <main id="content"> of the layout. Shared by BaseLayout and NeutralLayout.
+import { t } from '../i18n/index.ts';
+import type { Locale } from '../lib/routes.ts';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+---
+
+<a
+  href="#content"
+  class="absolute top-8 left-8 z-10 -translate-y-[200%] rounded-botao bg-papel px-16 py-12 text-nav text-violeta-ata focus:translate-y-0"
+>
+  {t(locale, 'nav.skip')}
+</a>

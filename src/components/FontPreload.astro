@@ -1,0 +1,7 @@
+---
+// Preloads the display font only (DESIGN.md "Fontes e licencas"). Public Sans is not preloaded: the text it draws is
+// below the fold or small. The `?url` import resolves to the same hashed /_astro/ file the stylesheet uses.
+import serifUrl from '@fontsource-variable/source-serif-4/files/source-serif-4-latin-wght-normal.woff2?url';
+---
+
+<link rel="preload" href={serifUrl} as="font" type="font/woff2" crossorigin="anonymous" />

@@ -1,0 +1,37 @@
+---
+// Status mark (DESIGN.md "Status"): glyph + 8 px + label, no box, not clickable. The glyph shape differs per status
+// and the label is real text, so the meaning never depends on color alone. Takes the schema value
+// (`live`, `in-development`, `coming-soon`); the mapping to the design names is in src/lib/status.ts.
+import { t } from '../i18n/index.ts';
+import { STATUS_LABEL, statusKind } from '../lib/status.ts';
+import type { DataStatus } from '../lib/status.ts';
+import type { Locale } from '../lib/routes.ts';
+
+interface Props {
+  locale: Locale;
+  status: DataStatus;
+}
+
+const { locale, status } = Astro.props;
+const kind = statusKind(status);
+
+const COLOR_CLASS = {
+  live: 'text-status-no-ar',
+  development: 'text-status-desenvolvimento',
+  soon: 'text-status-em-breve',
+} as const;
+---
+
+<span class={`inline-flex items-center gap-8 text-label ${COLOR_CLASS[kind]}`}>
+  <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" focusable="false" fill="none" stroke="currentColor">
+    {kind === 'live' && <circle cx="6" cy="6" r="5" fill="currentColor" stroke="none" />}
+    {kind === 'development' && (
+      <>
+        <circle cx="6" cy="6" r="4.25" stroke-width="1.5" />
+        <path d="M6 1.75a4.25 4.25 0 0 0 0 8.5Z" fill="currentColor" stroke="none" />
+      </>
+    )}
+    {kind === 'soon' && <circle cx="6" cy="6" r="4.25" stroke-width="1.5" />}
+  </svg>
+  {t(locale, STATUS_LABEL[kind])}
+</span>

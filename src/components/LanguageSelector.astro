@@ -1,0 +1,41 @@
+---
+// Language selector (docs/contracts/routing-locale.md section 2): two plain links, one per locale, each to the
+// equivalent page (same route key). No script, cookie or storage; the URL is the state. No flags, never WhatsApp.
+import { t } from '../i18n/index.ts';
+import type { MessageKey } from '../i18n/index.ts';
+import { HTML_LANG, LOCALES, routePath } from '../lib/routes.ts';
+import type { Locale, RouteKey } from '../lib/routes.ts';
+
+interface Props {
+  locale: Locale;
+  routeKey: RouteKey;
+}
+
+const { locale, routeKey } = Astro.props;
+
+/** Each name is written in its own language, whatever the page language is. */
+const NAME_KEY: Readonly<Record<Locale, MessageKey>> = { 'pt-br': 'selector.pt-br', 'en-us': 'selector.en-us' };
+
+const linkClass =
+  'inline-flex min-h-[44px] items-center px-8 text-nav text-papel-suave hover:text-papel aria-[current=true]:text-papel aria-[current=true]:underline aria-[current=true]:decoration-1 aria-[current=true]:underline-offset-8 motion-safe:transition-colors';
+---
+
+<nav aria-label={t(locale, 'selector.aria')}>
+  <ul class="flex flex-wrap">
+    {
+      LOCALES.map((target) => (
+        <li>
+          <a
+            href={routePath(target, routeKey)}
+            hreflang={HTML_LANG[target]}
+            lang={HTML_LANG[target]}
+            aria-current={target === locale ? 'true' : undefined}
+            class={linkClass}
+          >
+            {t(target, NAME_KEY[target])}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</nav>

@@ -1,30 +1,22 @@
 ---
-// Neutral bilingual page served with status 404 for any unknown path (routing-locale section 1).
-import '../styles/global.css';
+// Neutral bilingual page served with status 404 for any unknown path (routing-locale section 1). The page language is
+// en-US; the Portuguese block carries its own `lang`.
+import NeutralLayout from '../layouts/NeutralLayout.astro';
 import { t } from '../i18n/index.ts';
 import { routePath } from '../lib/routes.ts';
+
+const linkClass = 'link-text inline-flex min-h-[44px] items-center text-body';
 ---
 
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="noindex" />
-    <title>{t('pt-br', 'notFound.title')} · {t('en-us', 'notFound.title')}</title>
-  </head>
-  <body>
-    <main id="content">
-      <section lang="pt-BR">
-        <h1>{t('pt-br', 'notFound.title')}</h1>
-        <p>{t('pt-br', 'notFound.body')}</p>
-        <p><a href={routePath('pt-br', 'home')}>{t('pt-br', 'notFound.home')}</a></p>
-      </section>
-      <section lang="en-US">
-        <h1>{t('en-us', 'notFound.title')}</h1>
-        <p>{t('en-us', 'notFound.body')}</p>
-        <p><a href={routePath('en-us', 'home')}>{t('en-us', 'notFound.home')}</a></p>
-      </section>
-    </main>
-  </body>
-</html>
+<NeutralLayout title={t('en-us', 'notFound.title')} noindex>
+  <section>
+    <h1 class="font-display text-display text-papel">{t('en-us', 'notFound.title')}</h1>
+    <p class="mt-24 max-w-[56ch] text-lead text-papel-suave">{t('en-us', 'notFound.body')}</p>
+    <p class="mt-16"><a href={routePath('en-us', 'home')} class={linkClass}>{t('en-us', 'notFound.home')}</a></p>
+  </section>
+  <section lang="pt-BR" class="mt-64 border-t border-pauta pt-48">
+    <h2 class="font-display text-headline text-papel">{t('pt-br', 'notFound.title')}</h2>
+    <p class="mt-24 max-w-[56ch] text-lead text-papel-suave">{t('pt-br', 'notFound.body')}</p>
+    <p class="mt-16"><a href={routePath('pt-br', 'home')} class={linkClass}>{t('pt-br', 'notFound.home')}</a></p>
+  </section>
+</NeutralLayout>

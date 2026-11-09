@@ -139,6 +139,54 @@ export function hreflangReciprocity(pages: ReadonlyMap<string, string>, origin: 
   return findings;
 }
 
+/** `<html lang>` (WCAG 3.1.1): a locale page carries its locale; the chooser, the 404 and /discord are en-US (routing-locale sections 1 and 3). */
+export function htmlLang(html: string, file: string, expected: 'pt-BR' | 'en-US'): Finding[] {
+  const tag = /<html\b([^>]*)>/i.exec(html)?.[1] ?? '';
+  const lang = attributesOf(tag).get('lang');
+  return lang === expected ? [] : [err(file, `<html lang> is ${lang ?? 'missing'}, expected ${expected}`)];
+}
+
+/**
+ * Language selector (routing-locale section 2). A selector is a `<nav>` that holds links with `hreflang` (the header renders
+ * one per breakpoint, so each is checked on its own). Each has exactly one link per locale, with a supported `hreflang`
+ * value, the same value in `lang`, an `href` to the equivalent page, and `aria-current="true"` on the current locale's
+ * link only (the other link has no `aria-current` at all). The page must have at least one selector.
+ */
+export function languageSelector(html: string, file: string, locale: 'pt-br' | 'en-us', route: string): Finding[] {
+  const findings: Finding[] = [];
+  let selectors = 0;
+  for (const nav of html.matchAll(/<nav\b[^>]*>([\s\S]*?)<\/nav>/gi)) {
+    const links = [...(nav[1] ?? '').matchAll(/<a\b([^>]*)>/gi)]
+      .map((match) => attributesOf(match[1] ?? ''))
+      .filter((attrs) => attrs.has('hreflang'));
+    if (links.length === 0) continue;
+    selectors += 1;
+    const seen = new Map<string, number>();
+    for (const attrs of links) {
+      const target = attrs.get('hreflang') ?? '';
+      const targetLocale = LOCALE_LABELS.get(target);
+      if (targetLocale === undefined) {
+        findings.push(err(file, `selector link has an unsupported hreflang value "${target}"`));
+        continue;
+      }
+      seen.set(targetLocale, (seen.get(targetLocale) ?? 0) + 1);
+      const wanted = `/${targetLocale}/${route}`;
+      if (attrs.get('href') !== wanted) findings.push(err(file, `selector link ${target} goes to ${attrs.get('href') ?? 'nothing'}, expected ${wanted}`));
+      if (attrs.get('lang') !== target) findings.push(err(file, `selector link ${target} has no matching lang attribute`));
+      const current = attrs.get('aria-current');
+      if (targetLocale === locale ? current !== 'true' : current !== undefined) {
+        findings.push(err(file, `selector link ${target} has the wrong aria-current (${current ?? 'none'})`));
+      }
+    }
+    for (const needed of LOCALE_LABELS.values()) {
+      const count = seen.get(needed) ?? 0;
+      if (count !== 1) findings.push(err(file, `a selector has ${count} links to ${needed}, expected 1`));
+    }
+  }
+  if (selectors === 0) findings.push(err(file, 'the page has no language selector'));
+  return findings;
+}
+
 // RFC 3339 date-time (JSON Schema format date-time): a bare date such as 2026-11-09 is not one.
 const DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/i;
 

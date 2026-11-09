@@ -11,7 +11,7 @@ if (!isLocale(locale)) throw new Error(`unexpected locale: ${locale}`);
 ---
 
 <BaseLayout locale={locale} routeKey="home">
-  <main id="content">
-    <h1>{t(locale, 'meta.home.title')}</h1>
-  </main>
+  <div class="frame section-y">
+    <h1 class="font-display text-display text-papel">{t(locale, 'meta.home.title')}</h1>
+  </div>
 </BaseLayout>
