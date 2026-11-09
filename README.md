@@ -38,6 +38,14 @@ pnpm test
 Rotas em `/pt-br/` e `/en-us/` (ver `docs/contracts/routing-locale.md`). Regras para quem contribui, incluindo o fluxo
 com worktrees e o mapa de risco, em [`AGENTS.md`](AGENTS.md).
 
+## 📦 CI, imagem e release
+
+- `ci.yml` roda em PR e em push na `main`: qualidade (check, lint, testes), build com varreduras do `dist/`, imagem com
+  teste de cabeçalhos HTTP, lint dos workflows e varredura de segredos.
+- A imagem (`Dockerfile`, `nginx/`) serve só o `dist/` em nginx-unprivileged, porta 8080, sem log de acesso.
+- Release por tag `vX.Y.Z` na `main`, decidida pelo dono: [`docs/runbook/release.md`](docs/runbook/release.md).
+  O template de deploy está em `deploy/compose.yml`.
+
 ## 🤝 Contribuição
 
 Antes de enviar alterações, consulte nossas diretrizes de engenharia e fluxo de trabalho no repositório [`.github`](https://github.com/Empire-Community/.github).

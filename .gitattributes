@@ -1,0 +1,4 @@
+# Parallel PRs each add lines under [Unreleased]; the built-in union driver keeps both sides instead of conflicting.
+# Note: GitHub's web merge ignores merge drivers; it applies to `git merge` run locally.
+CHANGELOG.md merge=union eol=lf
+*.sh eol=lf
