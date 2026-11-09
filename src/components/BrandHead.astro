@@ -1,6 +1,10 @@
 ---
-// Favicon set of the approved Rack brand (D-40, D-42): files in `public/`, served from the root (routing-locale section 3).
-// Used by both layouts so every page, locale or neutral, carries the same icons. Static images only.
+// Head tags of the approved Rack brand (D-40, D-42), used by both layouts so every page, locale or neutral, carries the
+// same icons and the same default Open Graph image (a link to the chooser gets a share image too). Files are in `public/`,
+// served from the root (routing-locale section 3). Static images only. `noindex` stays a layout decision, not made here.
+const origin = Astro.site;
+if (origin === undefined) throw new Error('`site` must be set in astro.config.ts');
+const ogImage = new URL('/og-image.png', origin).href;
 ---
 
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
@@ -8,3 +12,8 @@
 <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
 <link rel="icon" href="/icon-512.png" type="image/png" sizes="512x512" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+<meta property="og:image" content={ogImage} />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="EmpireCommunity" />

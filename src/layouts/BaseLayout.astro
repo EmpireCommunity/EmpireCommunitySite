@@ -45,11 +45,6 @@ const otherLocales = LOCALES.filter((other) => other !== locale);
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={absolute(routePath(locale, routeKey))} />
-    <meta property="og:image" content={absolute('/og-image.png')} />
-    <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="EmpireCommunity" />
     <meta property="og:locale" content={OG_LOCALE[locale]} />
     {otherLocales.map((other) => <meta property="og:locale:alternate" content={OG_LOCALE[other]} />)}
     <BrandHead />
