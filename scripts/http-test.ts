@@ -13,23 +13,25 @@ if (base === '') {
 const DEFAULT_CSP = "default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com; img-src 'self'; style-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 const SUPPORT_CSP = "default-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 const NO_CACHE = 'no-cache';
+// Values of the routing contract section 6 (snippets/security-headers.conf).
+const PERMISSIONS_POLICY = 'camera=(), microphone=(), geolocation=(), payment=(), interest-cohort=()';
+const COOP = 'same-origin';
 
 const problems: string[] = [];
 const fail = (where: string, message: string) => problems.push(`${where}: ${message}`);
 
-type Expectation = { path: string; status: number[]; csp: string; cache: string };
+type Expectation = { path: string; status: number[]; csp: string; cache: string | string[] };
 
 async function checkPath(expected: Expectation, init: RequestInit = {}): Promise<Response> {
   const response = await fetch(`${base}${expected.path}`, { redirect: 'manual', ...init });
   const where = `${init.method ?? 'GET'} ${expected.path}`;
   if (!expected.status.includes(response.status)) fail(where, `status ${response.status}, expected ${expected.status.join(' or ')}`);
   if (response.headers.get('content-security-policy') !== expected.csp) fail(where, 'Content-Security-Policy differs from the contract');
-  for (const header of ['permissions-policy', 'cross-origin-opener-policy']) {
-    if (response.headers.get(header) === null) fail(where, `${header} missing`);
-  }
-  if (response.headers.get('cache-control') !== expected.cache) {
-    fail(where, `Cache-Control is ${response.headers.get('cache-control')}, expected ${expected.cache}`);
-  }
+  if (response.headers.get('permissions-policy') !== PERMISSIONS_POLICY) fail(where, 'Permissions-Policy differs from the contract');
+  if (response.headers.get('cross-origin-opener-policy') !== COOP) fail(where, 'Cross-Origin-Opener-Policy differs from the contract');
+  const cache = response.headers.get('cache-control');
+  const acceptable = Array.isArray(expected.cache) ? expected.cache : [expected.cache];
+  if (cache === null || !acceptable.includes(cache)) fail(where, `Cache-Control is ${cache}, expected ${acceptable.join(' or ')}`);
   const server = response.headers.get('server');
   if (server !== null && /\d/.test(server)) fail(where, `Server header exposes a version: ${server}`);
   if (response.headers.get('set-cookie') !== null) fail(where, 'Set-Cookie present');
@@ -57,7 +59,8 @@ await checkPath({
   path: '/data/members.json',
   status: PENDING.membersFallback ? [membersOk ? 200 : 404] : [200],
   csp: DEFAULT_CSP,
-  cache: membersOk ? 'public, max-age=300' : NO_CACHE,
+  // Origin file: max-age=300. At the public URL the Worker may answer with its documented max-age=600 (members-json 1).
+  cache: membersOk ? (publicUrl ? ['public, max-age=300', 'public, max-age=600'] : 'public, max-age=300') : NO_CACHE,
 });
 
 // A query string never reaches the file (members-json 2.9).

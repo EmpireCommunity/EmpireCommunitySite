@@ -116,3 +116,20 @@ test('regressions of the PR 4 review: workflow rules', () => {
   }
   assert.equal(count('.github/workflows/worker-deploy.yml', wf({ environment: 'worker-production' })), 0);
 });
+
+test('a removed hreflang backlink is reported even when every language label is present', () => {
+  const origin = 'https://e.org';
+  const alternates = (xDefault: string) =>
+    `<link rel="alternate" hreflang="pt-BR" href="${origin}/pt-br/"><link rel="alternate" hreflang="en-US" href="${origin}/en-us/">` +
+    `<link rel="alternate" hreflang="x-default" href="${origin}${xDefault}">`;
+  const page = (self: string, links: string) => `<link rel="canonical" href="${origin}${self}">${links}`;
+  const whole = new Map([['/pt-br/', page('/pt-br/', alternates('/en-us/'))], ['/en-us/', page('/en-us/', alternates('/en-us/'))]]);
+  assert.equal(hreflangReciprocity(whole, origin).length, 0);
+  // /en-us/ keeps all three labels but no longer links back to /pt-br/ (its pt-BR alternate points elsewhere).
+  const noBacklink = new Map(whole).set(
+    '/en-us/',
+    page('/en-us/', `<link rel="alternate" hreflang="pt-BR" href="${origin}/pt-br/other/"><link rel="alternate" hreflang="en-US" href="${origin}/en-us/"><link rel="alternate" hreflang="x-default" href="${origin}/en-us/">`),
+  );
+  const findings = hreflangReciprocity(noBacklink, origin);
+  assert.ok(findings.some((f) => f.file === '/pt-br/' && /not reciprocal/.test(f.message)), 'the page that lost its backlink is reported');
+});
