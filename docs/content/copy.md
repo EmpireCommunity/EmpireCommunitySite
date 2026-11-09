@@ -89,8 +89,9 @@ Estrutura e regras em [`docs/design/information-architecture.md`](../design/info
 | servers.title | Servidores de jogos | Game servers |
 | servers.request | Pedir um jogo | Request a game |
 | funding.title | Como nos mantemos | How we are funded |
-| funding.body | A EmpireCommunity vive de doações voluntárias. O primeiro marco é de R$ 3.000, para montar um servidor próprio, com Xeon e 128 GB de RAM, que vai hospedar mais servidores de jogos. Depois dele, a arrecadação continua para os custos da comunidade: energia dos servidores, melhorias, hospedagem e domínios. As doações em dinheiro ainda não estão abertas. | EmpireCommunity runs on voluntary donations. The first milestone is R$ 3,000, to build our own server, with a Xeon and 128 GB of RAM, to host more game servers. After that, fundraising continues for community costs: server power, upgrades, hosting and domains. Money donations are not open yet. |
-| funding.progress | {{arrecadado}} de R$ 3.000 `[PENDING P-03]` | {{raised}} of R$ 3,000 `[PENDING P-03]` |
+| funding.body | A EmpireCommunity vive de doações voluntárias. O primeiro marco é de R$ 3.000, para montar um servidor próprio, com Xeon e 128 GB de RAM, que vai hospedar mais servidores de jogos. Depois dele, continuam os custos da comunidade: energia dos servidores, melhorias, hospedagem e domínios. As doações em dinheiro ainda não estão abertas. | EmpireCommunity runs on voluntary donations. The first milestone is R$ 3,000, to build our own server, with a Xeon and 128 GB of RAM, to host more game servers. After that, community costs continue: server power, upgrades, hosting and domains. Money donations are not open yet. |
+| funding.progress | {{secured}} de R$ 3.000 `[PENDING P-03]` | {{secured}} of R$ 3,000 `[PENDING P-03]` |
+| funding.progress.criterion | O progresso conta o valor das peças já compradas ou doadas, não dinheiro recebido. | Progress counts the value of parts already bought or donated, not money received. |
 | funding.link | Apoiar | Support us |
 | join.title | Faça parte. | Join us. |
 | join.body | A entrada é gratuita. | Joining is free. |
@@ -117,7 +118,7 @@ Estrutura e regras em [`docs/design/information-architecture.md`](../design/info
 | open.github | Ver no GitHub | View on GitHub |
 | open.guides | Guias de colaboração | Contribution guides |
 | activity.title | Atividade recente | Recent activity |
-| activity.updated | Atualizado em {{data}} | Updated on {{date}} |
+| activity.updated | Atualizado em {{date}} | Updated on {{date}} |
 
 ## Infraestrutura e servidores de jogos
 
@@ -187,9 +188,9 @@ Estrutura e regras em [`docs/design/information-architecture.md`](../design/info
 | lead | A EmpireCommunity é gratuita e vive de doações voluntárias. Doar nunca é obrigatório. | EmpireCommunity is free and runs on voluntary donations. Donating is never required. |
 | goal.title | Meta atual | Current goal |
 | goal.value | R$ 3.000 | R$ 3,000 |
-| goal.body | A meta é montar um servidor local, com Xeon e 128 GB de RAM, para hospedar mais servidores de jogos. Ele está em montagem e ainda não está em uso. Esse é o primeiro marco: depois dele, a arrecadação continua para os custos da comunidade, como energia dos servidores, melhorias, hospedagem e domínios. | The goal is to build a local server, with a Xeon and 128 GB of RAM, to host more game servers. It is being built and is not in use yet. This is the first milestone: after it, fundraising continues for community costs, such as server power, upgrades, hosting and domains. |
-| goal.progress | {{arrecadado}} de R$ 3.000 `[PENDING P-03]` | {{raised}} of R$ 3,000 `[PENDING P-03]` |
-| support.goal.reached | Este marco foi alcançado. A arrecadação continua para os custos da comunidade: energia dos servidores, melhorias, hospedagem e domínios. | This milestone has been reached. Fundraising continues for community costs: server power, upgrades, hosting and domains. |
+| goal.body | A meta é montar um servidor local, com Xeon e 128 GB de RAM, para hospedar mais servidores de jogos. Ele está em montagem e ainda não está em uso. Esse é o primeiro marco: depois dele, continuam os custos da comunidade, como energia dos servidores, melhorias, hospedagem e domínios. | The goal is to build a local server, with a Xeon and 128 GB of RAM, to host more game servers. It is being built and is not in use yet. This is the first milestone: after it, community costs continue, such as server power, upgrades, hosting and domains. |
+| goal.progress | {{secured}} de R$ 3.000 `[PENDING P-03]` | {{secured}} of R$ 3,000 `[PENDING P-03]` |
+| support.goal.reached | Este marco foi alcançado. Os custos da comunidade continuam: energia dos servidores, melhorias, hospedagem e domínios. | This milestone has been reached. Community costs continue: server power, upgrades, hosting and domains. |
 | support.progress.criterion | O progresso conta o valor das peças já compradas ou doadas, não dinheiro recebido. | Progress counts the value of parts already bought or donated, not money received. |
 | support.donations.notOpen | As doações em dinheiro ainda não estão abertas. O site não recebe dinheiro e não indica nenhuma forma de enviar. | Money donations are not open yet. This website does not receive money and does not give any way to send it. |
 | parts.title | Peças do servidor | Server parts |
@@ -206,8 +207,7 @@ Estrutura e regras em [`docs/design/information-architecture.md`](../design/info
 | other.body | Parte do nosso código é pública. Colaborações são bem-vindas no GitHub. | Part of our code is public. Contributions are welcome on GitHub. |
 | transparency.title | Transparência | Transparency |
 | transparency.sold | Nada é vendido. | Nothing is for sale. |
-| transparency.data | Dados de usuários não são vendidos nem divulgados. | User data is never sold or disclosed. |
-| transparency.perks | Recursos só para doadores podem existir na instância hospedada, por causa do custo de VPS. Eles nunca são retirados das versões self-hosted. | Donor-only features may exist on the hosted instance, because of VPS costs. They are never removed from self-hosted versions. |
+| transparency.data | Este site não vende dados de usuários e só os compartilha com os fornecedores necessários para funcionar, como explica a Política de Privacidade. | This website does not sell user data and shares it only with the providers needed to run it, as the Privacy Policy explains. |
 
 ## Organização
 
@@ -217,13 +217,13 @@ Estrutura e regras em [`docs/design/information-architecture.md`](../design/info
 | meta.description | Quem mantém a EmpireCommunity, como ela funciona e seus endereços oficiais. | Who runs EmpireCommunity, how it works, and its official addresses. |
 | title | Organização | Organization |
 | lead | A EmpireCommunity é uma comunidade de jogadores e aficionados por tecnologia, sediada no Brasil. | EmpireCommunity is a community of gamers and technology enthusiasts, based in Brazil. |
-| since | Desde {{ano}} `[PENDING P-06]` | Since {{year}} `[PENDING P-06]` |
+| since | Desde {{year}} `[PENDING P-06]` | Since {{year}} `[PENDING P-06]` |
 | purpose.title | Propósito | Purpose |
 | purpose.body | `[PENDING P-07]` | `[PENDING P-07]` |
 | how.title | Como funciona | How it works |
 | how.free | Tudo é gratuito e vive de doações voluntárias. | Everything is free and runs on voluntary donations. |
 | how.sold | Nada é vendido. | Nothing is for sale. |
-| how.data | Dados de usuários não são vendidos nem divulgados. | User data is never sold or disclosed. |
+| how.data | Este site não vende dados de usuários e só os compartilha com os fornecedores necessários para funcionar, como explica a Política de Privacidade. | This website does not sell user data and shares it only with the providers needed to run it, as the Privacy Policy explains. |
 | names.title | Nomes | Names |
 | names.community | **EmpireCommunity** é a organização e a comunidade, e dá nome ao servidor no Discord e ao grupo no WhatsApp. | **EmpireCommunity** is the organization and the community, and the name of its Discord server. |
 | names.hub | **EmpireHub** é o produto de jogos de mesa dentro do Discord. | **EmpireHub** is the tabletop games product inside Discord. |
@@ -301,7 +301,7 @@ conversa e o GitHub, que têm regras próprias. Os serviços hospedados pela Emp
 **5. Disponibilidade.** Servidores de jogos e projetos são mantidos pela comunidade e podem mudar, ser interrompidos ou
 encerrados.
 
-**6. Marcas e conteúdo.** Marcas e assets da EmpireCommunity pertencem ao seu fundador, Leonne Martins. O código de cada
+**6. Marcas e conteúdo.** Marcas e assets da EmpireCommunity pertencem ao seu fundador, Leone Santos Martins. O código de cada
 projeto segue a licença do respectivo repositório.
 
 **7. Uso adequado.** Não use o site para atacar, sobrecarregar ou tentar burlar a segurança dele ou de terceiros, nem
@@ -335,7 +335,7 @@ platforms and GitHub, which have their own rules. Services hosted by EmpireCommu
 **5. Availability.** Game servers and projects are maintained by the community and may change, be interrupted or be
 discontinued.
 
-**6. Trademarks and content.** EmpireCommunity's trademarks and assets belong to its founder, Leonne Martins. Each
+**6. Trademarks and content.** EmpireCommunity's trademarks and assets belong to its founder, Leone Santos Martins. Each
 project's code follows the license of its repository.
 
 **7. Acceptable use.** Do not use the website to attack, overload or try to bypass the security of the website or of
@@ -360,7 +360,7 @@ Vigência: `[PENDING P-12]`
 legal@empirecommunity.org. Esta política vale para o site empirecommunity.org. Os demais serviços da comunidade têm políticas próprias.
 
 **2. O que este site não faz.** O site não tem formulários, contas ou cadastro, não define cookies próprios, não mantém
-registros de acesso e não vende nem divulga dados de usuários.
+registros de acesso e não vende dados de usuários. O item 7 diz com quem os dados são compartilhados.
 
 **3. Registros técnicos.** O servidor do site não mantém registros de acesso. Ele guarda apenas registros mínimos de
 erro, para diagnóstico. Esses registros podem conter o endereço de conexão de quem acessava o site quando o erro
@@ -368,8 +368,9 @@ ocorreu, são substituídos em rotação curta e se perdem quando o servidor do 
 atualiza o número de membros armazena apenas esse número da comunidade e dados técnicos da própria atualização, sem
 nenhum dado de visitantes.
 
-**4. Estatísticas de uso.** Usamos o Cloudflare Web Analytics para saber quantas visitas cada página recebe. Essa
-ferramenta não usa cookies nem armazenamento local no seu navegador e não identifica pessoas.
+**4. Estatísticas de uso.** Usamos o Cloudflare Web Analytics para saber quantas visitas as páginas do site recebem. A
+página Apoiar e a página de redirecionamento para o Discord não usam essa ferramenta, e as visitas a elas não são
+contadas. Essa ferramenta não usa cookies nem armazenamento local no seu navegador e não identifica pessoas.
 
 **5. Escolha de idioma.** Ao acessar o endereço principal, a Cloudflare identifica o país da conexão para enviar você à
 versão em português ou em inglês. O site não guarda essa informação.
@@ -409,14 +410,15 @@ Effective date: `[PENDING P-12]`
 legal@empirecommunity.org. This policy applies to the empirecommunity.org website. The community's other services have their own policies.
 
 **2. What this website does not do.** The website has no forms, accounts or registration, sets no cookies of its own,
-keeps no access logs, and does not sell or disclose user data.
+keeps no access logs, and does not sell user data. Item 7 says who data is shared with.
 
 **3. Technical records.** The website's server keeps no access logs. It keeps only minimal error records, for diagnosis.
 These records may contain the connection address of whoever was accessing the website when the error occurred, are
 replaced on a short rotation, and are lost when the website's server is recreated. The automated service that updates
 the member count stores only that community number and technical data about its own update, with no visitor data.
 
-**4. Usage statistics.** We use Cloudflare Web Analytics to learn how many visits each page receives. This tool does not
+**4. Usage statistics.** We use Cloudflare Web Analytics to learn how many visits the website's pages receive. The
+Support page and the Discord redirect page do not use this tool, and visits to them are not counted. This tool does not
 use cookies or local storage in your browser and does not identify people.
 
 **5. Language selection.** When you open the main address, Cloudflare identifies the country of your connection to send

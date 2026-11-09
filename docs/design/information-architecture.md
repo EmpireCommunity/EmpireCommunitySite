@@ -116,9 +116,9 @@ Vocabulário fechado. O dado vem de arquivo, para mudar sem mexer em layout.
 | Contexto | Valor | pt-BR | en-US | Link? |
 |---|---|---|---|---|
 | Projeto | `live` | No ar | Live | Sim, se houver URL funcionando |
-| Projeto | `development` | Em desenvolvimento | In development | Não |
+| Projeto | `in-development` | Em desenvolvimento | In development | Não |
 | Servidor de jogo | `live` | No ar | Live | Não: o acesso passa pela comunidade (P-09) |
-| Servidor de jogo | `soon` | Em breve | Coming soon | Não |
+| Servidor de jogo | `coming-soon` | Em breve | Coming soon | Não |
 
 ### Catálogo inicial de projetos, verificado em 2026-11-08
 
@@ -127,9 +127,9 @@ Vocabulário fechado. O dado vem de arquivo, para mudar sem mexer em layout.
 | EmpireMuse | `live` | Site `muse.empirecommunity.org`; código no GitHub | Site responde 200; repositório público. Crédito obrigatório: derivado do MuseHeart-MusicBot, de zRitsu (GPL-2.0). |
 | github-worker-relay | `live` (dono confirma, P-10) | Código no GitHub | Repositório público, v2.1.0. Não há URL pública para checar se está em execução. |
 | EmpireCommunitySite | `live` no lançamento | Código no GitHub | Este site. |
-| EmpireHub | `development` | Nenhum | `empirehub.com.br` responde 404. Repositório principal privado. |
-| EmpireBot | `development` | Nenhum | Ainda não implantado (D-13). Repositório privado. |
-| EmpireCraft | `development` | Nenhum | Repositório público só com README e licença. |
+| EmpireHub | `in-development` | Nenhum | `empirehub.com.br` responde 404. Repositório principal privado. |
+| EmpireBot | `in-development` | Nenhum | Ainda não implantado (D-13). Repositório privado. |
+| EmpireCraft | `in-development` | Nenhum | Repositório público só com README e licença. |
 
 Fora do catálogo: EmpireAssets (biblioteca privada e interna) e `.github` (perfil da organização). Os subprojetos
 (Panel, RPC-app, LL-binaries, jishaku, HubEngine, HubGames e demais) ficam dentro do projeto-pai, para não inflar a lista.
@@ -275,7 +275,7 @@ Seções: Título e lead · Legenda de status · Lista completa · Código abert
 └──────────────────────┴─────────────────────────────────────────────────┘
 ```
 
-Ordem: `live` antes de `development`; dentro de cada grupo, a ordem do arquivo de dados.
+Ordem: `live` antes de `in-development`; dentro de cada grupo, a ordem do arquivo de dados.
 
 Atividade recente: até 5 repositórios públicos, do mais recente para o mais antigo, com a data da última atualização.
 A regra "sem data" vale só para o número de membros. A origem desse dado ainda não foi decidida (ponto aberto da
