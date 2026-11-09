@@ -48,8 +48,9 @@ file in it is empty and its `package.json` has no dependencies.
   `nginxinc/nginx-unprivileged:1.30-alpine-slim` (pinned tag plus digest; stable branch, about 7 MB, a few MB of RAM).
   No Node at runtime.
 - **The build runs in GitHub Actions, never on the host** (D-10). CI runs lint, `astro check`, tests, build and the
-  content checks in site-data. **Only a push to `main` publishes** an image to GHCR (public package), with a build
-  provenance attestation; pull requests and forks never publish and never see a secret. The host pulls **by digest**
+  content checks in site-data. **Only a release tag `vX.Y.Z` on a commit of `main` publishes** an image `X.Y.Z` to GHCR (public package; a merge to
+  `main` never builds one, D-24), with a build provenance attestation; pull requests and forks never publish and never
+  see a secret. The host pulls **by digest**
   and verifies the attestation first; **CI holds no SSH key or any credential for the host** (pull model).
   The image must carry **no `traefik.*` label** (inherited or added), and CI fails if it does. All of this, with the
   workflow hygiene rules and the owner-approved deploy step, is specified in [deploy](../contracts/deploy.md).

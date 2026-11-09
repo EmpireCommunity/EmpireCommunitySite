@@ -136,7 +136,7 @@ plan allows 10; this uses 2, and `/discord` needs none, D-29). Status code **302
   Ops Runbook with the date): **Email Address Obfuscation** (it replaces visible e-mail addresses in the HTML, which
   would alter contact addresses), **Rocket Loader** (it rewrites script loading and conflicts with
   the CSP), and **automatic Web Analytics injection**. Any other feature that modifies delivered HTML is also off.
-  The integrity check in [deploy](deploy.md) section 8 compares the delivered support page with the built one (expected state block, no payment marker), so a
+  The integrity check in [deploy](deploy.md) section 8 checks the delivered support page for the expected state block and no payment marker, so a
   re-enabled feature is detected.
 
 ## 6. nginx (`nginxinc/nginx-unprivileged`, port 8080)
