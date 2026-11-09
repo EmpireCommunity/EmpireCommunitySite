@@ -1,5 +1,8 @@
 name: CI
 
+# Contract: docs/contracts/deploy.md. No secrets, no write permission, nothing here publishes an image
+# (release.yml does, from a tag on main). Job names below are the required status checks; renaming one
+# means updating the branch ruleset and docs/runbook/release.md.
 on:
   push:
     branches: [main]
@@ -7,22 +10,189 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  validate:
-    name: Lint & Validation
+  quality:
+    name: Quality (check, lint, tests)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: 20
+          persist-credentials: false
 
-      - name: Verify repository structure and health
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Enable pnpm (version from packageManager)
+        run: corepack enable
+
+      - name: Install dependencies (lockfile only)
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck (astro check)
+        run: pnpm check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Tests
+        run: pnpm test
+
+  build:
+    name: Build and dist checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Enable pnpm (version from packageManager)
+        run: corepack enable
+
+      - name: Install dependencies (lockfile only)
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Scans over dist/ and the content sources (C-1, C-3, C-5, payment guard, /discord)
+        run: node scripts/check-dist.ts
+
+  image:
+    name: Image checks and HTTP header test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      IMAGE: empirecommunity-site:ci
+      CONTAINER: empirecommunity-site-ci
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Enable pnpm and install dependencies (scripts need the yaml package)
         run: |
-          echo "Validating EmpireCommunitySite repository integrity..."
-          test -f README.md || exit 1
-          test -f LICENSE || exit 1
-          echo "Repository integrity check passed successfully."
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Compose template follows the deploy contract (labels, hardening, logging)
+        run: |
+          node scripts/check-compose.ts deploy/compose.yml
+          docker compose -f deploy/compose.yml config -q
+
+      - name: Build the image (the build runs the dist checks inside)
+        run: docker build --build-arg REVISION="$GITHUB_SHA" -t "$IMAGE" .
+
+      - name: Image rules (no traefik label, non-root, 8080 only, no VOLUME, dist and nginx only)
+        run: scripts/check-image.sh "$IMAGE"
+
+      - name: Start the image with the production hardening
+        run: |
+          docker run -d --name "$CONTAINER" --read-only --tmpfs /tmp --cap-drop ALL \
+            --security-opt no-new-privileges:true --memory 32m --pids-limit 64 \
+            -p 127.0.0.1:18080:8080 "$IMAGE"
+          for _ in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:18080/healthz > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          docker logs "$CONTAINER"
+          echo "::error::the container did not become healthy"
+          exit 1
+
+      - name: HTTP header test against the running image
+        env:
+          BASE_URL: http://127.0.0.1:18080
+        run: node scripts/http-test.ts
+
+      - name: No access log at the origin (D-20)
+        run: |
+          # The requests above were served; stdout and stderr must not hold a single access-log line.
+          if docker logs "$CONTAINER" 2>&1 | grep -E '"(GET|HEAD|POST) /'; then
+            echo "::error::the origin wrote an access log line"
+            exit 1
+          fi
+
+      - name: Clean up
+        if: always()
+        run: |
+          docker rm -f "$CONTAINER" || true
+          docker image rm -f "$IMAGE" || true
+
+  workflows:
+    name: Workflow lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ACTIONLINT_VERSION: 1.7.12
+      ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Enable pnpm and install dependencies (the hygiene check uses the yaml package)
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Hygiene rules (SHA pins, permissions, no pull_request_target, no event data in shell)
+        run: node scripts/check-workflows.ts
+
+      - name: actionlint
+        run: |
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL -o "$RUNNER_TEMP/$archive" "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/$archive"
+          echo "$ACTIONLINT_SHA256  $RUNNER_TEMP/$archive" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -color
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GITLEAKS_VERSION: 8.30.1
+      GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: gitleaks over the history
+        run: |
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -fsSL -o "$RUNNER_TEMP/$archive" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/$archive"
+          echo "$GITLEAKS_SHA256  $RUNNER_TEMP/$archive" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" git --no-banner --redact

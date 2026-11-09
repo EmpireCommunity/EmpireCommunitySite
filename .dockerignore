@@ -12,3 +12,5 @@ node_modules/
 *.log
 coverage/
 .DS_Store
+dist/
+deploy/

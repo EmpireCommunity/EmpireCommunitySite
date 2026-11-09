@@ -1,0 +1,41 @@
+# Production compose TEMPLATE for the host (docs/contracts/deploy.md sections 4, 6 and 7).
+# The image line is the only thing edited per deploy, by Guindaste and only with the owner's OK for that deploy:
+# release tag plus the digest taken from the release run summary, verified with `gh attestation verify` before pulling.
+# The tag and digest below are placeholders and are never deployed. Routing labels exist only here, never in the image.
+name: empirecommunity-site
+
+services:
+  site:
+    image: ghcr.io/empirecommunity/empirecommunitysite:0.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 32m
+    pids_limit: 64
+    networks:
+      - proxy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: "2"
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.empirecommunity-site.rule=Host(`empirecommunity.org`)
+      - traefik.http.services.empirecommunity-site.loadbalancer.server.port=8080
+
+networks:
+  proxy:
+    external: true
