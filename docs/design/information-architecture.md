@@ -36,11 +36,11 @@ Cada regra é verificável. A coluna da direita aponta o critério de aceite rel
 
 | Id | Regra | Critério |
 |---|---|---|
-| R-1 | **Canais em pt-BR:** Discord e WhatsApp usam o mesmo componente, com largura, altura, tipografia, cor e estilo idênticos. Nenhum é "primário". Ordem alfabética: Discord à esquerda (em cima no mobile), WhatsApp à direita (embaixo). Ícones monocromáticos, sem as cores das marcas. Textos de apoio com a mesma extensão. | C-1 |
-| R-2 | **Canais em en-US:** a palavra WhatsApp não aparece em nenhuma página, metadado, `llms.txt` ou texto alternativo de `/en-us/`, nem na página de escolha em `/`. | C-1 |
+| R-1 | **Canais em pt-BR:** Discord e WhatsApp usam o mesmo componente, com largura, altura, tipografia, cor e estilo idênticos. Nenhum é "primário". Ordem alfabética: Discord à esquerda (em cima no mobile), WhatsApp à direita (embaixo); em `/discord`, lado a lado em todas as larguras (D-41). Ícones monocromáticos, sem as cores das marcas. Textos de apoio com a mesma extensão. | C-1 |
+| R-2 | **Canais em en-US:** a palavra WhatsApp não aparece em nenhuma página, metadado, `llms.txt` ou texto alternativo de `/en-us/`, nem na página de escolha em `/`. Em `/discord`, página neutra, ela só aparece dentro do container `lang="pt-BR"` (D-41). | C-1 |
 | R-3 | **Sem CTA de canal no header.** O header leva para Participar. Assim nenhum canal ganha mais peso. | C-1 |
 | R-4 | **Link só no que funciona.** O link é renderizado somente quando `status = live` e existe `url`. Em desenvolvimento e Em breve são texto, sem link, sem `href="#"`, sem botão desabilitado. | C-2 |
-| R-5 | **Discord sempre por `https://empirecommunity.org/discord`.** Nenhum outro link ou convite do Discord é usado. | C-2 |
+| R-5 | **Toda entrada passa por `https://empirecommunity.org/discord` (D-41).** Botões e links de Discord e de WhatsApp, em qualquer página, levam a esse endereço. O convite do Discord e o link do WhatsApp só existem dentro de `/discord`. | C-2 |
 | R-6 | **Seção sem dado real não é renderizada.** Inclui título, separador, espaçamento e âncora. Nada de "em breve", traços ou zeros no lugar do dado. Ver §6. | C-4 |
 | R-7 | **Pessoa só com consentimento registrado.** Sem consentimento, a build falha. Vale para fundador e equipe. | C-4 |
 | R-8 | **Número de membros:** só o último valor, com a regra de exibição de `members-json` (888 vira `880+`), sem data, sem "atualizado em", sem animação. Aparece apenas na faixa de números da Home. | C-7 |
@@ -65,7 +65,7 @@ alvos de toque com pelo menos 44 × 44 px, contraste AA, tabelas com cabeçalho 
 │   ├── organization/      falta no contrato routing-locale (ver §11)
 │   ├── terms-of-service/
 │   └── privacy-policy/
-/discord          página servida pelo site, HTTP 200 (D-29)
+/discord          regras da comunidade e links de entrada, HTTP 200 (D-29, D-41)
 /404.html         página neutra e bilíngue
 ```
 
@@ -107,7 +107,7 @@ navegador, o que sustenta a afirmação da Política de Privacidade.
 | Contato | `contact@`, `legal@` | `contact@`, `legal@` |
 | Legal | Termos, Privacidade | Terms, Privacy |
 
-Última linha do rodapé: nome da organização e "sediada no Brasil". Nada de ano enquanto P-06 estiver pendente.
+Última linha do rodapé: nome da organização e "sediada no Brasil". Sem ano: a data de fundação fica em Organização.
 
 ## 5. Status
 
@@ -117,7 +117,7 @@ Vocabulário fechado. O dado vem de arquivo, para mudar sem mexer em layout.
 |---|---|---|---|---|
 | Projeto | `live` | No ar | Live | Sim, se houver URL funcionando |
 | Projeto | `in-development` | Em desenvolvimento | In development | Não |
-| Servidor de jogo | `live` | No ar | Live | Não: o acesso passa pela comunidade (P-09) |
+| Servidor de jogo | `live` | No ar | Live | Não: o acesso se dá pelo Discord (D-37) |
 | Servidor de jogo | `coming-soon` | Em breve | Coming soon | Não |
 
 ### Catálogo inicial de projetos, verificado em 2026-11-08
@@ -139,13 +139,9 @@ Fora do catálogo: EmpireAssets (biblioteca privada e interna) e `.github` (perf
 | Pendência | Seção afetada | Com dado vazio |
 |---|---|---|
 | P-02 Peças | Apoiar › Peças do servidor | Tabela some, com título |
-| P-03 Valor arrecadado | Apoiar e Home › progresso da meta | Só a meta aparece; sem barra e sem "R$ 0" |
+| P-03 Valor arrecadado | Apoiar › progresso da meta (D-39: não aparece na Home) | Só a meta aparece; sem barra e sem "R$ 0" |
 | P-04 Equipe | Organização › Equipe | Seção some |
 | P-05 Fundador | Organização › Fundador | Sem consentimento registrado, a build falha (R-7). Apelido, bio e foto somem individualmente |
-| P-06 Ano | Organização › linha "Desde" | Linha some |
-| P-07 Propósito | Organização › Propósito | Seção some |
-| P-08 WhatsApp | Home › "membros no WhatsApp" | Item some; o do Discord continua igual |
-| P-09 Minecraft | Infraestrutura › detalhes de acesso | Fica só a orientação de falar com a comunidade |
 | GitHub | Home › repositórios públicos; Projetos › Atividade recente | Item e seção somem |
 
 O número do Discord não some: sempre existe o valor embutido na build (`members-json` §3 e §4). Esse valor precisa ser
@@ -163,6 +159,7 @@ final. Marcas: `[P-xx]` some quando vazio; `(pt)` existe só em pt-BR.
 | Header | Logo, cinco itens, seletor | Logo, seletor, botão Menu | Faixa com o seletor; abaixo, logo e botão Menu |
 | Índice (título + linhas) | Título em 4 colunas, linhas em 8 | Título acima, linhas na largura total | Igual ao tablet |
 | Par de canais (pt) | Dois blocos iguais lado a lado | Dois blocos iguais lado a lado | Empilhados, largura total, Discord primeiro |
+| Par de botões em `/discord` (pt) | Lado a lado | Lado a lado | Lado a lado (D-41) |
 | Linha de status | Nome, descrição, status e links na mesma linha | Nome e status na 1ª linha; descrição e links abaixo | Tudo empilhado, status logo abaixo do nome |
 | Tabela de peças | Tabela | Tabela | Linhas empilhadas, cada uma com rótulo e valor |
 | Faixa de números | Até 3 itens em linha | Até 3 itens em linha | Empilhados |
@@ -173,7 +170,7 @@ final. Marcas: `[P-xx]` some quando vazio; `(pt)` existe só em pt-BR.
 Propósito: dizer em segundos o que é a organização e oferecer a entrada. Sequência: afirmação, prova, o que existe,
 como se mantém, entrada.
 
-Seções: Hero · Números · O que fazemos · Projetos · Servidores de jogos · Como nos mantemos · Faça parte.
+Seções: Hero · Números · Propósito · O que fazemos · Projetos · Servidores de jogos · Como nos mantemos · Faça parte.
 
 ```text
 Desktop 1440
@@ -190,8 +187,10 @@ Desktop 1440
 │  [ Entrar no Discord ]  [ Entrar no WhatsApp (pt) ]   Ver projetos →   │
 │                                                                        │
 ├────────────────────────────────────────────────────────────────────────┤
-│  880+ membros no Discord │ 570+ no WhatsApp (pt)[P-08] │ 12 repositórios │
+│  880+ membros no Discord │ 60 no WhatsApp (pt)         │ 12 repositórios │
 ├──────────────────────┬─────────────────────────────────────────────────┤
+│  Propósito           │ Texto do dono                                   │
+├──────────────────────┼─────────────────────────────────────────────────┤
 │  O que fazemos       │ ─────────────────────────────────────────────── │
 │                      │ Servidores de jogos      texto                  │
 │                      │ ─────────────────────────────────────────────── │
@@ -209,7 +208,7 @@ Desktop 1440
 │                      │ Project Zomboid                Em breve         │
 │                      │ Factorio                       Em breve         │
 ├──────────────────────┼─────────────────────────────────────────────────┤
-│  Como nos mantemos   │ Texto + R$ 3.000 + progresso [P-03]  Apoiar →   │
+│  Como nos mantemos   │ Texto + R$ 3.000                     Apoiar →   │
 ├──────────────────────┴─────────────────────────────────────────────────┤
 │  Faça parte.                [ Discord ]      [ WhatsApp (pt) ]         │
 ├────────────────────────────────────────────────────────────────────────┤
@@ -229,7 +228,7 @@ Mobile 390
 │ Ver projetos →       │
 ├──────────────────────┤
 │ 880+ membros Discord │
-│ 570+ WhatsApp [P-08] │  (pt)
+│ 60 WhatsApp          │  (pt)
 │ 12 repositórios      │
 ├──────────────────────┤
 │ O que fazemos        │
@@ -292,7 +291,7 @@ Seções: Título e lead · Servidores de jogos · Pedir um jogo · Onde tudo ro
 │  Infraestrutura e    │  Lead                                           │
 │  servidores de jogos │                                                 │
 ├──────────────────────┼─────────────────────────────────────────────────┤
-│  Servidores de jogos │ Minecraft  No ar     Detalhes de acesso [P-09]  │
+│  Servidores de jogos │ Minecraft  No ar     Acesso pelo Discord        │
 │                      │ Palworld   Em breve                             │
 │                      │ Project Zomboid  Em breve                       │
 │                      │ Factorio   Em breve                             │
@@ -338,6 +337,11 @@ en-US: um único bloco do Discord, em 8 colunas, com a nota sobre a comunidade s
 
 Perguntas frequentes usam `<details>` nativo: funcionam sem JavaScript.
 
+**Decisão (T-38): dois blocos de canal, cada um com o próprio botão.** Em pt-BR a página mantém os blocos Discord e
+WhatsApp, e os dois botões levam a `/discord` (`site-data` §8). Um botão único obrigaria a criar outro padrão só para esta
+página, sem combinar com a Home; os dois blocos mantêm R-1 e dizem o que é cada canal antes da escolha. Em en-US, um
+bloco do Discord, que também leva a `/discord`.
+
 ### 7.5 Apoiar
 
 Propósito: mostrar a meta, as peças e que as doações em dinheiro ainda não estão abertas. No lançamento, o site não
@@ -376,13 +380,13 @@ A abertura das doações em dinheiro fica para um contrato posterior (D-28).
 
 Propósito: responder "quem está por trás disto?".
 
-Seções: Título e lead · Propósito · Como funciona · Nomes · Fundador · Equipe · Endereços oficiais · Contato.
+Seções: Título e lead · Como começou · Como funciona · Nomes · Fundador · Equipe · Endereços oficiais · Contato.
 
 ```text
 ┌──────────────────────┬─────────────────────────────────────────────────┐
-│  Organização         │  Lead · Desde {ano} [P-06]                      │
+│  Organização         │  Lead · Desde {ano}                             │
 ├──────────────────────┼─────────────────────────────────────────────────┤
-│  Propósito [P-07]    │  Texto do dono                                  │
+│  Como começou        │  Texto do dono, em dois parágrafos              │
 ├──────────────────────┼─────────────────────────────────────────────────┤
 │  Como funciona       │  Gratuito · doações · dados não vendidos        │
 ├──────────────────────┼─────────────────────────────────────────────────┤
@@ -422,6 +426,71 @@ Em tablet e mobile, o sumário vira lista acima do texto.
 - **Escolha de idioma em `/`:** só aparece se as regras da Cloudflare estiverem desligadas. Nome da organização e dois
   links, cada um no próprio idioma. Sem script.
 - **404:** uma única página neutra e bilíngue, com links para as duas Homes (`routing-locale` §1).
+- **`/discord`:** regras da comunidade e links de entrada, na §7.10.
+
+### 7.10 Regras da comunidade: `/discord` (D-41)
+
+Propósito: mostrar as regras e, depois da confirmação, liberar a entrada. Comportamento em `routing-locale`, dados em
+`site-data` §14, texto em `copy.md`. Esta seção define ordem, colunas e tratamento visual. A caixa é só uma confirmação
+de interface: nada é gravado e nenhum texto pode sugerir o contrário.
+
+**Os dois idiomas na mesma URL.** pt-BR vem primeiro, porque é o idioma de cerca de 99% das visitas. en-US vem depois,
+empilhado, nunca em coluna paralela: duas colunas estreitariam a leitura de quase todos para atender poucos. Quem lê
+inglês encontra `Read in English` no primeiro viewport, uma âncora para `#en-us`. Cada container é completo: regras, data,
+caixa e botões próprios. O layout é o neutro, sem navegação nem seletor.
+
+```text
+Desktop 1440
+┌──────────────────────┬─────────────────────────────────────────────────┐
+│ Regras da            │ 1 - Proibição de Spam:                          │
+│ comunidade           │ Texto da regra                                  │
+│ Atualizadas em {data}│ ...                                             │
+│ Read in English ↓    │ 6 - Conteúdo explícito +18:                     │
+│                      │ Texto da regra                                  │
+│                      │ Frase de encerramento (500)                     │
+│                      │ ─────────────────────────────────────────────── │
+│                      │ ☐ Li as regras e concordo com elas. Ao marcar...│
+│                      │ antes: Marque a caixa acima para ver os botões. │
+│                      │ depois: [ Discord ]   [ WhatsApp ]              │
+├──────────────────────┼─────────────────────────────────────────────────┤
+│ Community rules      │ 1 - No Spam: ...                                │
+│ Updated on {date}    │ ☐ I have read the rules ...                     │
+│                      │ after: [ Discord ]                              │
+└──────────────────────┴─────────────────────────────────────────────────┘
+
+Mobile 390
+┌──────────────────────┐
+│ Regras da comunidade │
+│ Atualizadas em {data}│
+│ Read in English ↓    │
+│ 1 - Proibição de ... │
+│ ...                  │
+│ ──────────────────── │
+│ ☐ Li as regras ...   │
+│ [Discord] [WhatsApp] │
+├──────────────────────┤
+│ Community rules      │
+│ ... ☐ ... [ Discord ]│
+└──────────────────────┘
+```
+
+| Elemento | Especificação |
+|---|---|
+| Containers | Dois irmãos em `<main>`, `lang="pt-BR"` e depois `lang="en-US"`, com `id` `pt-br` e `en-us` e `scroll-margin-top: 24px` |
+| Entre os containers | Filete `pauta` de 1 px em cima do en-US. Padding vertical de 96 px (64 px abaixo de 1024 px) |
+| Colunas | Índice: a partir de 1024 px, 4 + 8 colunas, com A Margem correndo pelos dois containers. Abaixo disso, título acima do texto |
+| Título | Headline nos dois idiomas, `h1` em pt-BR e `h2` em en-US. Sem Display, porque a página tem dois títulos equivalentes |
+| Data | Body-sm, `papel-suave`, 8 px abaixo do título |
+| `Read in English` | Só no container pt-BR, 16 px abaixo da data. `link-text` em Body-sm, `href="#en-us"`, `lang="en-US"`, seta Lucide para baixo depois do texto, alvo de 44 px |
+| Título de regra | Title, `papel`. `h2` em pt-BR e `h3` em en-US. Número e dois-pontos fazem parte do texto do dono: não usar `<ol>` |
+| Corpo de regra | Body, até 68 caracteres, `white-space: pre-line`, para manter o endereço da regra 5 em linha própria. 8 px abaixo do título; 32 px entre regras |
+| Encerramento | Body com peso 500, 32 px abaixo da última regra |
+| Bloco da caixa | Filete `pauta` em cima, 48 px depois do texto, com 32 px de padding superior |
+| Caixa | Nativa, 24 × 24 px, `accent-color: papel`, foco padrão do site. 12 px até o rótulo em Body. A linha inteira tem pelo menos 44 px de altura e clicar no rótulo marca a caixa |
+| Texto de estado | `discord.pending`, Body-sm, `papel-suave`, 16 px abaixo da caixa. Fica oculto por padrão e só aparece dentro de `@supports selector(:has(*))` com a caixa desmarcada, para o navegador sem `:has()` não pedir uma ação que não muda nada |
+| Entrada | 16 px abaixo da caixa. `discord.links.lead` em Body-sm, 12 px acima dos botões. Some junto com os botões enquanto a caixa está desmarcada, sem animação |
+| Botões, pt-BR | `button-channel` de 56 px, Discord à esquerda, WhatsApp à direita, **lado a lado em todas as larguras** (D-41). `grid-template-columns: repeat(2, minmax(0, 280px))`. Medianiz de 16 px abaixo de 640 px e de 24 px a partir daí. Abaixo de 640 px, `padding-inline: 8px`. Medido em 320 px: célula de 136 px, conteúdo de 120 px |
+| Botão, en-US | Só Discord: largura total abaixo de 640 px e 280 px a partir daí |
 
 ## 8. Dados necessários para a implementação
 
@@ -436,7 +505,7 @@ não presente no repositório).
 | Servidores de jogos | Arquivo do site | `id`, `status`, detalhes por idioma |
 | Apoio | `support.yaml` (`site-data` §10, D-28) | `donations.status: not-open`, `goal`, `specs?`, `parts[]` (nome, valor em centavos, situação, foto, alt por idioma), `partDonations?` |
 | Pessoas | Arquivo do site | `name`, `nickname?`, `role`, `bio?`, `photo?`, `consent` (obrigatório) |
-| Organização | Arquivo do site | `founded?`, `purpose?` |
+| Organização | `community.yaml` e mensagens `organization.*` | `foundedYear` (2022), `purpose` (lido na Home); o texto de origem fica nas mensagens |
 | GitHub | A decidir (ADR-0001) | total de repositórios públicos e últimas atualizações |
 
 Não usar o widget do Discord: ele expõe nomes de membros online (R-3 do Risks & Backlog), e D-13 já definiu o caminho.
@@ -448,13 +517,13 @@ Não usar o widget do Discord: ele expõe nomes de membros online (R-3 do Risks 
 | Id | O que falta | Recomendação |
 |---|---|---|
 | P-02 | Peças do Xeon: nome, valor, situação, fotos | Fotos sem etiquetas com números de série |
-| P-03 | Valor já arrecadado | Sem esse número, a barra de progresso não aparece |
+| P-03 | Valor já arrecadado | Calculado a partir das peças de P-02 (`site-data` §10). Só em Apoiar (D-39). Sem esse número, a barra de progresso não aparece |
 | P-04 | Equipe: nomes ou apelidos, funções, consentimento | Consentimento por escrito, guardado fora do repositório público |
 | P-05 | Fundador: apelido, bio curta, foto, registro de consentimento | O próprio dono registra o consentimento |
-| P-06 | Ano de início da comunidade | |
-| P-07 | Propósito | Dois ou três parágrafos curtos |
-| P-08 | Número de membros do WhatsApp | Valor manual, sem data (D-14) |
-| P-09 | Minecraft: endereço, versão, requisitos e como entrar | Confirmar se o endereço pode ser público |
+| P-06 | Fechada por D-37 | Fundação em 20 de agosto de 2022 |
+| P-07 | Fechada por D-39 | Propósito na Home e origem em Organização, com o texto do dono |
+| P-08 | Fechada por D-37 | WhatsApp é uma comunidade de 12 grupos, com 60 membros (valor manual, sem data na tela, D-14) |
+| P-09 | Fechada por D-37 | O acesso ao Minecraft se dá pelo Discord, que em breve funcionará como whitelist. Endereço e versão não são publicados (`site-data` §13) |
 | P-10 | Confirmar se o `github-worker-relay` está em produção | |
 | P-11 | Fechada por D-23 | Controlador: o dono, pessoa física. A Privacidade mostra só o nome legal e o e-mail `legal@` |
 | P-12 | Data de vigência de Termos e Privacidade | A data da publicação |
@@ -465,7 +534,7 @@ Não usar o widget do Discord: ele expõe nomes de membros online (R-3 do Risks 
 | Id | Decisão | Recomendação |
 |---|---|---|
 | O-1 | Projeto em desenvolvimento com repositório público (hoje EmpireCraft) recebe link para o código? | Não. Segue a leitura estrita de D-7. A página tem link geral para o GitHub da organização |
-| O-2 | Regras de convivência da comunidade aparecem em Participar? | Só se já existirem por escrito; o site não as inventa |
+| O-2 | Fechada por D-41 | As regras da comunidade ficam em `/discord`, §7.10 |
 | O-3 | Termos e Privacidade são rascunho em linguagem simples, feito sem advogado | Publicar assim é aceitável para um site sem coleta de dados, mas vale uma revisão jurídica pontual antes de receber doações, incluindo a ausência de registros de acesso (D-20) |
 
 **Conferir na implementação**, porque a Política de Privacidade afirma: nenhum registro de acesso na origem e registros de erro em rotação curta (D-20); ausência de
