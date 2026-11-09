@@ -58,7 +58,7 @@ Option 1, scoped to the exact path `/`:
 - A Brazilian visitor who prefers English, or a VPN user, gets the wrong language once and fixes it with the
   selector. This is the accepted cost of D-15.
 - These two rules are the only redirect rules the site needs in the dashboard: `/discord` is a page served by the
-  site (D-29, routing-locale), not a rule.
+  site (D-29, D-41, routing-locale), not a rule.
 - `/` is not in the sitemap and is never a canonical page; `x-default` on the home page points to it, on inner pages
   to the en-US page.
 - Privacy page: the country is derived by Cloudflare at the edge from the IP address; the site stores nothing. The

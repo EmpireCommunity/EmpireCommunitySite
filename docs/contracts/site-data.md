@@ -2,7 +2,7 @@
 
 - Version: 1. Owner: Alicerce. Consumers: Vitral (pages and components), Forja (loaders, build checks, CI), Ensaio
   (C-1 to C-4), Sentinela (money and personal data surfaces), Regente (content intake from the owner).
-- Decisions: D-2, D-3, D-5, D-6, D-7, D-14, D-21, D-22, D-23, D-28, D-29 (D-16 is superseded by D-21). Stack: [ADR-0001](../adr/0001-stack.md). Routes and locales:
+- Decisions: D-2, D-3, D-5, D-6, D-7, D-14, D-21, D-22, D-23, D-28, D-29, D-41 (D-16 is superseded by D-21; D-41 amends D-29). Stack: [ADR-0001](../adr/0001-stack.md). Routes and locales:
   [routing-locale](routing-locale.md). Member count endpoint: [members-json](members-json.md).
 - Risk: **High** for `team.yaml` (personal data). `support.yaml` is **Medium at launch**: public goal figures and a
   "donations not open" state, no payment instruction (D-28). The change that opens donations is High and has its own
@@ -23,6 +23,7 @@ src/
   data/projects.yaml           # collection
   data/game-servers.yaml       # collection
   data/join-channels.yaml      # collection
+  data/community-rules.yaml    # one document (rules text and date shown on /discord, D-41), section 14
   data/team.yaml               # collection
   data/support.yaml            # one document (goal, parts, donations state), read only through src/lib/support.ts
   content/legal/pt-br/terms-of-service.md   privacy-policy.md
@@ -31,8 +32,14 @@ src/
   assets/                      # images referenced by data files
 ```
 
-Collections use Astro's `file()` loader; one-document files are parsed with the same Zod schemas by a small loader.
-**Any schema error fails the build** with the file, the entry id and the field.
+Every YAML file goes through the custom `yamlLoader` in `src/lib/yaml-loader.ts`, **not** Astro's `file()` loader:
+`file()` only logs an error and carries on when a file is malformed, has no ids or is missing, and only warns on a
+duplicate id, so a broken data file could still produce a green build. `yamlLoader` fails the build on each of those
+(a missing file fails unless the collection is declared `optional`), takes per-entry schema errors from the
+collection's Zod schema through `parseData`, and runs a cross-entry `validate` callback after every load. Collections
+are parsed by `parseEntryList` and one-document files (`site.yaml`, `community.yaml`, `community-rules.yaml`) by
+`parseSingleDocument`, both in `src/lib/yaml-entries.ts`. **Any schema error fails the build** with the file, the
+entry id and the field.
 
 ## 2. Common types and rules
 
@@ -77,7 +84,10 @@ compile-time assertion in `index.ts` (a missing or extra key in `en-us.json` is 
   message first needs it, together with the change to `t()` and the parity test.
 - Required namespaces: `nav.*`, `selector.*`, `a11y.*`, `status.live`, `status.inDevelopment`, `status.comingSoon`,
   `meta.<routeKey>.title`, `meta.<routeKey>.description` (one pair per route key), `home.*`, `projects.*`,
-  `servers.*`, `join.*`, `support.*`, `organization.*`, `team.*`, `legal.*`, `footer.*`, `notFound.*`.
+  `servers.*`, `join.*`, `support.*`, `organization.*`, `team.*`, `legal.*`, `footer.*`, `notFound.*`, and `discord.*`
+  (the `/discord` page: headings, the agreement label, the updated-date line; its `<head>` strings use the en-US
+  values because the page is `<html lang="en-US">`). The join buttons on `/discord` take their label from
+  `join-channels.yaml`, so no `discord.*` key names WhatsApp.
 - **No key name mentions WhatsApp**, so the two locales always have the same key set (C-1). WhatsApp content comes
   from the `whatsapp` entry of `join-channels.yaml`, which has `audience: [pt-br]`. **One exception for text, not
   for keys:** the pt-BR **value** of `meta.join.description` may name WhatsApp, because it describes the join page,
@@ -108,7 +118,8 @@ discord:                                            # the one place the invite i
 approved invite is defined: the `/discord` page ([routing-locale](routing-locale.md)), the Worker
 ([members-json](members-json.md) 2.6) and the integrity check read them. A search over `src/` fails the build if any
 Discord invite URL (`discord.gg/...`, `discord.com/invite/...`) or any other copy of the code appears. The built
-`/discord` page is the one place an invite URL exists in `dist/`.
+`/discord` page is the one place an invite URL exists in `dist/`, and every join button elsewhere links to
+`links.discord` (D-41), not to the invite.
 
 ## 5. `community.yaml`
 
@@ -186,9 +197,18 @@ whatsapp:                                 # pt-BR only; optional
 
 - Rules: `discord` audience is both locales; `whatsapp` audience is exactly `[pt-br]` and its `url` is the group
   link from EMPIRECOMMUNITY.md. A channel is rendered in a locale only if the locale is in its `audience`.
+- **Where each link goes (D-41).** Every join button on a locale page (home, join, game servers, footer) links to
+  `links.discord`, whichever channel it names: the destination is the `/discord` page, where the visitor reads the
+  rules and ticks the box before the real links appear. The `discord` entry's `url` is therefore the page address, as
+  before. The `whatsapp` entry's `url` (the group link) is **read only by the `/discord` page**, inside its pt-BR
+  container; no other page, component, head tag or data file renders it, and it exists nowhere else in the
+  repository. That is its one source. The Discord invite has one source too (`site.yaml`, section 4). Whether the
+  pt-BR join page shows one button or one per channel is a layout choice (Bússola); either way every `href` is
+  `links.discord`.
 - Equal weight in pt-BR (D-3): the two channels share the same component, size, and prominence, ordered by the order
   in this file. Visual treatment is Vitral's.
-- WhatsApp never appears in en-US output, including head tags, JSON-LD, sitemap and `llms.txt` (post-build scan).
+- WhatsApp never appears in en-US output, including head tags, JSON-LD, sitemap and `llms.txt` (post-build scan). On
+  `/discord`, a neutral page, it appears only inside the `lang="pt-BR"` container (section 12).
 
 ## 9. `team.yaml` (personal data, High)
 
@@ -407,7 +427,8 @@ effectiveDate: 2026-12-01       # identical in both locales
 | `Localized` complete, `audience` keys exact, `pt-br`/`en-us` message type parity and placeholder parity | yes | C-3 |
 | Route keys exist in both locales | yes | C-3 |
 | Team consent rules, empty collections not rendered | yes | C-4 |
-| WhatsApp absent from en-US output, `llms.txt`, root page **and from the legal Markdown and built legal pages in both locales**; only `https://empirecommunity.org/discord` as Discord link; in `dist/` the invite URL appears only in `discord/index.html` and only with the configured code; that page has no script | yes | C-1 |
+| WhatsApp absent from en-US output, `llms.txt`, root page **and from the legal Markdown and built legal pages in both locales** (scope unchanged by D-41); only `https://empirecommunity.org/discord` as Discord link; in `dist/` the invite URL appears only in `discord/index.html` and only with the configured code (it may appear once per language container); the WhatsApp group URL appears in `dist/` only in `discord/index.html`, only once, only as `join-channels.yaml` defines it, and no WhatsApp reference there has a nearest ancestor `lang` other than `pt-BR` or sits in the `<head>` | yes | C-1 |
+| `/discord` page structure (D-41): `<html lang="en-US">`; exactly two language containers; one checkbox per container (no `name`, `autocomplete="off"`, a matching `<label for>`) followed by that container's join links; the en-US container has the Discord link and no WhatsApp; the pt-BR container has the Discord and the WhatsApp link; no `<script>`, `<form>`, `<noscript>`, `style=` or `http-equiv="refresh"`; `noindex`; rules text and `updatedOn` rendered from `community-rules.yaml`; absent from the sitemap | yes | C-1, C-5 |
 | Legal parity (ids, version, effective date) | yes | C-3 |
 | No inline executable script or `style=` in built HTML; inline `ld+json` allowed | yes | C-5 |
 | `hreflang` reciprocity, sitemap content, canonical present | yes | C-5 |
@@ -428,6 +449,35 @@ effectiveDate: 2026-12-01       # identical in both locales
 5. Publish game server addresses? Default no.
 6. GitHub activity as a credibility item: source not decided (build-time public data or static).
 7. Year the community started and its purpose text (owner is writing).
-8. Depends on the owner: legal name and contact e-mail for the Privacy page (section 11, D-23); withdrawal deadlines
+8. The community rules text in both languages for `community-rules.yaml` (the text valid on 2025-02-27; the en-US
+   version is owner or Bússola content, never invented here). The rules cannot name WhatsApp (section 14); if the
+   owner's text does, Regente decides where that wording goes.
+9. Depends on the owner: legal name and contact e-mail for the Privacy page (section 11, D-23); withdrawal deadlines
    (9.1); confirming the approved invite code (section 4); strong authentication on the accounts involved; the legal review
    of log obligations before donations open.
+
+## 14. `community-rules.yaml` (D-41)
+
+The text and the date shown on the `/discord` page ([routing-locale](routing-locale.md)). One document, optional until
+the owner supplies the rules (the page is not built without it, so `PENDING.discordPage` stays true), validated whenever
+the file exists, and **required once that flag is false**. It is the **one source** of the rules text and of the "last
+updated" date; no other file holds either.
+
+```yaml
+updatedOn: 2025-02-27                     # IsoDate; when the rules text last changed (shown on /discord, formatted per locale)
+intro: { pt-br: ..., en-us: ... }         # optional, max 400
+rules:                                    # 1 to 40 entries, shown in file order
+  - id: respect                           # Id, unique, never renamed
+    title: { pt-br: ..., en-us: ... }     # max 80
+    body: { pt-br: ..., en-us: ... }      # max 600
+```
+
+- Strict keys. `Localized` on every text, so a missing translation fails the build (C-3). Plain text only (`Text`
+  rule, no markup): the page renders it as text, never as HTML.
+- **No text names WhatsApp, in either locale** (a schema refinement), for the reason the legal text does not
+  (section 11): the two locales carry identical content and WhatsApp appears only in pt-BR (C-1).
+- `updatedOn` changes only when the rules text changes, in the same pull request. The page shows this date, not a build
+  date. It is the date of the rules, and the project does not claim it is verified against the server's own rules
+  channel; the owner is the source for both.
+- The page shows the date because this section says so (section 2: other dates are shown only where a section says
+  so). A stale-date warning is not defined: an old date is normal for rules that rarely change.

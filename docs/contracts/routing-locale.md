@@ -3,7 +3,7 @@
 - Version: 1. Owner: Alicerce. Consumers: Vitral (pages, selector, head tags), Forja (nginx, build scripts), Guindaste
   (Cloudflare rules, compose), Ensaio (C-3, C-5, C-8), Sentinela (headers, CSP).
 - Decisions: D-2 (two locales), D-3 (WhatsApp pt-BR only), D-8 (sitemap, robots, llms.txt, Web Analytics), D-15
-  (country-based root), D-29 (`/discord` served by the site). Rationale for the root: [ADR-0002](../adr/0002-locale-entry-routing.md).
+  (country-based root), D-29 (`/discord` served by the site), D-41 (`/discord` shows the community rules and releases the join links). Rationale for the root: [ADR-0002](../adr/0002-locale-entry-routing.md).
 
 ## 1. URL space
 
@@ -26,13 +26,15 @@ Locale path segments are `pt-br` and `en-us`; the `lang` attribute and `hreflang
   first segment. The route keys and slugs live in one module (`src/lib/routes.ts`); nothing else hardcodes a URL.
 - Every route exists in both locales (C-3). The build fails if a route key has no page in one locale.
 - Join page content differs by audience (WhatsApp pt-BR only, C-1), the URL does not.
+- Every join button or call to action on a locale page links to `/discord` (D-41), never to Discord or WhatsApp
+  directly. The WhatsApp group link and the Discord invite exist only on the `/discord` page.
 
 ### Reserved and special paths
 
 | Path | Owner | Behavior |
 |---|---|---|
 | `/` | Cloudflare rules, origin fallback | 302 to a locale tree (section 3). Origin serves the chooser page with HTTP 200 if the rules are off. |
-| `/discord` | build (static page, D-29) | Invite page served by the site, HTTP 200, live with the site. **No Cloudflare rule and no nginx rule.** See "The `/discord` page" below. The site never links anywhere else for Discord. |
+| `/discord` | build (static page, D-29, D-41) | Community rules and join links, served by the site, HTTP 200 (**never a redirect**), live with the site. **No Cloudflare rule; nginx serves it directly** (section 6). See "The `/discord` page" below. Every join button on the site points here. |
 | `/data/members.json` | Worker, origin fallback | [members-json](members-json.md) |
 | `/sitemap-index.xml`, `/sitemap-0.xml` | build | section 5 |
 | `/robots.txt`, `/llms.txt` | build | section 5 |
@@ -44,25 +46,54 @@ Locale path segments are `pt-br` and `en-us`; the `lang` attribute and `hreflang
 A path without a locale prefix (for example `/projects/`) is a 404. There are no redirects from old or guessed URLs.
 `/discord` is the one deliberate exception to the locale prefix.
 
-### The `/discord` page (D-29)
+### The `/discord` page (D-29, D-41)
 
-A static page built to `dist/discord/index.html`. nginx serves `/discord` and `/discord/` through the existing
-`try_files $uri $uri/index.html`, so no redirect rule is added anywhere and the page goes live with the site.
+A static page built to `dist/discord/index.html`. nginx serves `/discord` from its own exact location (section 6) and
+`/discord/` through `location /`; both answer 200, and the page goes live with the site. It **does not redirect**:
+D-41 replaced the D-29 behavior (a redirect with a link as fallback) with a page that shows the community rules and,
+only after a checkbox is ticked, the join links. The `<meta http-equiv="refresh">` of D-29 is removed.
 
-- **One source for the invite.** The invite code comes only from `src/data/site.yaml` (`discord.inviteCode`, site-data
-  section 4), the approved invite. The page, the Worker (members-json 2.6) and the integrity check read that one
-  value; no other file holds a code or an invite URL. The superseded invite is not kept anywhere in the repository.
-- **Works without JavaScript.** The page has no script. It carries `<meta http-equiv="refresh" content="0;url=...">`
-  and a visible link with the same target as the fallback, with a short text in both languages (`<html lang="en-US">`,
-  each element in the other language with its own `lang`). The target is `https://discord.com/invite/<inviteCode>`, fixed at build time.
+- **What it shows.** The community rules and the date they were last updated (2025-02-27 at the time of D-41), then a
+  checkbox confirming agreement, then the join links: **Discord** for everyone, **WhatsApp** inside the pt-BR content
+  only. Rules text and date come from `src/data/community-rules.yaml` (one source, site-data section 14). The
+  WhatsApp group link comes from the `whatsapp` entry of `join-channels.yaml` (one source, site-data section 8). The
+  invite code comes only from `src/data/site.yaml` (`discord.inviteCode`, site-data section 4), the approved invite,
+  and is the same value the Worker (members-json 2.6) and the integrity check read. The superseded invite is not
+  kept anywhere in the repository.
+- **Two language containers, each self-contained.** `<html lang="en-US">` (the neutral-page rule of section 3) with
+  exactly two sibling containers in `<main>`, `lang="pt-BR"` and `lang="en-US"`. Each holds, in its own language, the
+  rules, the updated date (formatted for that locale), its own checkbox with its label, and its own join links. The
+  pt-BR container has the Discord link and the WhatsApp link; the **en-US container has the Discord link only**.
+  Every WhatsApp reference (the word or the group URL) has a nearest ancestor `lang` of `pt-BR`; none appears in the
+  `<head>` (title, description, Open Graph, which use en-US strings) or in the en-US container (C-1 stays true).
+  Order, columns and visual treatment are Bússola's, not this contract's.
+- **The gate is CSS only.** No script, no `<form>`, no `<noscript>`. Each container is a gate group: an
+  `<input type="checkbox">` with `id`, `autocomplete="off"` and **no `name`**, a `<label for>`, and the join links as
+  the checkbox's following content inside the same container (so the next tab stop after the checkbox is the first
+  link). The links are hidden with `display: none` (or `visibility: hidden`) until the checkbox is checked, using
+  `:has()` inside `@supports selector(:has(*))`, for example
+  `.gate:not(:has(.agree:checked)) .links { display: none }`. `display: none` removes the links from the tab order and
+  from assistive technology; `opacity` or `pointer-events` alone do not and are not accepted. **Without `:has()` the
+  `@supports` block does not apply and the links stay visible and usable**, which is the intended fallback. Unchecking
+  hides them again. Because there is no script, the reveal is not announced to a screen reader; the label wording
+  (Bússola) tells the visitor that the links appear after the box.
+- **The checkbox is a UX confirmation and nothing else.** It records nothing: no cookie, no `localStorage` or
+  `sessionStorage`, no request, no server state, and the page sends no data. It is **bypassable by design** (view
+  source, a stylesheet override, CSS off, a browser without `:has()`, or an invite shared by someone else), and the
+  gate is not a control the project relies on for anything. The page copy must not say or imply that agreement is
+  recorded, verified or enforced. The community rules are enforced by moderation on the server, not by this page.
 - **Language-neutral and query-blind.** One URL for both locales, no locale prefix and no `hreflang`. The page is
-  static, so a query string on `/discord` is ignored and **never forwarded** to the target.
+  static, so a query string on `/discord` is ignored and **never forwarded**: the link targets are fixed at build time
+  (`https://discord.com/invite/<inviteCode>` and the WhatsApp group link), and are the same with or without a query.
 - **Not an indexable page:** `<meta name="robots" content="noindex">`, absent from the sitemap, no canonical to a
-  locale page. No analytics snippet and no script of any kind on it. It uses the default headers and CSP of section 6.
-- **Changing the invite** is a pull request that changes `discord.inviteCode`, merged and deployed through
-  [deploy](deploy.md); the Worker follows through its own deploy (members-json 2.6). No dashboard step.
-- Checks: the build scan of site-data section 12 (the invite URL pattern appears only in this page and only with the
-  configured code), the HTTP test of section 6 (`/discord` answers 200, no `Location` header), and the
+  locale page. No analytics snippet and **no script of any kind**. It uses the **default** headers and CSP of
+  section 6 (no new policy entry): the gate CSS lives in the shared external stylesheet, with no inline style.
+  External links carry `rel="noopener noreferrer"`.
+- **Changing the invite or the rules** is a pull request (`discord.inviteCode`, or `community-rules.yaml` with a new
+  `updatedOn`), merged and deployed through [deploy](deploy.md); the Worker follows an invite change through its own
+  deploy (members-json 2.6). No dashboard step.
+- Checks: the build scans of site-data section 12 (invite URL pattern, WhatsApp scope, page structure), the HTTP test
+  of section 6 (`/discord` answers 200, no `Location` header), a browser test of the gate (section 7, C-9) and the
   integrity monitor of [deploy](deploy.md) section 8.
 
 ## 2. Language selector (no cookie)
@@ -99,7 +130,7 @@ plan allows 10; this uses 2, and `/discord` needs none, D-29). Status code **302
   default `false`): static page, HTTP 200, two links (`/pt-br/`, `/en-us/`) with names in their own language, a
   `<link rel="alternate" hreflang="x-default" href="https://empirecommunity.org/">`, `<html lang="en-US">` (the
   `x-default` language, so the page has a language as WCAG 3.1.1 requires) and a `lang` on every link or text in the
-  other language. The bilingual 404 page and the `/discord` page follow the same rule. No script. It is shown only when the rules are off or on direct origin access.
+  other language. The bilingual 404 page and the `/discord` page follow the same rule (on `/discord`, each language container carries its own `lang`). No script. It is shown only when the rules are off or on direct origin access.
 - **Source of truth:** these expressions. The dashboard is not versioned, so Guindaste copies them into the Ops
   Runbook with the date applied; any change is made here first.
 - **Test plan (C-8):** from a Brazilian network, `curl -sI https://empirecommunity.org/?utm_source=t` must answer
@@ -118,6 +149,8 @@ plan allows 10; this uses 2, and `/discord` needs none, D-29). Status code **302
 - Open Graph and `og:locale` (`pt_BR`, `en_US`) per page; `og:locale:alternate` for the other.
 - The en-US HTML, `hreflang` data, JSON-LD, `og` tags and `llms.txt` MUST NOT contain the WhatsApp link or the word
   WhatsApp (C-1). A post-build script scans `dist/en-us/**`, `dist/llms.txt` and `dist/index.html` and fails the build.
+  The neutral `/discord` page is not in that scope, so it has its own rule (D-41): WhatsApp appears there only inside
+  the `lang="pt-BR"` container ("The `/discord` page" above, checked as in site-data section 12).
 - Page `title` and `description` are required per locale in the page data (site-data).
 
 ## 5. Discovery files
@@ -172,12 +205,12 @@ location /_astro/ {
   add_header Cache-Control "public, max-age=31536000, immutable" always; try_files $uri =404;
 }
 location = /data/members.json {
+  include snippets/limit-methods.conf;      # first: a non-GET method answers 405 before any other rule
   if ($args != "") { return 404; }          # a query string never reaches the file (members-json 2.9)
-  include snippets/limit-methods.conf;
   include snippets/security-headers.conf;
   add_header Cache-Control "public, max-age=300" always; try_files $uri =404;
 }
-location = /discord {                       # D-29: served directly, 200, no redirect
+location = /discord {                       # D-29, D-41: the rules page, served directly, 200, no redirect
   include snippets/limit-methods.conf;
   include snippets/security-headers.conf;
   add_header Cache-Control "no-cache" always; try_files /discord/index.html =404;
@@ -197,7 +230,8 @@ and **every location that sets any header includes it**, as above. `always` is u
 the headers too, and the `404.html` page is served from a location that includes it. A new location is not accepted
 without the include; the HTTP test below enforces it.
 
-`snippets/limit-methods.conf` (included first in every location):
+`snippets/limit-methods.conf` (included first in every location, before any other `if` or `return`, so the method check
+decides first):
 
 ```
 if ($request_method !~ ^(GET|HEAD)$) { return 405; }
@@ -257,7 +291,7 @@ assert:
 - `Cache-Control` matches the location's value;
 - `/data/members.json?x=1` returns 404 and a non-GET method returns 405 on every path tested, including `POST /healthz`;
   `/pt-br/join` (no slash) answers a redirect to `/pt-br/join/` and `/pt-br/join/` answers 200; `/discord` returns 200 with no `Location`
-  header and its page has the same link target with or without a query string;
+  header (D-41 keeps this: the page does not redirect) and its join links are identical with or without a query string;
 - no `Server` version string and no `Set-Cookie` anywhere;
 - against the public URL: `X-Content-Type-Options`, `Referrer-Policy` and `Strict-Transport-Security` are present.
 
@@ -269,3 +303,4 @@ assert:
 | C-1 | Post-build scan described in section 4. |
 | C-5 | Sitemap and robots lint; `hreflang` reciprocity check script over `dist/`; Web Analytics under the CSP in a browser test; the HTTP header test of section 6. |
 | C-8 | Section 3 test plan, plus a browser test that the selector changes locale and survives a reload with cookies and storage disabled. |
+| C-9 | Browser test of the `/discord` gate (Ensaio), in a browser with `:has()` support and JavaScript disabled: with the box unchecked, no join link is visible or reachable by Tab; after checking, the pt-BR container shows the Discord and WhatsApp links and the en-US container the Discord link only; unchecking hides them again; after a reload the box is unchecked; no cookie, storage entry or request is made by ticking it. The build checks of site-data section 12 cover the page structure. |
