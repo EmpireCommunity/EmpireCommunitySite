@@ -35,7 +35,7 @@ browsers read from `/data/members.json`. Facts from the Cloudflare docs (checked
 **GitHub Actions with a protected environment and owner approval**, because every deploy then needs an explicit
 approval and the token is limited to what the Worker needs. Required conditions:
 
-1. **Workflow.** `worker-deploy.yml`, triggered by a push to `main` that touches `worker/**`, and by manual dispatch
+1. **Workflow.** `worker-deploy.yml`, triggered by a push to `main` that touches `worker/**` or `src/data/site.yaml` (the invite is defined there and passed to the deploy, members-json 2.6), and by manual dispatch
    restricted to `main`. Never `pull_request` or `pull_request_target`. Job permissions `contents: read` only. Every
    action pinned by commit SHA. Wrangler comes from the committed lockfile (no `npx` of the latest version).
    Concurrency limited to one run.

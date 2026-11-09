@@ -26,7 +26,7 @@
 |---|---|---|---|---|
 | `ci.yml` | `pull_request`, push to `main` | lint, typecheck, tests, build, content and `dist` checks, image build and image checks, HTTP header test, worker config check, workflow lint, secret scan | `contents: read` | none |
 | `publish.yml` | push to `main` only | build the image, push to GHCR, create the provenance attestation, print the digest in the run summary | `contents: read`, and only in the publish job `packages: write`, `id-token: write`, `attestations: write` | none (uses the run's token) |
-| `worker-deploy.yml` | push to `main` touching `worker/**`, manual dispatch from `main` | deploys the Worker behind the protected environment | per ADR-0003 | environment secrets only |
+| `worker-deploy.yml` | push to `main` touching `worker/**` or `src/data/site.yaml` (the invite, members-json 2.6), manual dispatch from `main` | deploys the Worker behind the protected environment | per ADR-0003 | environment secrets only |
 | `integrity.yml` | schedule, manual | checks the live site against the repository (section 8) | `contents: read` | none |
 
 `publish.yml` and `worker-deploy.yml` MUST NOT be reachable from a pull request or a fork. If a job needs write
@@ -103,9 +103,9 @@ other secret is used.
 
 | Check | Rule |
 |---|---|
-| Payment key | The `data-pix` block of `/pt-br/support/` and `/en-us/support/` equals the key and recipient in `src/data/support.yaml` on `main`; if the file has no key, the pages have none; the key appears nowhere else on the page. |
+| No payment instruction (D-28) | `/pt-br/support/` and `/en-us/support/` carry the `data-donations="not-open"` block and none of the payment-guard markers of site-data section 10 (`data-pix`, payment-provider host or short link, BR Code marker, key-shaped strings, e-mail outside the allowlist), and the same holds for the home page of both locales. |
 | Rewriting features | The delivered support page has no Cloudflare e-mail obfuscation or script-rewriting markers, so a re-enabled feature is detected. |
-| Discord entry | `/discord` answers with a redirect whose target is the invite configured in `worker/wrangler.jsonc`, and the public invite lookup for that code returns the configured guild id. |
+| Discord entry (D-29) | `/discord` answers 200 with no `Location` header; its visible link and its `<meta http-equiv="refresh">` target are both exactly `https://discord.com/invite/<inviteCode>` with the code from `src/data/site.yaml` on `main`, with or without a query string on the request; the page has no script and no other invite URL; the public invite lookup for that code returns the configured guild id. |
 | Root | `/?utm_source=ci` answers `302` to `/en-us/?utm_source=ci` from the (non-Brazilian) runner. The Brazilian case is checked by hand (C-8). |
 | Member count | `/data/members.json` validates against the schema, `source` is not `built-in`, and `updatedAt` is not older than 3 days. |
 | Headers | `/pt-br/` and `/en-us/support/` carry the expected CSP and the other headers of routing-locale section 6. |
@@ -126,7 +126,7 @@ Applied to `main` by the owner; the list states the control, not the current set
 - A `CODEOWNERS` file is kept in the repository (owner for the whole tree) for future use. **No required approval
   count is specified**, because the actor and the approver may be the same account (D-17); the compensating controls
   are this document's controls: required checks, PR-only merges, the integrity monitor, attestation verification
-  before deploy, the Pix key pinned on the official Discord, and the owner's approval of each deploy.
+  before deploy, the payment guard of site-data section 10, and the owner's approval of each deploy.
 
 ## 10. Negative tests (Ensaio)
 
@@ -134,12 +134,14 @@ Applied to `main` by the owner; the list states the control, not the current set
 - A fork or pull request run cannot publish an image, cannot read an environment secret and cannot trigger
   `worker-deploy.yml`.
 - An image built outside `publish.yml` on `main`, or with a modified digest, fails the attestation verification.
-- A changed Pix key in the delivered page, or a re-enabled HTML-rewriting feature, fails `integrity.yml`.
+- A pull request that adds a payment field to `support.yaml`, sets `donations.status` to another value, or puts a payment marker in a page fails `ci.yml`.
+- A payment marker in the delivered page, or a re-enabled HTML-rewriting feature, fails `integrity.yml`.
 - `publish.yml` does not run on a pull request.
 
 ## 11. Depends on the owner
 
 Strong authentication on the GitHub, Cloudflare and host provider accounts; applying and keeping the repository
 settings of sections 3 and 9; the protected environment and the expiring token (ADR-0003); keeping failed-run
-notifications on; the Cloudflare dashboard items copied into the runbook (root redirect, `/discord`, the `/data/`
-rules, features off).
+notifications on; confirming the approved invite code in the pull request that sets it; the Cloudflare dashboard items copied into
+the runbook (the two root redirect rules, the `/data/` rules, the Worker route, features off). `/discord` needs no
+dashboard item (D-29).

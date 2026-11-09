@@ -78,15 +78,15 @@ to the origin file (section 4).
 | Cron Trigger | `0 */12 * * *` (UTC, so 00:00 and 12:00). One trigger. |
 | KV binding | `MEMBERS_KV`, one namespace created by hand; its id goes in `wrangler.jsonc` (an id is not a secret) |
 | `vars.MEMBERS_SOURCE` | `discord-invite` (later `empirebot`) |
-| `vars.DISCORD_INVITE_CODE` | invite code, currently `7Pxg3gyr8n` (see 2.6) |
-| `vars.DISCORD_GUILD_ID` | `1010657521775681556` (public) |
+| `vars.DISCORD_INVITE_CODE` | invite code, **not written in `wrangler.jsonc`**: supplied at deploy time from `src/data/site.yaml` `discord.inviteCode` (see 2.6) |
+| `vars.DISCORD_GUILD_ID` | guild id (public), supplied at deploy time from `discord.guildId` in the same file |
 | `observability` | `{ "enabled": false }`: Workers Logs, invocation logs and traces off (D-20). The Worker code makes no `console.*` call. See 2.10. |
 | Runtime dependencies | none (only `wrangler` as a dev dependency); tests with `node --test` |
 
 There is no secret in this design: the invite endpoint needs no token and the public endpoint has no write path.
 
-CI fails the build of `worker/` if `wrangler.jsonc` contains a `routes` or `route` key, or if `workers_dev` or
-`preview_urls` is not `false`. The deploy credential and its limits are in
+CI fails the build of `worker/` if `wrangler.jsonc` contains a `routes` or `route` key, if `workers_dev` or
+`preview_urls` is not `false`, or if it defines `DISCORD_INVITE_CODE` or `DISCORD_GUILD_ID` (one source, 2.6). The deploy credential and its limits are in
 [ADR-0003](../adr/0003-members-worker-deploy-credential.md).
 
 ### 2.2 KV record
@@ -151,14 +151,20 @@ days means the Cron is failing, and `lastError` says why (see open questions).
 
 ### 2.6 Invite code configuration
 
-- The code is `vars.DISCORD_INVITE_CODE` in `worker/wrangler.jsonc`, in the repository (public information, reviewed
-  in a PR). The invite currently live and permanent is `7Pxg3gyr8n`.
-- It is **coupled by hand** to the Cloudflare redirect rule for `https://empirecommunity.org/discord`, which points
-  to the same invite. Changing the invite means: PR changing the variable, merge and deploy, update the redirect
-  rule. If the invite is deleted, the count freezes at the last value (row `invite_not_found`) until this is done.
-- Rejected: deriving the code by following the `/discord` redirect at run time (an extra moving part and a
-  self-request, for a value that changes rarely).
-- Only this one invite code is ever used by the Worker, the redirect rule and the site.
+- The invite is defined **once**, in `src/data/site.yaml` (`discord.inviteCode`, `discord.guildId`; site-data section 4),
+  public information reviewed in a PR. The `/discord` page of the site is built from the same value
+  ([routing-locale](routing-locale.md), D-29), so there is no second copy to keep in step and no Cloudflare rule.
+- The Worker gets the two values **at deploy time**: `worker-deploy.yml` reads them from `site.yaml` and passes them
+  to `wrangler deploy` as variables, and runs when that file changes as well as when `worker/**` changes
+  ([ADR-0003](../adr/0003-members-worker-deploy-credential.md)). Not verified: the exact `wrangler deploy --var`
+  syntax for the pinned version; Forja confirms against its documentation, and if it does not fit, a generated
+  non-committed config file is the alternative with the same single source.
+- Changing the invite means: one PR that changes `site.yaml`, merge, then the site deploy and the Worker deploy (both
+  with the owner's OK). If the invite is deleted, the count freezes at the last value (row `invite_not_found`) until
+  this is done.
+- Rejected: deriving the code by following the `/discord` page at run time (an extra moving part and a self-request,
+  for a value that changes rarely).
+- Only this one invite code is ever used by the Worker, the `/discord` page and the integrity check.
 
 ### 2.7 Public read path
 
@@ -321,5 +327,5 @@ route (the origin file then serves the built-in value).
 1. Alerting when the Cron fails for days: resolved without a secret by the scheduled integrity workflow in
    [deploy](deploy.md) section 8, which fails when `updatedAt` is older than 3 days or `source` is `built-in`; GitHub's
    failed-run notification reaches the owner. Depends on the owner keeping those notifications on.
-2. Is `7Pxg3gyr8n` the definitive invite behind `/discord`?
+2. The owner confirms the approved invite code that goes into `site.yaml` (D-29).
 3. EmpireBot hosting and endpoint (section 5).

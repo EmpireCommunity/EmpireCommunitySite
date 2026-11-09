@@ -44,7 +44,7 @@ Cada regra é verificável. A coluna da direita aponta o critério de aceite rel
 | R-6 | **Seção sem dado real não é renderizada.** Inclui título, separador, espaçamento e âncora. Nada de "em breve", traços ou zeros no lugar do dado. Ver §6. | C-4 |
 | R-7 | **Pessoa só com consentimento registrado.** Sem consentimento, a build falha. Vale para fundador e equipe. | C-4 |
 | R-8 | **Número de membros:** só o último valor, com a regra de exibição de `members-json` (888 vira `880+`), sem data, sem "atualizado em", sem animação. Aparece apenas na faixa de números da Home. | C-7 |
-| R-9 | **Paridade de rotas:** toda página existe nos dois idiomas com o mesmo conteúdo. Exceções permitidas, e só estas: elementos ligados ao WhatsApp (R-2) e a nota em en-US sobre o Pix exigir conta brasileira. | C-3 |
+| R-9 | **Paridade de rotas:** toda página existe nos dois idiomas com o mesmo conteúdo. Exceções permitidas, e só estas: elementos ligados ao WhatsApp (R-2). | C-3 |
 | R-10 | **Termos e Privacidade têm conteúdo idêntico** nos dois idiomas. Por causa de R-2, o texto legal não cita o WhatsApp em nenhum idioma e fala em "canais" e "plataformas de conversa". | C-1, C-3 |
 | R-11 | **Seletor de idioma sempre visível** em todas as larguras, fora do menu recolhido, levando à página equivalente no outro idioma. Rótulos `Português` e `English`, sem bandeiras (`routing-locale` §2). | C-8 |
 | R-12 | **Status nunca só por cor:** o rótulo em texto está sempre presente. | C-6 |
@@ -65,7 +65,7 @@ alvos de toque com pelo menos 44 × 44 px, contraste AA, tabelas com cabeçalho 
 │   ├── organization/      falta no contrato routing-locale (ver §11)
 │   ├── terms-of-service/
 │   └── privacy-policy/
-/discord          redirecionamento no Cloudflare, não é página
+/discord          página servida pelo site, HTTP 200 (D-29)
 /404.html         página neutra e bilíngue
 ```
 
@@ -138,7 +138,6 @@ Fora do catálogo: EmpireAssets (biblioteca privada e interna) e `.github` (perf
 
 | Pendência | Seção afetada | Com dado vazio |
 |---|---|---|
-| P-01 Pix | Apoiar › Doar por Pix | Bloco some; a meta e a doação de peças continuam |
 | P-02 Peças | Apoiar › Peças do servidor | Tabela some, com título |
 | P-03 Valor arrecadado | Apoiar e Home › progresso da meta | Só a meta aparece; sem barra e sem "R$ 0" |
 | P-04 Equipe | Organização › Equipe | Seção some |
@@ -341,9 +340,10 @@ Perguntas frequentes usam `<details>` nativo: funcionam sem JavaScript.
 
 ### 7.5 Apoiar
 
-Propósito: dar transparência e receber doação. É a página mais dependente de dado real.
+Propósito: mostrar a meta, as peças e que as doações em dinheiro ainda não estão abertas. No lançamento, o site não
+recebe dinheiro nem indica forma de enviar (D-28). É a página mais dependente de dado real.
 
-Seções: Título e lead · Meta atual · Doar por Pix · Peças do servidor · Doar peças · Outras formas de ajudar · Transparência.
+Seções: Título e lead · Meta atual · Doações ainda não abertas · Peças do servidor · Doar peças · Outras formas de ajudar · Transparência.
 
 ```text
 ┌──────────────────────┬─────────────────────────────────────────────────┐
@@ -353,9 +353,7 @@ Seções: Título e lead · Meta atual · Doar por Pix · Peças do servidor · 
 │                      │  Texto sobre o servidor próprio                 │
 │                      │  ▓▓▓▓░░░░  R$ X de R$ 3.000  [P-03]             │
 ├──────────────────────┼─────────────────────────────────────────────────┤
-│  Doar por Pix  [P-01]│  Chave ............ [ Copiar chave ]            │
-│                      │  Favorecido .......                             │
-│                      │  Aviso: confira o nome antes de confirmar       │
+│  Doações             │  Ainda não abertas: support.donations.notOpen   │
 ├──────────────────────┼─────────────────────────────────────────────────┤
 │  Peças do servidor   │  Foto  Peça   Valor   Situação                  │
 │  [P-02]              │  ───────────────────────────────                │
@@ -369,9 +367,10 @@ Seções: Título e lead · Meta atual · Doar por Pix · Peças do servidor · 
 └──────────────────────┴─────────────────────────────────────────────────┘
 ```
 
-Copiar a chave é melhoria progressiva: sem JavaScript, a chave continua selecionável como texto, e o botão não aparece.
-Depois de copiar, o rótulo muda para "Chave copiada" por 2 s, anunciado por `aria-live`. D-16 mantém o dado em arquivo,
-substituível depois.
+As doações aparecem em um único bloco, `data-donations="not-open"`, com a mensagem `support.donations.notOpen`: sem
+instrução de pagamento, dados de conta ou link para provedor (`site-data` §10). Ao alcançar a meta, o texto de progresso
+passa a `support.goal.reached`, e nada é escondido ou encerrado (D-22). A doação de peças continua por Discord ou e-mail.
+A abertura das doações em dinheiro fica para um contrato posterior (D-28).
 
 ### 7.6 Organização
 
@@ -435,7 +434,7 @@ não presente no repositório).
 | Membros WhatsApp | `community.yaml`, manual, só pt-BR | valor |
 | Projetos | Arquivo do site | `id`, `status`, `url?`, `repo?`, descrição por idioma, crédito por idioma |
 | Servidores de jogos | Arquivo do site | `id`, `status`, detalhes por idioma |
-| Apoio | Arquivo do site (D-16) | `goal`, `raised?`, `pix?`, `parts[]` (nome, valor em centavos, situação, foto, alt por idioma) |
+| Apoio | `support.yaml` (`site-data` §10, D-28) | `donations.status: not-open`, `goal`, `specs?`, `parts[]` (nome, valor em centavos, situação, foto, alt por idioma), `partDonations?` |
 | Pessoas | Arquivo do site | `name`, `nickname?`, `role`, `bio?`, `photo?`, `consent` (obrigatório) |
 | Organização | Arquivo do site | `founded?`, `purpose?` |
 | GitHub | A decidir (ADR-0001) | total de repositórios públicos e últimas atualizações |
@@ -448,7 +447,6 @@ Não usar o widget do Discord: ele expõe nomes de membros online (R-3 do Risks 
 
 | Id | O que falta | Recomendação |
 |---|---|---|
-| P-01 | Chave Pix e nome do favorecido | Chave aleatória, e-mail ou CNPJ, evitando CPF ou telefone |
 | P-02 | Peças do Xeon: nome, valor, situação, fotos | Fotos sem etiquetas com números de série |
 | P-03 | Valor já arrecadado | Sem esse número, a barra de progresso não aparece |
 | P-04 | Equipe: nomes ou apelidos, funções, consentimento | Consentimento por escrito, guardado fora do repositório público |
@@ -458,9 +456,9 @@ Não usar o widget do Discord: ele expõe nomes de membros online (R-3 do Risks 
 | P-08 | Número de membros do WhatsApp | Valor manual, sem data (D-14) |
 | P-09 | Minecraft: endereço, versão, requisitos e como entrar | Confirmar se o endereço pode ser público |
 | P-10 | Confirmar se o `github-worker-relay` está em produção | |
-| P-11 | Controladora dos dados: nome legal e CNPJ, se existir | A LGPD pede controlador identificável; hoje o texto usa "equipe administrativa da EmpireCommunity" |
+| P-11 | Fechada por D-23 | Controlador: o dono, pessoa física. A Privacidade mostra só o nome legal e o e-mail `legal@` |
 | P-12 | Data de vigência de Termos e Privacidade | A data da publicação |
-| P-13 | Regra para doação feita por engano | Proposta na copy: avaliar caso a caso por `legal@`, sem promessa de reembolso |
+| P-13 | Regra para doação feita por engano | Fora do lançamento (D-28): volta com o contrato de doações |
 
 ## 10. Decisões para o dono
 
@@ -484,7 +482,7 @@ aplica ao tráfego da União Europeia e do Reino Unido; só importa se esse púb
 | "Mesmo conteúdo nos dois idiomas" em textos legais × WhatsApp só em pt-BR | R-10: texto legal não cita o WhatsApp |
 | `EmpireAssets/docs/EmpireCommunity-DESIGN.md` cita Facebook; `EMPIRECOMMUNITY.md` diz que não há | Vale `EMPIRECOMMUNITY.md`. O arquivo será substituído na T-2 |
 | `README.md` deste repositório cita `empirehub.com.br`, um link do Discord fora da regra R-5 e React | Fora do escopo da T-1; registrado para o Regente |
-| `https://empirecommunity.org/discord` responde 404 hoje | O redirecionamento precisa estar aplicado antes do lançamento, ou C-2 falha |
+| `https://empirecommunity.org/discord` responde 404 hoje | `/discord` é uma página do site e entra no ar com ele (D-29) |
 
 ## 12. O que fica para a T-2
 
