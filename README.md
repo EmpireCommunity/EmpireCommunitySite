@@ -65,3 +65,4 @@ aprovação explícita do dono a cada vez.
 ## 📜 Licença
 
 Distribuído sob a licença **MIT**. Consulte o arquivo [LICENSE](LICENSE) para mais detalhes.
+A licença cobre apenas o código: o logotipo e os demais arquivos de marca (a marca Rack, o lockup, o conjunto de ícones e a imagem de compartilhamento) são direitos reservados da EmpireCommunity, sem licença concedida, conforme [LICENSES.md](LICENSES.md#brand-logo-and-icons).
