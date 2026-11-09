@@ -1,0 +1,82 @@
+---
+// Como participar (information-architecture section 7.4, decision T-38): two channel blocks in pt-BR, one in en-US,
+// each with its own button and every button going to /discord (R-5, D-41). Then what you can do, and the FAQ
+// (native <details>, no JavaScript). WhatsApp text comes only from the channel data, so it never reaches en-US.
+import type { GetStaticPaths } from 'astro';
+import ChannelButton from '../../components/ChannelButton.astro';
+import FaqItem from '../../components/FaqItem.astro';
+import Index from '../../components/Index.astro';
+import IndexSection from '../../components/IndexSection.astro';
+import RegisterList from '../../components/RegisterList.astro';
+import RegisterRow from '../../components/RegisterRow.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { t } from '../../i18n/index.ts';
+import { LOCALES, isLocale } from '../../lib/routes.ts';
+import { channelPhrase, getJoinChannels, getSite } from '../../lib/site-data.ts';
+
+export const getStaticPaths = (() => LOCALES.map((locale) => ({ params: { locale } }))) satisfies GetStaticPaths;
+
+const { locale } = Astro.params;
+if (!isLocale(locale)) throw new Error(`unexpected locale: ${locale}`);
+
+const [site, channels] = await Promise.all([getSite(), getJoinChannels(locale)]);
+// Channels other than Discord exist only in some locales (pt-BR today). The FAQ sentence about them is built from data.
+const otherChannel = channels.find((channel) => channel.id !== 'discord');
+const requestPhrase = channelPhrase(locale, channels, 'disjunction');
+---
+
+<BaseLayout locale={locale} routeKey="join">
+  <div class="frame pt-64 lg:pt-96">
+    <h1 class="font-display text-display text-papel">{t(locale, 'join.title')}</h1>
+    <p class="mt-24 max-w-[56ch] text-lead text-papel-suave">{t(locale, 'join.lead')}</p>
+
+    <div class="mt-48 grid gap-x-24 gap-y-16 border-t border-pauta pt-48 pb-64 lg:grid-cols-12 lg:pb-96">
+      {
+        channels.map((channel) => (
+          <section class="flex flex-col gap-16 lg:col-span-6 lg:last:col-span-6 lg:only:col-span-8">
+            <h2 class="font-display text-title text-papel">{channel.label}</h2>
+            <p class="max-w-[56ch] flex-1 text-body-sm text-papel-suave">{channel.description}</p>
+            <div class="sm:max-w-[280px]">
+              <ChannelButton
+                href={site.links.discord}
+                label={t(locale, 'cta.join', { channel: channel.label })}
+                icon={channel.id === 'whatsapp' ? 'whatsapp' : 'discord'}
+              />
+            </div>
+          </section>
+        ))
+      }
+    </div>
+
+    <Index closed>
+      <IndexSection title={t(locale, 'join.do.title')} rows>
+        <RegisterList>
+          <RegisterRow name={t(locale, 'join.do.play.title')} description={t(locale, 'join.do.play.body')} />
+          <RegisterRow
+            name={t(locale, 'join.do.request.title')}
+            description={t(locale, 'join.do.request.body', { channels: requestPhrase })}
+          />
+          <RegisterRow name={t(locale, 'join.do.contribute.title')} description={t(locale, 'join.do.contribute.body')} />
+          <RegisterRow name={t(locale, 'join.do.support.title')} description={t(locale, 'join.do.support.body')} />
+        </RegisterList>
+      </IndexSection>
+
+      <IndexSection title={t(locale, 'join.faq.title')} rows>
+        <RegisterList>
+          <FaqItem question={t(locale, 'join.faq.paid.q')}>{t(locale, 'join.faq.paid.a')}</FaqItem>
+          <FaqItem question={t(locale, 'join.faq.donate.q')}>{t(locale, 'join.faq.donate.a')}</FaqItem>
+          <FaqItem question={t(locale, 'join.faq.request.q')}>
+            {t(locale, 'join.faq.request.a', { channels: requestPhrase })}
+          </FaqItem>
+          <FaqItem question={t(locale, 'join.faq.abroad.q')}>
+            {t(locale, 'join.faq.abroad.a')}
+            {otherChannel !== undefined && ` ${t(locale, 'join.faq.abroad.note', { channel: otherChannel.label })}`}
+          </FaqItem>
+          <FaqItem question={t(locale, 'join.faq.contact.q')}>
+            {t(locale, 'join.faq.contact.a', { email: site.contact.general })}
+          </FaqItem>
+        </RegisterList>
+      </IndexSection>
+    </Index>
+  </div>
+</BaseLayout>

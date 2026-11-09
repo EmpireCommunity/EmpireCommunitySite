@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  discordLinks, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, membersFallback, paymentGuard, whatsappAbsent,
+  discordLinks, hreflangReciprocity, htmlLang, mainContent, inlineExecutable, languageSelector, membersFallback, paymentGuard, whatsappAbsent, whatsappInviteLink,
 } from '../scripts/lib/dist-checks.ts';
 import { checkWorkflow } from '../scripts/lib/workflow-rules.ts';
 
@@ -197,4 +197,18 @@ test('the language selector maps each page to its equivalent and marks only the 
   assert.equal(check(nav(pt, en, pt.replace('hreflang="pt-BR"', 'hreflang="pt-br"'))), 1, 'unsupported hreflang value');
   assert.equal(check(nav(pt, en) + nav(pt)), 1, 'a second selector is checked on its own');
   assert.equal(check('<p>no selector</p>'), 1, 'no selector at all');
+});
+
+test('the WhatsApp community link is allowed only on the /discord page', () => {
+  const link = '<a href="https://chat.whatsapp.com/abc">';
+  assert.equal(whatsappInviteLink(link, 'discord/index.html', true).length, 0);
+  assert.equal(whatsappInviteLink(link, 'pt-br/join/index.html', false).length, 1);
+  assert.equal(whatsappInviteLink('<a href="https://empirecommunity.org/discord">WhatsApp</a>', 'pt-br/index.html', false).length, 0);
+});
+
+test('legal pages are scanned on their <main> only, so the shared pt-BR footer may list the channel', () => {
+  const page = '<footer>WhatsApp</footer><main><p>texto legal</p></main>';
+  assert.equal(whatsappAbsent(mainContent(page), 'pt-br/terms-of-service/index.html').length, 0);
+  assert.equal(whatsappAbsent(mainContent('<main>WhatsApp</main>'), 'f').length, 1);
+  assert.equal(mainContent('no main here'), 'no main here');
 });

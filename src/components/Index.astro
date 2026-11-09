@@ -1,0 +1,25 @@
+---
+// The "Índice": stacked sections (title left, content right) separated by pauta rules, with A Margem, the one
+// recurring ornament: a 1 px vertical line in `margem` at the start of column 5, from 1024 px, running through every
+// section of the stack without a break. On the Home it draws itself once, top to bottom (DESIGN.md "Movimento");
+// with reduced motion it is already drawn.
+interface Props {
+  animate?: boolean;
+  /** Adds the closing rule below the last section, for a stack that ends against the footer. */
+  closed?: boolean;
+}
+
+const { animate = false, closed = false } = Astro.props;
+---
+
+<div class:list={['relative', closed && 'border-b border-pauta']}>
+  <div
+    aria-hidden="true"
+    class:list={[
+      'pointer-events-none absolute inset-y-0 left-[calc((100%-264px)/12*4+96px)] hidden w-px bg-margem lg:block',
+      animate && 'margem-draw',
+    ]}
+  >
+  </div>
+  <slot />
+</div>

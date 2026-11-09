@@ -1,17 +1,141 @@
 ---
+// Home (docs/design/information-architecture.md section 7.1). Sequence: hero, numbers, purpose, what we do, projects,
+// game servers, how we are funded, join. A section with no real data is not rendered (R-6): the numbers strip and the
+// projects and servers sections appear only when their data exists. Every channel button goes to /discord (R-5).
 import type { GetStaticPaths } from 'astro';
+import { getCollection } from 'astro:content';
+import ArrowLink from '../../components/ArrowLink.astro';
+import ChannelPair from '../../components/ChannelPair.astro';
+import Index from '../../components/Index.astro';
+import IndexSection from '../../components/IndexSection.astro';
+import NumbersStrip from '../../components/NumbersStrip.astro';
+import RegisterList from '../../components/RegisterList.astro';
+import RegisterRow from '../../components/RegisterRow.astro';
+import Status from '../../components/Status.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { t } from '../../i18n/index.ts';
-import { LOCALES, isLocale } from '../../lib/routes.ts';
+import { formatMembers } from '../../lib/members.ts';
+import { LOCALES, HTML_LANG, isLocale, routePath } from '../../lib/routes.ts';
+import { channelPhrase, getCommunity, getJoinChannels } from '../../lib/site-data.ts';
 
 export const getStaticPaths = (() => LOCALES.map((locale) => ({ params: { locale } }))) satisfies GetStaticPaths;
 
 const { locale } = Astro.params;
 if (!isLocale(locale)) throw new Error(`unexpected locale: ${locale}`);
+
+const lang = HTML_LANG[locale];
+const [community, channels] = await Promise.all([getCommunity(), getJoinChannels(locale)]);
+const [projectEntries, serverEntries] = await Promise.all([getCollection('projects'), getCollection('gameServers')]);
+const projects = projectEntries
+  .map((entry) => entry.data)
+  .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+const servers = serverEntries.map((entry) => entry.data);
+
+// Numbers: only figures with real data. The Discord count is the verified built-in reading, never invented; the
+// WhatsApp count is a manual value and exists only for the locales whose audience includes that channel.
+const numbers = channels.flatMap((channel) => {
+  const label = t(locale, 'count.members', { channel: channel.label });
+  if (channel.id === 'discord' && community?.discord !== undefined) {
+    return [{ value: formatMembers(community.discord.membersBuiltIn, lang), label, live: true }];
+  }
+  if (channel.id === 'whatsapp' && community?.whatsapp !== undefined) {
+    return [{ value: new Intl.NumberFormat(lang).format(community.whatsapp.members), label }];
+  }
+  return [];
+});
+
+const purpose = community?.purpose?.[locale];
+const rowLinks = 'link-text inline-flex min-h-[44px] items-center gap-8 text-body-sm whitespace-nowrap';
 ---
 
 <BaseLayout locale={locale} routeKey="home">
-  <div class="frame section-y">
-    <h1 class="font-display text-display text-papel">{t(locale, 'meta.home.title')}</h1>
+  <div class="frame">
+    <section class="pt-64 pb-64 lg:pt-96 lg:pb-96">
+      <h1 class="max-w-[calc(100%/12*9)] font-display text-display text-papel max-lg:max-w-none">
+        {t(locale, 'home.hero.title')}
+      </h1>
+      <p class="mt-24 max-w-[56ch] text-lead text-papel-suave">{t(locale, 'home.hero.lead')}</p>
+      <div class="mt-48 flex flex-wrap items-center gap-x-32 gap-y-16">
+        <ChannelPair locale={locale} />
+        <ArrowLink href={routePath(locale, 'projects')} label={t(locale, 'home.hero.link')} />
+      </div>
+    </section>
+
+    <NumbersStrip items={numbers} />
+
+    <Index animate>
+      {
+        purpose !== undefined && (
+          <IndexSection title={t(locale, 'home.purpose.title')}>
+            <p class="max-w-[68ch] text-body text-papel-suave">{purpose}</p>
+          </IndexSection>
+        )
+      }
+
+      <IndexSection title={t(locale, 'home.what.title')} rows>
+        <RegisterList>
+          <RegisterRow name={t(locale, 'home.what.servers.title')} description={t(locale, 'home.what.servers.body')} />
+          <RegisterRow name={t(locale, 'home.what.bots.title')} description={t(locale, 'home.what.bots.body')} />
+          <RegisterRow
+            name={t(locale, 'home.what.community.title')}
+            description={t(locale, 'home.what.community.body', { channels: channelPhrase(locale, channels, 'conjunction') })}
+          />
+        </RegisterList>
+      </IndexSection>
+
+      {
+        projects.length > 0 && (
+          <IndexSection title={t(locale, 'home.projects.title')} rows>
+            <ArrowLink slot="aside" href={routePath(locale, 'projects')} label={t(locale, 'link.all')} />
+            <RegisterList>
+              {projects.map((project) => (
+                <RegisterRow name={project.name} description={project.summary[locale]}>
+                  <Status slot="status" locale={locale} status={project.status} />
+                  {project.status === 'live' && project.url !== undefined && (
+                    <a slot="links" href={project.url} class={rowLinks}>
+                      {t(locale, 'link.site')}
+                    </a>
+                  )}
+                </RegisterRow>
+              ))}
+            </RegisterList>
+          </IndexSection>
+        )
+      }
+
+      {
+        servers.length > 0 && (
+          <IndexSection title={t(locale, 'home.servers.title')} rows>
+            <ArrowLink slot="aside" href={routePath(locale, 'join')} label={t(locale, 'home.servers.request')} />
+            <RegisterList>
+              {servers.map((server) => (
+                <RegisterRow name={server.name}>
+                  <Status slot="status" locale={locale} status={server.status} />
+                </RegisterRow>
+              ))}
+            </RegisterList>
+          </IndexSection>
+        )
+      }
+
+      <IndexSection title={t(locale, 'home.funding.title')}>
+        <p class="max-w-[68ch] text-body text-papel-suave">{t(locale, 'home.funding.body')}</p>
+        <div class="mt-16">
+          <ArrowLink href={routePath(locale, 'support')} label={t(locale, 'home.funding.link')} />
+        </div>
+      </IndexSection>
+    </Index>
+
+    <section class="border-t border-pauta py-64 lg:py-96">
+      <div class="grid gap-x-24 gap-y-32 lg:grid-cols-12 lg:items-center">
+        <div class="lg:col-span-6">
+          <h2 class="font-display text-headline text-papel">{t(locale, 'home.join.title')}</h2>
+          <p class="mt-16 max-w-[56ch] text-body text-papel-suave">{t(locale, 'home.join.body')}</p>
+        </div>
+        <div class="lg:col-span-6 lg:justify-self-end">
+          <ChannelPair locale={locale} />
+        </div>
+      </div>
+    </section>
   </div>
 </BaseLayout>

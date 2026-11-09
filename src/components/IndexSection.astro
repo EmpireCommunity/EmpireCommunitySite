@@ -1,0 +1,28 @@
+---
+// One section of the Índice: pauta rule on top, title (Headline) in 4 columns on the left, content in 8 columns on the
+// right with 32 px of padding after A Margem. Below 1024 px the title sits above the content. Sections are contiguous:
+// the rule of one is the rule below the previous. A section of ruled lines (`rows`) has no padding of its own, the
+// rows carry their 24 px, and the title is lowered by the same 24 px to line up with the first one. Text sections
+// get 48 px (64 px from 1024 px). A section with no real data is not rendered by its page (R-6): title, rule and
+// anchor go together.
+interface Props {
+  title: string;
+  id?: string;
+  rows?: boolean;
+}
+
+const { title, id, rows = false } = Astro.props;
+---
+
+<section
+  id={id}
+  class:list={['grid gap-x-24 border-t border-pauta lg:grid-cols-12', rows ? 'gap-y-0' : 'gap-y-24 py-48 lg:py-64']}
+>
+  <div class:list={['lg:col-span-4', rows && 'pt-24']}>
+    <h2 class="font-display text-headline text-papel">{title}</h2>
+    <slot name="aside" />
+  </div>
+  <div class="lg:col-span-8 lg:pl-32">
+    <slot />
+  </div>
+</section>

@@ -13,5 +13,11 @@ export const SiteSchema = z.strictObject({
   currency: z.literal('BRL'),
   contact: z.strictObject({ general: Email, legal: Email }),
   links: z.strictObject({ discord: z.literal(DISCORD_URL), github: HttpsUrl }),
+  // The one place the approved invite is defined (D-29): read by the /discord page, the Worker and the integrity check.
+  discord: z.strictObject({
+    inviteCode: z.string().regex(/^[A-Za-z0-9-]{2,32}$/),
+    // Quoted in YAML so it stays a string (a 19-digit id is not a safe JavaScript number).
+    guildId: z.string().regex(/^\d{17,20}$/),
+  }),
 });
 export type Site = z.infer<typeof SiteSchema>;
