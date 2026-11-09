@@ -159,9 +159,13 @@ days means the Cron is failing, and `lastError` says why (see open questions).
   ([ADR-0003](../adr/0003-members-worker-deploy-credential.md)). Not verified: the exact `wrangler deploy --var`
   syntax for the pinned version; Forja confirms against its documentation, and if it does not fit, a generated
   non-committed config file is the alternative with the same single source.
-- Changing the invite means: one PR that changes `site.yaml`, merge, then the site deploy and the Worker deploy (both
-  with the owner's OK). If the invite is deleted, the count freezes at the last value (row `invite_not_found`) until
-  this is done.
+- **Rotating the invite, in this order.** (1) Create the new invite in Discord and keep the old one valid. (2) One PR
+  changes `site.yaml`; merge. The Worker deploys on that merge and starts counting through the new code, while the
+  live site still serves the old one: both must be valid during this window. (3) Release and deploy the site
+  ([deploy](deploy.md)). (4) Open the live `/discord` page and confirm it carries the new invite, and that the new
+  invite lookup returns the configured guild. (5) Only then revoke the old invite. Revoking earlier leaves visitors
+  with a dead link until the site release is live. If an invite is deleted unexpectedly, the count freezes at the last
+  value (row `invite_not_found`) until `site.yaml` holds a valid code and both deploys are done.
 - Rejected: deriving the code by following the `/discord` page at run time (an extra moving part and a self-request,
   for a value that changes rarely).
 - Only this one invite code is ever used by the Worker, the `/discord` page and the integrity check.
@@ -181,7 +185,7 @@ days means the Cron is failing, and `lastError` says why (see open questions).
 | Cron Triggers per account | 5 | 1 |
 | CPU time per Cron run / per request | 10 ms (waiting on `fetch` and KV does not count) | a few ms |
 | Subrequests per invocation | 50 | at most 5 |
-| Worker requests per day | 100,000 **per account** (shared with every Worker on the account), then error 1027 (route fail open bypasses this Worker) | one per visitor page view; the mandatory rate limit below keeps abusive volume out of this budget |
+| Worker requests per day | 100,000 **per account** (shared with every Worker on the account), then error 1027 (route fail open bypasses this Worker) | one per visitor page view. The per-IP rate limit below does **not** bound this budget (see "What the rate limit does not do" in 2.9) |
 | KV reads per day | 100,000 | cache-backed, well below |
 | KV writes per day | 1,000; same key at most 1 per second | 2 to 4 |
 | KV storage | 1 GB | under 1 KB |
@@ -206,7 +210,18 @@ Guindaste copies them into the Ops Runbook with the date applied.
    Guindaste with the owner.
 3. **Route creation.** The route is created once by hand (exact pattern, fail open) and is never created or edited by
    CI. The deploy token has no route-edit permission (ADR-0003).
-4. **Test.** From one address, more than the limit within 10 seconds against `/data/members.json` and against
+4. **What the rate limit does not do.** It is counted per IP, so it limits one client and not the total: one address
+   at the allowed rate (about 1 request per second) would use most of the 100,000 daily Worker requests that the
+   whole account shares, and a few addresses together would exhaust them. The rule reduces noise; it is not a quota
+   control, and tightening its numbers is allowed but is not treated as one. When the quota is reached, Cloudflare stops
+   running Workers on the account until the daily reset. Because the route fails open, `/data/members.json` is then
+   answered by the origin's built-in file (the count shows the built-in value and the page keeps working), and **every
+   other Worker on the account stops too**. Proportionate response for a Free-plan site: the member-count Worker is the
+   only Worker on the account's quota, or lives in its own Cloudflare account (owner decision, ADR-0003); Guindaste
+   reviews the Workers request usage in the dashboard after launch and then monthly, and tells the owner when the daily
+   use passes half of the limit; the owner then chooses between a paid plan with a higher quota and removing the live
+   count (the built-in value stays). Residual risk accepted by the owner.
+5. **Test.** From one address, more than the limit within 10 seconds against `/data/members.json` and against
    `/data/members.json?x=1` both return 429 (the second may return the query-string block first, which is also a
    refusal); a single request without query returns the JSON.
 
@@ -282,7 +297,8 @@ One-time setup, each step with the owner's OK:
 1. create the KV namespace by hand and put its id in `wrangler.jsonc`;
 2. create the route by hand (exact pattern, fail open), the two edge rules of 2.9, and confirm both site-wide
    Cloudflare features in routing-locale section 5 are off;
-3. create the environment and the expiring token, store them only in the environment;
+3. create the environment and the two expiring tokens (deploy token and zone route-read token, ADR-0003), store
+   them only in the environment;
 4. run the workflow once, then run the Cron once from the dashboard to seed the value.
 
 Post-deploy check (automatic): only the one expected route points at the Worker, the endpoint returns the schema, and
@@ -311,7 +327,8 @@ route (the origin file then serves the built-in value).
   cache keyed on the exact URL (2.7); the integer written with `textContent` only (3); zero runtime dependencies.
 - No Worker logs (D-20, 2.10): there is no per-request record to leak or to retain.
 - Residual, mitigated and not eliminated: a malicious merge or a stolen deploy token can publish any integer; the
-  Workers Scripts permission is account-wide.
+  Workers Scripts permission is account-wide; the account-wide Worker request quota is shared and not bounded by the
+  per-IP rate limit (2.9, item 4).
 
 ## 9. Not verified (confirm in a staging deploy before relying on it)
 

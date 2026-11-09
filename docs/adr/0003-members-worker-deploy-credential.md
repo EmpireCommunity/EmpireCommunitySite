@@ -40,19 +40,31 @@ approval and the token is limited to what the Worker needs. Required conditions:
    action pinned by commit SHA. Wrangler comes from the committed lockfile (no `npx` of the latest version).
    Concurrency limited to one run.
 2. **Environment** `worker-production`: deployment allowed only from `main`; required reviewer is the owner; the
-   Cloudflare secrets exist **only** in this environment (no repository-level secret, no other workflow can read
-   them). Where the approver and the person who triggered the run are the same account, the gate is procedural
-   rather than a technical separation; this is accepted by the owner (D-17, D-18).
+   Cloudflare secrets exist **only** in this environment (no repository-level secret). **GitHub cannot restrict an
+   environment to one workflow file**: environment secrets are available to any job that names the environment, once
+   its protection rules pass. The **owner's approval is therefore the gate for every such job** (D-18). The owner
+   approves only a run of `worker-deploy.yml` from the expected ref, after reading that workflow file as it exists at
+   the commit being deployed. Repository controls make a second workflow naming the environment visible and
+   blocking: workflow lint fails any workflow file other than `worker-deploy.yml` that names `worker-production`;
+   `.github/workflows/`, `worker/` and `src/data/site.yaml` have the owner in `CODEOWNERS`; changes reach `main` only
+   by pull request with the required checks ([deploy](../contracts/deploy.md) section 9). Where the approver and the
+   person who triggered the run are the same account, the gate is procedural rather than a technical separation; this
+   is accepted by the owner (D-17, D-18).
 3. **Token.** Account-scoped API token, permission **Account, Workers Scripts: Edit** and nothing else by default,
    **no Zone Workers Routes: Edit**, **an expiry date** (maximum 90 days; the rotation date is recorded in the Ops
    Runbook). Further permissions are added one at a time only if a real run fails without them, and each addition is
    recorded with the reason. The minimal set is **not verified** (see below).
+   **A second, read-only token** serves the post-deploy route check (item 6): **Zone, Workers Routes: Read** on the one
+   zone and nothing else, with an expiry, stored as a second secret of the same environment. The Scripts token cannot
+   list zone routes, so this token is created **before the first deploy** and recorded in the Ops Runbook with its
+   rotation date. If the owner prefers one secret fewer, the route check is not automated: the owner reads the zone's
+   route list in the dashboard after each Worker deploy, and the workflow keeps only the public checks.
 4. **Wrangler configuration.** `workers_dev: false`, `preview_urls: false`, and **no `routes` or `route` key**. CI
    fails if any of these is violated (see members-json 2.1).
 5. **Route.** Created once by hand in the Cloudflare dashboard by the owner or Guindaste with the owner's OK, exact
    pattern, fail open. The pipeline never creates or edits routes.
 6. **Post-deploy check.** After deploying, the workflow lists the zone's Workers routes through a read-only call
-   (Zone Workers Routes: **Read** on the one zone; not Edit) and fails if the Worker is attached to anything other than
+   with the route-read token above (not Edit) and fails if the Worker is attached to anything other than
    the single expected pattern. It also requests the public endpoint and validates the response schema, and confirms
    the `workers.dev` address does not answer.
 7. **Rotation and revocation.** Rotate at expiry or on any doubt: create the new token, replace the environment
@@ -74,6 +86,7 @@ approval and the token is limited to what the Worker needs. Required conditions:
 
 ## Not verified
 
-- The minimal token permission set (for example whether a KV or account-settings read is also needed), the exact
-  permission name for the read-only route listing, and that `wrangler deploy` succeeds without any routes in its
+- The minimal token permission set (for example whether a KV or account-settings read is also needed), that the
+  `Workers Routes Read` zone permission (its name is in Cloudflare's permission reference) is enough to list the
+  zone's routes, and that `wrangler deploy` succeeds without any routes in its
   configuration. Confirm in the first real run and record the result in the Ops Runbook.

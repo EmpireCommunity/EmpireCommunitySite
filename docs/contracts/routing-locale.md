@@ -37,7 +37,7 @@ Locale path segments are `pt-br` and `en-us`; the `lang` attribute and `hreflang
 | `/sitemap-index.xml`, `/sitemap-0.xml` | build | section 5 |
 | `/robots.txt`, `/llms.txt` | build | section 5 |
 | `/healthz` | nginx | `200 ok`, `Cache-Control: no-store`, not logged |
-| `/404.html` | build | neutral bilingual page with links to both locales, served with status 404 for any unknown path |
+| `/404.html` | build | neutral bilingual page (`<html lang="en-US">`, other language marked per element) with links to both locales, served with status 404 for any unknown path |
 | `/_astro/*` | build | hashed assets |
 | `/favicon.ico`, `/favicon.svg`, `/apple-touch-icon.png`, `/manifest.webmanifest` | build (`public/`) | static |
 
@@ -53,8 +53,8 @@ A static page built to `dist/discord/index.html`. nginx serves `/discord` and `/
   section 4), the approved invite. The page, the Worker (members-json 2.6) and the integrity check read that one
   value; no other file holds a code or an invite URL. The superseded invite is not kept anywhere in the repository.
 - **Works without JavaScript.** The page has no script. It carries `<meta http-equiv="refresh" content="0;url=...">`
-  and a visible link with the same target as the fallback, with a short text in both languages (each element with
-  its own `lang`). The target is `https://discord.com/invite/<inviteCode>`, fixed at build time.
+  and a visible link with the same target as the fallback, with a short text in both languages (`<html lang="en-US">`,
+  each element in the other language with its own `lang`). The target is `https://discord.com/invite/<inviteCode>`, fixed at build time.
 - **Language-neutral and query-blind.** One URL for both locales, no locale prefix and no `hreflang`. The page is
   static, so a query string on `/discord` is ignored and **never forwarded** to the target.
 - **Not an indexable page:** `<meta name="robots" content="noindex">`, absent from the sitemap, no canonical to a
@@ -97,8 +97,9 @@ plan allows 10; this uses 2, and `/discord` needs none, D-29). Status code **302
   US, and reach `/pt-br/` through the sitemap, internal links and `hreflang`.
 - **Fallback chooser** (`src/pages/index.astro`, outside the locale folders, `redirectToDefaultLocale` left at its
   default `false`): static page, HTTP 200, two links (`/pt-br/`, `/en-us/`) with names in their own language, a
-  `<link rel="alternate" hreflang="x-default" href="https://empirecommunity.org/">`, `lang` unset on the container
-  and set per link. No script. It is shown only when the rules are off or on direct origin access.
+  `<link rel="alternate" hreflang="x-default" href="https://empirecommunity.org/">`, `<html lang="en-US">` (the
+  `x-default` language, so the page has a language as WCAG 3.1.1 requires) and a `lang` on every link or text in the
+  other language. The bilingual 404 page and the `/discord` page follow the same rule. No script. It is shown only when the rules are off or on direct origin access.
 - **Source of truth:** these expressions. The dashboard is not versioned, so Guindaste copies them into the Ops
   Runbook with the date applied; any change is made here first.
 - **Test plan (C-8):** from a Brazilian network, `curl -sI https://empirecommunity.org/?utm_source=t` must answer
@@ -161,22 +162,30 @@ gzip_static on;                   # build precompresses .gz; Cloudflare adds bro
 error_page 404 /404.html;
 
 location = /healthz {
+  include snippets/limit-methods.conf;
   include snippets/security-headers.conf;
-  add_header Cache-Control "no-store" always; return 200 "ok\n";
+  add_header Cache-Control "no-store" always; default_type text/plain; return 200 "ok\n";
 }
 location /_astro/ {
+  include snippets/limit-methods.conf;
   include snippets/security-headers.conf;
   add_header Cache-Control "public, max-age=31536000, immutable" always; try_files $uri =404;
 }
 location = /data/members.json {
   if ($args != "") { return 404; }          # a query string never reaches the file (members-json 2.9)
+  include snippets/limit-methods.conf;
   include snippets/security-headers.conf;
   add_header Cache-Control "public, max-age=300" always; try_files $uri =404;
 }
-location / {
-  limit_except GET HEAD { deny all; }
+location = /discord {                       # D-29: served directly, 200, no redirect
+  include snippets/limit-methods.conf;
   include snippets/security-headers.conf;
-  add_header Cache-Control "no-cache" always; try_files $uri $uri/index.html =404;
+  add_header Cache-Control "no-cache" always; try_files /discord/index.html =404;
+}
+location / {
+  include snippets/limit-methods.conf;
+  include snippets/security-headers.conf;
+  add_header Cache-Control "no-cache" always; try_files $uri $uri/ =404;   # directory URLs without a slash are redirected
 }
 ```
 
@@ -187,6 +196,16 @@ Therefore **no header is set at server level**: `snippets/security-headers.conf`
 and **every location that sets any header includes it**, as above. `always` is used so that error responses carry
 the headers too, and the `404.html` page is served from a location that includes it. A new location is not accepted
 without the include; the HTTP test below enforces it.
+
+`snippets/limit-methods.conf` (included first in every location):
+
+```
+if ($request_method !~ ^(GET|HEAD)$) { return 405; }
+```
+
+It is an `if` with `return`, not `limit_except`: nginx runs the rewrite-module directives of a location (including
+`return`) in sequence before the access phase, so `limit_except` cannot protect a location that answers with `return`
+(such as `/healthz`), and it answers 403 rather than 405.
 
 `snippets/security-headers.conf`:
 
@@ -214,7 +233,11 @@ add_header Cross-Origin-Opener-Policy "same-origin" always;
 - A strict CSP without `unsafe-inline` requires: no inline `<style>` or `style=""`, no inline `<script>` (JSON-LD
   `application/ld+json` blocks are data and allowed). Enforced by the Astro settings in ADR-0001 plus a post-build
   check that fails on inline executable scripts or style attributes in `dist/**/*.html`.
-- Only `GET` and `HEAD`. No directory listing, no `autoindex`, no proxying, no upstream.
+- Only `GET` and `HEAD`, enforced in **every** location by `snippets/limit-methods.conf` (405, below). No directory
+  listing, no `autoindex`, no proxying, no upstream.
+- **Trailing slash.** A locale URL without the slash (`/pt-br/join`) gets nginx's directory redirect to the slash form
+  (`try_files $uri $uri/ =404`; relative `Location`, because `absolute_redirect off`). `/discord` has its own exact
+  location and is served directly with 200 and no redirect.
 
 ### Logging (D-20)
 
@@ -232,7 +255,8 @@ assert:
 - `Content-Security-Policy` is present and equals the policy for that path (the support pages have no Cloudflare
   hosts), `Permissions-Policy` and `Cross-Origin-Opener-Policy` are present;
 - `Cache-Control` matches the location's value;
-- `/data/members.json?x=1` returns 404 and a non-GET method returns 405; `/discord` returns 200 with no `Location`
+- `/data/members.json?x=1` returns 404 and a non-GET method returns 405 on every path tested, including `POST /healthz`;
+  `/pt-br/join` (no slash) answers a redirect to `/pt-br/join/` and `/pt-br/join/` answers 200; `/discord` returns 200 with no `Location`
   header and its page has the same link target with or without a query string;
 - no `Server` version string and no `Set-Cookie` anywhere;
 - against the public URL: `X-Content-Type-Options`, `Referrer-Policy` and `Strict-Transport-Security` are present.

@@ -299,7 +299,7 @@ parts:
     quantity: 1                                # integer 1 to 99
     unitPriceCents: 0
     status: needed                             # needed | purchased | donated
-    acquiredOn: 2026-11-10                     # required iff purchased or donated, forbidden if needed
+    # acquiredOn: 2026-11-10                   # required iff purchased or donated, forbidden if needed (a needed part has none)
     photo: { src: ../assets/xeon/part.jpg, alt: { pt-br: ..., en-us: ... } }   # optional
 partDonations:                                 # optional; a physical part, not money
   accepted: true

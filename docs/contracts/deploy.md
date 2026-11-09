@@ -27,7 +27,7 @@
 | File | Trigger | Does | Permissions | Secrets |
 |---|---|---|---|---|
 | `ci.yml` | `pull_request`, push to `main` | lint, typecheck, tests, build, content and `dist` checks (section 4), image build and image checks, HTTP header test, worker config check (arrives with the Worker, T-14), workflow lint, secret scan | `contents: read` | none |
-| `release.yml` | push of a tag `vX.Y.Z` (or `vX.Y.Z-rc.N`, a rehearsal) | **guards** (section 5), then build the image, push `X.Y.Z` to GHCR with SBOM and provenance, create the attestation, create the GitHub Release with the changelog notes and `image-digest.txt`, print the digest in the run summary | `permissions: {}` at top; guards job `contents: read`; publish job adds `packages: write`, `id-token: write`, `attestations: write`; release job `contents: write` | none (uses the run's token) |
+| `release.yml` | push of a tag `vX.Y.Z` (or `vX.Y.Z-rc.N`, a rehearsal) | **guards** (section 5), then build the image, push `X.Y.Z` (`X.Y.Z-rc.N` for a rehearsal) to GHCR with SBOM and provenance, create the attestation, create the GitHub Release with the changelog notes and `image-digest.txt`, print the digest in the run summary | `permissions: {}` at top; guards job `contents: read`; publish job adds `packages: write`, `id-token: write`, `attestations: write`; release job `contents: write` | none (uses the run's token) |
 | `worker-deploy.yml` | push to `main` touching `worker/**` or `src/data/site.yaml` (the invite, members-json 2.6), manual dispatch from `main` | deploys the Worker behind the protected environment | per ADR-0003 | environment secrets only |
 | `integrity.yml` | schedule, manual | checks the live site for invariants the release guards cannot see (section 8); not written yet | `contents: read` | none |
 
@@ -50,8 +50,13 @@ permission, it is a separate job with its own `permissions` block.
 - Repository settings the owner applies (depends on the owner): fork pull request workflows require approval; the
   default token is read-only; only the listed actions are allowed; the apps installed on the repository are limited to
   what is needed; strong authentication on the accounts involved.
-- `.maestri/` (agent workspace data) is in `.gitignore` and `.dockerignore`; the image build context never includes it
-  or any file outside `dist/` and the nginx configuration.
+- **The environment `worker-production` is named by `worker-deploy.yml` only.** GitHub cannot restrict an environment
+  to one workflow file, so workflow lint fails any other workflow file that contains `environment:` with that name;
+  together with the owner's approval of every such job this is the control (ADR-0003).
+- `.maestri/`, local worktrees, `.git/`, `.github/`, environment files and `node_modules/` are excluded by
+  `.dockerignore` (and `.maestri/` and worktrees by `.gitignore`), so the image build context never includes them. The
+  context otherwise holds what the build stage needs (sources, lockfile, scripts, nginx configuration); the **runtime
+  image** is limited to `dist/` and the nginx configuration (section 4).
 
 ## 4. Image rules (checked by `ci.yml`, CI fails on any violation)
 
@@ -61,15 +66,20 @@ permission, it is a separate job with its own `permissions` block.
 - **Compose template validation.** `deploy/compose.yml` is the template for the host. CI parses it and fails unless
   the `image` line has the form `ghcr.io/empirecommunity/empirecommunitysite:X.Y.Z@sha256:<64 hex>` (the digest in the
   repository is a **placeholder that is never deployed**) and the only `traefik.*` keys are `traefik.enable`,
-  `traefik.docker.network`, one router rule that is exactly `Host(empirecommunity.org)`, and one service port (8080).
+  `traefik.docker.network`, one router rule that is exactly ``Host(`empirecommunity.org`)`` (the host name in backticks, as Traefik's rule
+  syntax requires), and one service port (8080).
 - **Checks for pages that do not exist yet only warn.** A scan whose target page or file is not in the scaffold yet
   (today: the `/discord` page, the `data-donations` block on the support pages, the discovery files) is listed in
   `scripts/lib/pending.ts` with a flag set to `true`: the check **warns** and does not fail. **The pull request that
   adds the page sets its flag to `false` in the same change**, which makes the check blocking from then on. A reviewer
   rejects a page-adding PR that leaves its flag `true`, and the flag list is empty before the first release
   (`release.yml` MUST fail if any flag is still `true`).
-- Both base images pinned by digest. The runtime image contains `dist/` and the nginx configuration only, no `src/`,
-  no data files, no Node. It runs as a non-root user, exposes only 8080, and declares no `VOLUME`.
+- Both base images pinned by digest. `dist/` is built and checked in the build stage of the image, so the files that
+  ship are the files that were checked. The runtime image contains `dist/` and the nginx configuration only: no `src/`,
+  no **source** data files (YAML) and no Node. The generated member-count fallback `dist/data/members.json`
+  (members-json section 4) **is** part of `dist/` and ships; the image check rejects source or data files by type
+  (YAML, TypeScript, Astro), not generated JSON. The image runs as a non-root user, exposes only 8080, and declares no
+  `VOLUME`.
 - The built image is started in CI and the HTTP header test of routing-locale section 6 runs against it.
 
 ## 5. Release, publication and attestation (D-24)
@@ -79,17 +89,24 @@ permission, it is a separate job with its own `permissions` block.
 does not exist before the image is built, and **the real digest is filled on the host at deploy** (section 6). The
 release PR goes through the same required checks as any PR (section 9).
 
-**Tag.** After the merge and a green `CI` run on that commit of `main`, the owner creates an **annotated** tag
-`vX.Y.Z` on it. Only the owner creates `v*` tags, and `v*` tags cannot be moved or deleted once pushed (a repository
-rule the owner applies, section 11). `-rc.N` tags are a rehearsal: they publish a pre-release and are never deployed.
+**Tag.** After the merge and a green `CI` run on that commit of `main` (with no other merge in between), the owner
+creates an **annotated** tag `vX.Y.Z` on it. Only the owner creates `v*` tags, and `v*` tags cannot be moved or deleted once pushed (a repository
+rule the owner applies, section 11). `-rc.N` tags are a rehearsal: they publish a pre-release under their **own image tag** `X.Y.Z-rc.N`, so they never
+occupy the `X.Y.Z` tag of the final release, and they are never deployed.
 
 **Guards** (job 1 of `release.yml`; any failure publishes nothing): tag matches `vX.Y.Z` (or `-rc.N`); the tag is
-annotated; its commit is contained in `origin/main`; the push `CI` run on that commit succeeded; the changelog has a
-dated, non-empty `[X.Y.Z]` section; the compose template names `X.Y.Z`; no pending-check flag is `true`; **no image
-for that version exists yet** (a version is published once and is immutable). If the image was published and a later
+annotated; its commit **is the tip of `origin/main`**; the push `CI` run on that commit succeeded; for a final release,
+the changelog has a dated, non-empty `[X.Y.Z]` section and the compose template names `X.Y.Z` (a rehearsal reads
+neither); no pending-check flag is `true`; **no image exists yet for the complete image tag** (`X.Y.Z` or
+`X.Y.Z-rc.N`), so a version is published once and is immutable. Why the tip and not just "contained in `main`":
+releases are cut only from the newest commit, so every release contains every removal merged before it, with no
+register of affected commits (which would itself need the removed data to be identified) and no extra step for the
+owner; the cost is that a merge between the release merge and the tag requires the next patch version. After a
+withdrawal ([site-data](site-data.md) 9.1) images already published with the data are purged, and a purged version is
+never a rollback or deploy target. If the image was published and a later
 step fails, the run is not repeated: the next patch version ships.
 
-**Publication.** The image is `ghcr.io/empirecommunity/empirecommunitysite:X.Y.Z`. **No mutable tag (`latest`, a
+**Publication.** The image is `ghcr.io/empirecommunity/empirecommunitysite:X.Y.Z` (`:X.Y.Z-rc.N` for a rehearsal). **No mutable tag (`latest`, a
 branch name or a commit tag) is used for deployment**; the deploy reference is the digest in `image-digest.txt` of
 the GitHub Release and in the run summary. The job attaches SBOM and provenance and creates a build provenance
 attestation for that digest with the official GitHub attestation action (pinned by SHA).
@@ -173,7 +190,9 @@ Applied to `main` by the owner; the list states the control, not the current set
 
 ## 10. Negative tests (Ensaio)
 
-- A pull request that adds a `traefik.*` label to the Dockerfile or the compose template fails `ci.yml`.
+- A pull request that adds a `traefik.*` label to the Dockerfile, or a label outside the allowed set of section 4 to
+  the compose template, fails `ci.yml`. The allowed compose labels of section 4 pass.
+- A workflow file other than `worker-deploy.yml` that names the environment `worker-production` fails `ci.yml`.
 - A fork or pull request run cannot publish an image, cannot read an environment secret and cannot trigger
   `worker-deploy.yml`.
 - An image built outside `release.yml` on a `vX.Y.Z` tag, or with a modified digest, fails the attestation verification.
@@ -186,7 +205,7 @@ Applied to `main` by the owner; the list states the control, not the current set
 ## 11. Depends on the owner
 
 Strong authentication on the GitHub, Cloudflare and host provider accounts; applying and keeping the repository
-settings of sections 3 and 9; the rule that only the owner creates `v*` tags and that they cannot be moved or deleted (section 5); the protected environment and the expiring token (ADR-0003); keeping failed-run
+settings of sections 3 and 9; the rule that only the owner creates `v*` tags and that they cannot be moved or deleted (section 5); the protected environment and the two expiring tokens (ADR-0003); keeping failed-run
 notifications on; confirming the approved invite code in the pull request that sets it; the Cloudflare dashboard items copied into
 the runbook (the two root redirect rules, the `/data/` rules, the Worker route, features off). `/discord` needs no
 dashboard item (D-29).
