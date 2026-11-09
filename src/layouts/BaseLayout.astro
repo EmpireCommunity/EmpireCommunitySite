@@ -1,0 +1,49 @@
+---
+// Head rules: docs/contracts/routing-locale.md section 4. No header, selector or content here:
+// those belong to the page and component tasks (Bússola's spec).
+import '../styles/global.css';
+import { t } from '../i18n/index.ts';
+import type { MessageKey } from '../i18n/index.ts';
+import { alternates, HTML_LANG, LOCALES, OG_LOCALE, routePath, xDefaultPath } from '../lib/routes.ts';
+import type { Locale, RouteKey } from '../lib/routes.ts';
+
+interface Props {
+  locale: Locale;
+  routeKey: RouteKey;
+}
+
+const { locale, routeKey } = Astro.props;
+const origin = Astro.site;
+if (origin === undefined) throw new Error('`site` must be set in astro.config.ts');
+
+const absolute = (path: string): string => new URL(path, origin).href;
+const title = t(locale, `meta.${routeKey}.title` as MessageKey);
+const description = t(locale, `meta.${routeKey}.description` as MessageKey);
+const otherLocales = LOCALES.filter((other) => other !== locale);
+---
+
+<!doctype html>
+<html lang={HTML_LANG[locale]}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={absolute(routePath(locale, routeKey))} />
+    {
+      alternates(routeKey).map((alternate) => (
+        <link rel="alternate" hreflang={alternate.hreflang} href={absolute(alternate.path)} />
+      ))
+    }
+    <link rel="alternate" hreflang="x-default" href={absolute(xDefaultPath(routeKey))} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={absolute(routePath(locale, routeKey))} />
+    <meta property="og:locale" content={OG_LOCALE[locale]} />
+    {otherLocales.map((other) => <meta property="og:locale:alternate" content={OG_LOCALE[other]} />)}
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

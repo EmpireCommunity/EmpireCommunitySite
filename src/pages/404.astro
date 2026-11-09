@@ -1,0 +1,30 @@
+---
+// Neutral bilingual page served with status 404 for any unknown path (routing-locale section 1).
+import '../styles/global.css';
+import { t } from '../i18n/index.ts';
+import { routePath } from '../lib/routes.ts';
+---
+
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>{t('pt-br', 'notFound.title')} · {t('en-us', 'notFound.title')}</title>
+  </head>
+  <body>
+    <main id="content">
+      <section lang="pt-BR">
+        <h1>{t('pt-br', 'notFound.title')}</h1>
+        <p>{t('pt-br', 'notFound.body')}</p>
+        <p><a href={routePath('pt-br', 'home')}>{t('pt-br', 'notFound.home')}</a></p>
+      </section>
+      <section lang="en-US">
+        <h1>{t('en-us', 'notFound.title')}</h1>
+        <p>{t('en-us', 'notFound.body')}</p>
+        <p><a href={routePath('en-us', 'home')}>{t('en-us', 'notFound.home')}</a></p>
+      </section>
+    </main>
+  </body>
+</html>

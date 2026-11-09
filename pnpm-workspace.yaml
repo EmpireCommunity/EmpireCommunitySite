@@ -1,0 +1,10 @@
+# pnpm settings (pnpm 12). Lifecycle scripts run only for the allowlist in ADR-0001.
+# minimumReleaseAge is in minutes: 4320 = 3 days (ADR-0001 asks for 3 days or more).
+minimumReleaseAge: 4320
+allowBuilds:
+  esbuild: true
+  sharp: true
+# @astrojs/astro2tsx resolves @napi-rs/wasm-runtime against a beta @emnapi/runtime (2.0.0-beta.2) that is
+# incompatible with @emnapi/core 1.x and makes `astro check` crash on load. Pin the stable line.
+overrides:
+  '@emnapi/runtime': 1.11.3

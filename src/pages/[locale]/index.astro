@@ -1,0 +1,17 @@
+---
+import type { GetStaticPaths } from 'astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { t } from '../../i18n/index.ts';
+import { LOCALES, isLocale } from '../../lib/routes.ts';
+
+export const getStaticPaths = (() => LOCALES.map((locale) => ({ params: { locale } }))) satisfies GetStaticPaths;
+
+const { locale } = Astro.params;
+if (!isLocale(locale)) throw new Error(`unexpected locale: ${locale}`);
+---
+
+<BaseLayout locale={locale} routeKey="home">
+  <main id="content">
+    <h1>{t(locale, 'meta.home.title')}</h1>
+  </main>
+</BaseLayout>

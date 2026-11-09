@@ -19,19 +19,40 @@ Este repositório armazena o código-fonte, layout e documentações do portal p
 
 ## 🛠️ Stack Tecnológica
 
-- **Framework Web**: Astro / React
-- **Estilização**: Tailwind CSS
+- **Framework Web**: Astro 7 (site estático), TypeScript, sem React
+- **Estilização**: Tailwind CSS 4, com os tokens de design em `@theme`
+- **Gerenciador de pacotes**: pnpm (Node 24 LTS)
 - **CI/CD**: GitHub Actions
+
+## 🚀 Desenvolvimento
+
+```bash
+pnpm install --frozen-lockfile
+pnpm dev      # servidor local
+pnpm build    # gera dist/
+pnpm check    # astro check
+pnpm lint
+pnpm test
+```
+
+Rotas em `/pt-br/` e `/en-us/` (ver `docs/contracts/routing-locale.md`). Regras para quem contribui, incluindo o fluxo
+com worktrees e o mapa de risco, em [`AGENTS.md`](AGENTS.md).
 
 ## 🤝 Contribuição
 
 Antes de enviar alterações, consulte nossas diretrizes de engenharia e fluxo de trabalho no repositório [`.github`](https://github.com/Empire-Community/.github).
 
+A raiz do repositório fica sempre na `main`: o trabalho acontece em um worktree, em uma branch `tipo/nome-curto`.
+
 ```bash
-git checkout -b feat/minha-feature
+git worktree add worktrees/feat-minha-feature -b feat/minha-feature main
+cd worktrees/feat-minha-feature
 git commit -m "feat(portal): adicionar nova secao"
-git push origin feat/minha-feature
+git push -u origin feat/minha-feature
 ```
+
+Push, PR e merge têm autorização permanente do dono (decisão D-31); nunca na `main` direto. Releases e deploys exigem a
+aprovação explícita do dono a cada vez.
 
 ## 📜 Licença
 

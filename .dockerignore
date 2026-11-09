@@ -1,0 +1,14 @@
+# The runtime image carries dist/ and the nginx configuration only (docs/contracts/deploy.md sections 3 and 4).
+# Everything else, including agent workspaces and local worktrees, stays out of the build context.
+.maestri/
+worktrees/
+.git/
+.github/
+node_modules/
+.astro/
+.env
+.env.*
+!.env.example
+*.log
+coverage/
+.DS_Store

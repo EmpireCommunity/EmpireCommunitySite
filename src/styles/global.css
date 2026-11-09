@@ -1,0 +1,95 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens. Source of truth: EmpireAssets/docs/EmpireCommunity-DESIGN.md (frontmatter).
+ * Naming follows the design record: colors.papel -> --color-papel, spacing.24 -> --spacing-24,
+ * rounded.botao -> --radius-botao.
+ *
+ * Rule: no color value exists outside this block. Components use the tokens through utilities
+ * (bg-verde-ata, text-papel) or var(--color-*). `static` emits every token as a CSS variable.
+ *
+ * STATUS: the design record is a proposal awaiting owner approval. The background greens
+ * (verde-ata, verde-capa, verde-noite) are under owner review: change their values here only.
+ */
+@theme static {
+  /* Background greens: UNDER OWNER REVIEW */
+  --color-verde-ata: #10241d;
+  --color-verde-capa: #183229;
+  --color-verde-noite: #0a1813;
+
+  /* Paper and neutrals */
+  --color-papel: #efece0;
+  --color-papel-hover: #dbd8c9;
+  --color-papel-active: #c6c3b3;
+  --color-papel-suave: #bcc3b3;
+  --color-papel-apagado: #9aa79b;
+  --color-folha-suave: #3a4f45;
+  --color-pauta: #2f473d;
+  --color-pauta-forte: #6f897b;
+  --color-margem: #8f4d3d;
+
+  /* Data colors: status vocabulary and ledger values only */
+  --color-status-no-ar: #8ddcaa;
+  --color-status-desenvolvimento: #e9bd6e;
+  --color-status-em-breve: #a9cbe9;
+  --color-livro-entrada: #93e0b2;
+  --color-livro-saida: #f3aa92;
+
+  /* Families. The fonts are self-hosted (SIL OFL) in a later task; fallbacks work until then. */
+  --font-display: 'Source Serif 4 Variable', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Public Sans Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* Type scale (fluid between 390 and 1440 px where the record says so) */
+  --text-display: clamp(2.5rem, 1.757rem + 3.048vw, 4.5rem);
+  --text-display--line-height: 1.08;
+  --text-display--letter-spacing: -0.01em;
+  --text-headline: clamp(2rem, 1.768rem + 0.952vw, 2.625rem);
+  --text-headline--line-height: 1.15;
+  --text-title: 1.5rem;
+  --text-title--line-height: 1.25;
+  --text-figure: clamp(2rem, 1.814rem + 0.762vw, 2.5rem);
+  --text-figure--line-height: 1.1;
+  --text-lead: 1.25rem;
+  --text-lead--line-height: 1.5;
+  --text-body: 1.125rem;
+  --text-body--line-height: 1.5;
+  --text-body-sm: 1rem;
+  --text-body-sm--line-height: 1.5;
+  --text-label: 0.875rem;
+  --text-label--line-height: 1.35;
+
+  /* Shape */
+  --radius-botao: 4px;
+
+  /* Spacing (8 px base, 4 and 12 for fine adjustment) */
+  --spacing-4: 4px;
+  --spacing-8: 8px;
+  --spacing-12: 12px;
+  --spacing-16: 16px;
+  --spacing-24: 24px;
+  --spacing-32: 32px;
+  --spacing-48: 48px;
+  --spacing-64: 64px;
+  --spacing-96: 96px;
+  --spacing-128: 128px;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background-color: var(--color-verde-ata);
+    color: var(--color-papel);
+    font-family: var(--font-sans);
+  }
+
+  body {
+    min-height: 100vh;
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-papel);
+    outline-offset: 2px;
+  }
+}
