@@ -19,13 +19,13 @@ if (site === undefined) throw new Error('src/data/site.yaml is missing: the foot
 const { contact, links } = site.data;
 
 const linkClass =
-  'link-text inline-flex min-h-[44px] items-center text-body-sm text-papel-suave hover:text-papel motion-safe:transition-colors';
+  'link-text inline-flex min-h-[44px] items-center text-body-sm [overflow-wrap:anywhere] text-papel-suave hover:text-papel motion-safe:transition-colors';
 const headingClass = 'text-body-sm font-medium text-papel';
 ---
 
 <footer class="bg-violeta-noite pt-64 pb-48 text-papel-suave">
   <div class="frame">
-    <div class="grid gap-x-24 gap-y-32 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="grid grid-cols-1 gap-x-24 gap-y-32 sm:grid-cols-2 lg:grid-cols-4">
       <section>
         <h2 class={headingClass}>{t(locale, 'footer.site')}</h2>
         <ul class="mt-8">
@@ -81,6 +81,6 @@ const headingClass = 'text-body-sm font-medium text-papel';
       </section>
     </div>
 
-    <p class="mt-48 text-label text-papel-apagado">{t(locale, 'footer.line')}</p>
+    <p class="mt-48 text-label text-papel-apagado [overflow-wrap:anywhere]">{t(locale, 'footer.line')}</p>
   </div>
 </footer>

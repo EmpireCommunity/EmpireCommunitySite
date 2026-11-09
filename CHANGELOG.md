@@ -21,6 +21,10 @@ release happens and which version it gets. The release PR (`chore/release-X.Y.Z`
 - Self-hosted fonts (Source Serif 4, Public Sans, variable, latin, SIL OFL 1.1) from `@fontsource-variable/*` 5.3.1 and 5.3.0, with the license texts in `public/fonts/` and `LICENSES.md`. No external font or script.
 - Sitemap through `@astrojs/sitemap` 3.7.4 (MIT), locale pages only with `hreflang` pairs. `dist` checks for `html lang` and for the language selector targets.
 
+### Fixed
+
+- PR 6 review: the sitemap filter derives locale prefixes from `routes.ts`; `check-dist` fails on a missing 404 page and validates each language selector on its own (one link per locale, supported `hreflang`, `aria-current` only on the current link); the neutral pages get a skip link and an English-only 404 title; the mobile header and footer reflow with a larger browser font size.
+
 ### Changed
 
 - The old green tokens are gone; the `folha-suave` token was dropped with the band it served.

@@ -67,6 +67,7 @@ for (const file of localePages) {
   add(...htmlLang(html, file, locale === 'pt-br' ? 'pt-BR' : 'en-US'));
   add(...languageSelector(html, file, locale === 'pt-br' ? 'pt-br' : 'en-us', rest.join('/')));
 }
+if (!files.includes('404.html')) add({ level: 'error', file: '404.html', message: 'the 404 page is not built' });
 for (const file of ['index.html', '404.html', 'discord/index.html'].filter((f) => files.includes(f))) {
   add(...htmlLang(read(distDir, file), file, 'en-US'));
 }

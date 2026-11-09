@@ -2,9 +2,10 @@
 // Frame of the pages that belong to no locale: the root chooser, the 404 and the /discord page
 // (docs/contracts/routing-locale.md sections 1 and 3). The page language is en-US (the x-default language, so WCAG 3.1.1
 // is met) and every element in the other language carries its own `lang`. There is no locale header, selector or
-// footer here, and no script. Extra head tags (for example the x-default alternate) go in the `head` slot.
+// footer here, and no script; the skip link is in English, the page language. Extra head tags (for example the x-default alternate) go in the `head` slot.
 import '../styles/global.css';
 import FontPreload from '../components/FontPreload.astro';
+import SkipLink from '../components/SkipLink.astro';
 import Wordmark from '../components/Wordmark.astro';
 
 interface Props {
@@ -27,6 +28,7 @@ const { title, noindex = false } = Astro.props;
     <FontPreload />
   </head>
   <body class="flex min-h-screen flex-col">
+    <SkipLink locale="en-us" />
     <header class="bg-violeta-ata">
       <div class="frame flex h-[56px] items-center lg:h-[72px]">
         <Wordmark />

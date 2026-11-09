@@ -5,6 +5,8 @@
 // - Below 640 px: the selector goes to a 44 px strip above the row (two full names do not fit beside the logo).
 // The menu is a native <details>: it works with no script and no client framework, the browser exposes the
 // expanded state, and the open panel sits in the flow, so it pushes the page down instead of covering it.
+// The Menu button is positioned over the right edge of the row, so the row reserves its width in rem: with a larger
+// browser font size the reserve grows with the button and the wordmark wraps (Wordmark allows it) instead of sliding under it.
 import { t } from '../i18n/index.ts';
 import { NAV_ITEMS } from '../lib/navigation.ts';
 import { routePath } from '../lib/routes.ts';
@@ -20,19 +22,19 @@ interface Props {
 const { locale, routeKey } = Astro.props;
 
 const pageLink =
-  'inline-flex min-h-[44px] items-center text-papel-suave hover:text-papel aria-[current=page]:text-papel aria-[current=page]:underline aria-[current=page]:decoration-1 aria-[current=page]:underline-offset-8 motion-safe:transition-colors';
+  'inline-flex min-h-[44px] items-center text-papel-suave [overflow-wrap:anywhere] hover:text-papel aria-[current=page]:text-papel aria-[current=page]:underline aria-[current=page]:decoration-1 aria-[current=page]:underline-offset-8 motion-safe:transition-colors';
 ---
 
 <header class="bg-violeta-ata">
   <div class="sm:hidden">
-    <div class="frame flex h-[44px] items-center justify-end">
+    <div class="frame flex min-h-[44px] items-center justify-end">
       <LanguageSelector locale={locale} routeKey={routeKey} />
     </div>
   </div>
 
   <div class="relative">
     <div class="frame">
-      <div class="flex h-[56px] items-center gap-24 pr-[96px] lg:h-[72px] lg:pr-0">
+      <div class="flex min-h-[56px] items-center gap-x-24 pr-[calc(46px+3.5rem)] lg:min-h-[72px] lg:pr-0">
         <a
           href={routePath(locale, 'home')}
           aria-label={t(locale, 'a11y.logo')}
@@ -68,7 +70,7 @@ const pageLink =
 
     <details class="group lg:hidden">
       <summary
-        class="absolute top-[6px] right-16 flex h-[44px] cursor-pointer list-none items-center rounded-botao border border-pauta-forte px-16 text-nav text-papel select-none group-open:border-papel hover:border-papel motion-safe:transition-colors sm:right-32 [&::-webkit-details-marker]:hidden"
+        class="absolute top-[6px] right-16 flex min-h-[44px] cursor-pointer list-none items-center rounded-botao border border-pauta-forte px-16 text-nav text-papel select-none group-open:border-papel hover:border-papel motion-safe:transition-colors sm:right-32 [&::-webkit-details-marker]:hidden"
       >
         <span class="group-open:hidden">{t(locale, 'nav.menu.open')}</span>
         <span class="hidden group-open:inline">{t(locale, 'nav.menu.close')}</span>

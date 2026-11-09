@@ -5,6 +5,7 @@ import '../styles/global.css';
 import FontPreload from '../components/FontPreload.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import SiteHeader from '../components/SiteHeader.astro';
+import SkipLink from '../components/SkipLink.astro';
 import { t } from '../i18n/index.ts';
 import type { MessageKey } from '../i18n/index.ts';
 import { alternates, HTML_LANG, LOCALES, OG_LOCALE, routePath, xDefaultPath } from '../lib/routes.ts';
@@ -48,12 +49,7 @@ const otherLocales = LOCALES.filter((other) => other !== locale);
     <FontPreload />
   </head>
   <body class="flex min-h-screen flex-col">
-    <a
-      href="#content"
-      class="absolute top-8 left-8 z-10 -translate-y-[200%] rounded-botao bg-papel px-16 py-12 text-nav text-violeta-ata focus:translate-y-0"
-    >
-      {t(locale, 'nav.skip')}
-    </a>
+    <SkipLink locale={locale} />
     <SiteHeader locale={locale} routeKey={routeKey} />
     <main id="content" tabindex="-1" class="flex-1">
       <slot />

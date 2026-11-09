@@ -147,29 +147,43 @@ export function htmlLang(html: string, file: string, expected: 'pt-BR' | 'en-US'
 }
 
 /**
- * Language selector (routing-locale section 2): every link with `hreflang` goes to the equivalent page in that locale
- * (same route), carries `lang`, and only the link to the page's own locale is `aria-current="true"`. Both locales must be present.
+ * Language selector (routing-locale section 2). A selector is a `<nav>` that holds links with `hreflang` (the header renders
+ * one per breakpoint, so each is checked on its own). Each has exactly one link per locale, with a supported `hreflang`
+ * value, the same value in `lang`, an `href` to the equivalent page, and `aria-current="true"` on the current locale's
+ * link only (the other link has no `aria-current` at all). The page must have at least one selector.
  */
 export function languageSelector(html: string, file: string, locale: 'pt-br' | 'en-us', route: string): Finding[] {
   const findings: Finding[] = [];
-  const seen = new Set<string>();
-  for (const match of html.matchAll(/<a\b([^>]*)>/gi)) {
-    const attrs = attributesOf(match[1] ?? '');
-    const target = attrs.get('hreflang');
-    if (target === undefined) continue;
-    const targetLocale = LOCALE_LABELS.get(target);
-    if (targetLocale === undefined) continue;
-    seen.add(targetLocale);
-    const wanted = `/${targetLocale}/${route}`;
-    if (attrs.get('href') !== wanted) findings.push(err(file, `selector link ${target} goes to ${attrs.get('href') ?? 'nothing'}, expected ${wanted}`));
-    if (attrs.get('lang') !== target) findings.push(err(file, `selector link ${target} has no matching lang attribute`));
-    if ((attrs.get('aria-current') === 'true') !== (targetLocale === locale)) {
-      findings.push(err(file, `selector link ${target} has the wrong aria-current`));
+  let selectors = 0;
+  for (const nav of html.matchAll(/<nav\b[^>]*>([\s\S]*?)<\/nav>/gi)) {
+    const links = [...(nav[1] ?? '').matchAll(/<a\b([^>]*)>/gi)]
+      .map((match) => attributesOf(match[1] ?? ''))
+      .filter((attrs) => attrs.has('hreflang'));
+    if (links.length === 0) continue;
+    selectors += 1;
+    const seen = new Map<string, number>();
+    for (const attrs of links) {
+      const target = attrs.get('hreflang') ?? '';
+      const targetLocale = LOCALE_LABELS.get(target);
+      if (targetLocale === undefined) {
+        findings.push(err(file, `selector link has an unsupported hreflang value "${target}"`));
+        continue;
+      }
+      seen.set(targetLocale, (seen.get(targetLocale) ?? 0) + 1);
+      const wanted = `/${targetLocale}/${route}`;
+      if (attrs.get('href') !== wanted) findings.push(err(file, `selector link ${target} goes to ${attrs.get('href') ?? 'nothing'}, expected ${wanted}`));
+      if (attrs.get('lang') !== target) findings.push(err(file, `selector link ${target} has no matching lang attribute`));
+      const current = attrs.get('aria-current');
+      if (targetLocale === locale ? current !== 'true' : current !== undefined) {
+        findings.push(err(file, `selector link ${target} has the wrong aria-current (${current ?? 'none'})`));
+      }
+    }
+    for (const needed of LOCALE_LABELS.values()) {
+      const count = seen.get(needed) ?? 0;
+      if (count !== 1) findings.push(err(file, `a selector has ${count} links to ${needed}, expected 1`));
     }
   }
-  for (const needed of LOCALE_LABELS.values()) {
-    if (!seen.has(needed)) findings.push(err(file, `selector has no link to ${needed}`));
-  }
+  if (selectors === 0) findings.push(err(file, 'the page has no language selector'));
   return findings;
 }
 

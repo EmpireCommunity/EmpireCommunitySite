@@ -10,5 +10,5 @@ test('schema status values map to the design record names', () => {
 
 test('every status has a label message and the mapping covers exactly the schema values', () => {
   assert.deepEqual(Object.keys(STATUS_KIND).sort(), ['coming-soon', 'in-development', 'live']);
-  assert.deepEqual(Object.values(STATUS_LABEL).sort(), ['status.comingSoon', 'status.inDevelopment', 'status.live']);
+  assert.deepEqual(STATUS_LABEL, { live: 'status.live', development: 'status.inDevelopment', soon: 'status.comingSoon' });
 });

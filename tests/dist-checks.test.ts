@@ -181,11 +181,20 @@ test('html lang must match the page: a locale for locale pages, en-US for the ne
 });
 
 test('the language selector maps each page to its equivalent and marks only the current locale', () => {
-  const ok =
-    '<a href="/pt-br/join/" hreflang="pt-BR" lang="pt-BR" aria-current="true">Português</a>' +
-    '<a href="/en-us/join/" hreflang="en-US" lang="en-US">English</a>';
-  assert.equal(languageSelector(ok, 'p', 'pt-br', 'join/').length, 0);
-  assert.equal(languageSelector(ok.replace('/en-us/join/', '/en-us/'), 'p', 'pt-br', 'join/').length, 1);
-  assert.equal(languageSelector(ok.replace(' aria-current="true"', ''), 'p', 'pt-br', 'join/').length, 1);
-  assert.equal(languageSelector(ok.replace(/<a[^>]*en-US[^<]*<\/a>/, ''), 'p', 'pt-br', 'join/').length, 1);
+  const pt = '<a href="/pt-br/join/" hreflang="pt-BR" lang="pt-BR" aria-current="true">Português</a>';
+  const en = '<a href="/en-us/join/" hreflang="en-US" lang="en-US">English</a>';
+  const nav = (...links: string[]) => `<nav aria-label="Idioma">${links.join('')}</nav>`;
+  const check = (html: string) => languageSelector(html, 'p', 'pt-br', 'join/').length;
+
+  assert.equal(check(nav(pt, en)), 0);
+  assert.equal(check(nav(pt, en) + nav(pt, en)), 0, 'one selector per breakpoint is fine when each is correct');
+  assert.equal(check(nav(pt, en.replace('/en-us/join/', '/en-us/'))), 1, 'wrong target');
+  assert.equal(check(nav(pt.replace(' aria-current="true"', ''), en)), 1, 'current link not marked');
+  assert.equal(check(nav(pt)), 1, 'missing locale');
+  assert.equal(check(nav(pt, en.replace(' lang="en-US"', ''))), 1, 'missing lang attribute');
+  assert.equal(check(nav(pt, en.replace('aria-current', 'x').replace('<a ', '<a aria-current="page" '))), 1, 'aria-current on the other locale');
+  assert.equal(check(nav(pt, en, en)), 1, 'duplicate locale in one selector');
+  assert.equal(check(nav(pt, en, pt.replace('hreflang="pt-BR"', 'hreflang="pt-br"'))), 1, 'unsupported hreflang value');
+  assert.equal(check(nav(pt, en) + nav(pt)), 1, 'a second selector is checked on its own');
+  assert.equal(check('<p>no selector</p>'), 1, 'no selector at all');
 });
