@@ -27,7 +27,7 @@ Locale path segments are `pt-br` and `en-us`; the `lang` attribute and `hreflang
 - Every route exists in both locales (C-3). The build fails if a route key has no page in one locale.
 - Join page content differs by audience (WhatsApp pt-BR only, C-1), the URL does not.
 - Every join button or call to action on a locale page links to `/discord` (D-41), never to Discord or WhatsApp
-  directly. The WhatsApp group link and the Discord invite exist only on the `/discord` page.
+  directly. The WhatsApp community link and the Discord invite exist only on the `/discord` page.
 
 ### Reserved and special paths
 
@@ -56,7 +56,7 @@ only after a checkbox is ticked, the join links. The `<meta http-equiv="refresh"
 - **What it shows.** The community rules and the date they were last updated (2025-02-27 at the time of D-41), then a
   checkbox confirming agreement, then the join links: **Discord** for everyone, **WhatsApp** inside the pt-BR content
   only. Rules text and date come from `src/data/community-rules.yaml` (one source, site-data section 14). The
-  WhatsApp group link comes from the `whatsapp` entry of `join-channels.yaml` (one source, site-data section 8). The
+  WhatsApp community link comes from the `whatsapp` entry of `join-channels.yaml` (one source, site-data section 8). The
   invite code comes only from `src/data/site.yaml` (`discord.inviteCode`, site-data section 4), the approved invite,
   and is the same value the Worker (members-json 2.6) and the integrity check read. The superseded invite is not
   kept anywhere in the repository.
@@ -64,7 +64,7 @@ only after a checkbox is ticked, the join links. The `<meta http-equiv="refresh"
   exactly two sibling containers in `<main>`, `lang="pt-BR"` and `lang="en-US"`. Each holds, in its own language, the
   rules, the updated date (formatted for that locale), its own checkbox with its label, and its own join links. The
   pt-BR container has the Discord link and the WhatsApp link; the **en-US container has the Discord link only**.
-  Every WhatsApp reference (the word or the group URL) has a nearest ancestor `lang` of `pt-BR`; none appears in the
+  Every WhatsApp reference (the word or the community URL) has a nearest ancestor `lang` of `pt-BR`; none appears in the
   `<head>` (title, description, Open Graph, which use en-US strings) or in the en-US container (C-1 stays true).
   Order, columns and visual treatment are Bússola's, not this contract's.
 - **The gate is CSS only.** No script, no `<form>`, no `<noscript>`. Each container is a gate group: an
@@ -84,7 +84,7 @@ only after a checkbox is ticked, the join links. The `<meta http-equiv="refresh"
   recorded, verified or enforced. The community rules are enforced by moderation on the server, not by this page.
 - **Language-neutral and query-blind.** One URL for both locales, no locale prefix and no `hreflang`. The page is
   static, so a query string on `/discord` is ignored and **never forwarded**: the link targets are fixed at build time
-  (`https://discord.com/invite/<inviteCode>` and the WhatsApp group link), and are the same with or without a query.
+  (`https://discord.com/invite/<inviteCode>` and the WhatsApp community link), and are the same with or without a query.
 - **Not an indexable page:** `<meta name="robots" content="noindex">`, absent from the sitemap, no canonical to a
   locale page. No analytics snippet and **no script of any kind**. It uses the **default** headers and CSP of
   section 6 (no new policy entry): the gate CSS lives in the shared external stylesheet, with no inline style.
