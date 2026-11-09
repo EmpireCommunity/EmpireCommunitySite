@@ -201,3 +201,22 @@
     color: var(--color-papel-hover);
   }
 }
+
+/* A Margem draws itself once, top to bottom, when the Home loads (DESIGN.md "Movimento"). Nothing else enters animated. */
+@keyframes margem-draw {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@utility margem-draw {
+  transform-origin: top;
+  animation: margem-draw 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}

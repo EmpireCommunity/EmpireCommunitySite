@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import { HttpsUrl, Image, IsoDate, Localized } from '../src/schemas/common.ts';
+import { CommunitySchema } from '../src/schemas/community.ts';
 import { GameServerSchema } from '../src/schemas/game-servers.ts';
 import { JoinChannelSchema } from '../src/schemas/join-channels.ts';
 import { LegalSchema } from '../src/schemas/legal.ts';
 import { ProjectSchema } from '../src/schemas/projects.ts';
+import { SiteSchema } from '../src/schemas/site.ts';
 import { TeamMemberSchema } from '../src/schemas/team.ts';
 
 const both = (text: string) => ({ 'pt-br': text, 'en-us': text });
@@ -123,5 +125,41 @@ describe('legal front matter', () => {
   test('an invalid date is still rejected', () => {
     assert.equal(LegalSchema.safeParse({ ...front, effectiveDate: new Date(Number.NaN) }).success, false);
     assert.equal(LegalSchema.safeParse({ ...front, effectiveDate: '2026-02-30' }).success, false);
+  });
+});
+
+describe('site and community data (site-data sections 4 and 5)', () => {
+  const site = {
+    origin: 'https://empirecommunity.org',
+    organization: 'EmpireCommunity',
+    currency: 'BRL',
+    contact: { general: 'contact@empirecommunity.org', legal: 'legal@empirecommunity.org' },
+    links: { discord: 'https://empirecommunity.org/discord', github: 'https://github.com/EmpireCommunity' },
+    discord: { inviteCode: 'abc-123', guildId: '1010657521775681556' },
+  };
+
+  test('accepts a valid invite code and guild id', () => {
+    assert.equal(SiteSchema.safeParse(site).success, true);
+  });
+
+  const rejected: [string, unknown][] = [
+    ['an invite code with a slash', { ...site, discord: { ...site.discord, inviteCode: 'a/b' } }],
+    ['an invite code of one character', { ...site, discord: { ...site.discord, inviteCode: 'a' } }],
+    ['a guild id given as a number (it would lose precision)', { ...site, discord: { ...site.discord, guildId: 1010657521775 } }],
+    ['a guild id that is too short', { ...site, discord: { ...site.discord, guildId: '12345' } }],
+    ['no discord block', { ...site, discord: undefined }],
+  ];
+  for (const [label, input] of rejected) {
+    test(`site rejects ${label}`, () => {
+      assert.equal(SiteSchema.safeParse(input).success, false);
+    });
+  }
+
+  test('community requires the verified Discord count, within bounds, and a real calendar date for WhatsApp', () => {
+    const discord = { membersBuiltIn: 888 };
+    assert.equal(CommunitySchema.safeParse({ foundedYear: 2022, discord, whatsapp: { members: 60, asOf: '2026-11-09' } }).success, true);
+    assert.equal(CommunitySchema.safeParse({ foundedYear: 2022 }).success, false);
+    assert.equal(CommunitySchema.safeParse({ discord: { membersBuiltIn: 0 } }).success, false);
+    assert.equal(CommunitySchema.safeParse({ discord, whatsapp: { members: 60, asOf: '2026-02-30' } }).success, false);
   });
 });

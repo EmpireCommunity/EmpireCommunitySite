@@ -1,0 +1,36 @@
+---
+// Ruled line (DESIGN.md "Linha pautada"): the signature component. Pauta rule above, 24 px of vertical padding, name
+// in Title, description in Body-sm, status on the right, then the links. Desktop: one line. Tablet: name and status on
+// top, the rest below. Mobile: stacked. The row is not a link; only the links inside it are (R-4). Put rows in a
+// <ul class="border-b border-pauta"> so the last one is closed by a rule.
+interface Props {
+  name: string;
+  description?: string;
+  /** Reserve the links column on desktop even when this row has no link, so descriptions line up across rows. */
+  linksColumn?: boolean;
+}
+
+const { name, description, linksColumn = false } = Astro.props;
+const hasStatus = Astro.slots.has('status');
+const hasLinks = Astro.slots.has('links');
+// Class names are written out in full so Tailwind can see them.
+const columns = hasStatus
+  ? 'lg:grid-cols-[minmax(0,12rem)_minmax(0,1fr)_11rem_6rem]'
+  : linksColumn
+    ? 'lg:grid-cols-[minmax(0,12rem)_minmax(0,1fr)_10rem]'
+    : 'lg:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]';
+const linksStart = hasStatus ? 'lg:col-start-4' : 'lg:col-start-3';
+// A 44 px link plus 24 px of padding on each side: rows with and without a link keep the same height.
+const rowHeight = linksColumn ? 'lg:min-h-[92px]' : '';
+---
+
+<li class={`grid gap-x-24 gap-y-8 border-t border-pauta py-24 sm:grid-cols-[1fr_auto] ${columns} ${rowHeight}`}>
+  <p class="font-display text-title text-papel sm:col-start-1 lg:row-start-1">{name}</p>
+  {hasStatus && <div class="sm:col-start-2 sm:row-start-1 lg:col-start-3"><slot name="status" /></div>}
+  {
+    description !== undefined && (
+      <p class="text-body-sm text-papel-suave sm:col-span-2 lg:col-span-1 lg:col-start-2 lg:row-start-1">{description}</p>
+    )
+  }
+  {hasLinks && <div class={`flex flex-wrap gap-x-24 sm:col-span-2 lg:col-span-1 lg:row-start-1 ${linksStart}`}><slot name="links" /></div>}
+</li>

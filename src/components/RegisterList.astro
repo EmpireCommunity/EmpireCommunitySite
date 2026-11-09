@@ -1,0 +1,14 @@
+---
+// A group of ruled lines. Inside an Índice section the section's own pauta rule closes the group on top and the next
+// section's rule closes it below, so the first row drops its top rule; outside the Índice pass `closed` to keep the
+// rule above the first row and add the one below the last (DESIGN.md "Linha pautada").
+interface Props {
+  closed?: boolean;
+}
+
+const { closed = false } = Astro.props;
+---
+
+<ul class:list={[closed ? 'border-b border-pauta' : '[&>li:first-child]:border-t-0']}>
+  <slot />
+</ul>

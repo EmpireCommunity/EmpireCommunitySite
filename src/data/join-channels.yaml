@@ -1,1 +1,19 @@
-[]
+- id: discord
+  url: https://empirecommunity.org/discord
+  audience: [pt-br, en-us]
+  label:
+    pt-br: Discord
+    en-us: Discord
+  description:
+    pt-br: O servidor EmpireCommunity. Conversa e pedidos de jogos.
+    en-us: >-
+      The EmpireCommunity server. Most members are Brazilian. Discord is also how people from other countries reach us
+      for contact, support and collaboration on open source projects.
+- id: whatsapp
+  # Read only by the /discord page (D-41), inside its pt-BR container. No other page renders this URL.
+  url: https://chat.whatsapp.com/GfCtl35a7MwKfDvI1MzK8n
+  audience: [pt-br]
+  label:
+    pt-br: WhatsApp
+  description:
+    pt-br: Uma comunidade de 12 grupos. Conversa e pedidos de jogos.

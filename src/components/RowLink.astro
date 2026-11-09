@@ -1,0 +1,11 @@
+---
+// Link inside a ruled line (`links` slot of RegisterRow): Body-sm, always underlined, never wraps, 44 px touch target.
+interface Props {
+  href: string;
+  label: string;
+}
+
+const { href, label } = Astro.props;
+---
+
+<a {href} class="link-text inline-flex min-h-[44px] items-center gap-8 text-body-sm whitespace-nowrap">{label}</a>

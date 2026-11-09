@@ -32,11 +32,38 @@ export function inlineExecutable(html: string, file: string): Finding[] {
   return findings;
 }
 
+/**
+ * The `<main>` of a page, or the whole text when there is none. The legal pages are scanned for WhatsApp on their own
+ * text only: the pt-BR footer is shared chrome that lists the channel (information-architecture section 4).
+ */
+export function mainContent(html: string): string {
+  return /<main\b[^>]*>([\s\S]*?)<\/main>/i.exec(html)?.[1] ?? html;
+}
+
 const WHATSAPP = /whats\s?app|\bwa\.me\b|api\.whatsapp\.com/i;
 
 /** C-1: WhatsApp never appears in en-US output, llms.txt, the root page or the legal pages. */
 export function whatsappAbsent(text: string, file: string): Finding[] {
   return WHATSAPP.test(text) ? [err(file, 'WhatsApp reference where the contract forbids it (C-1)')] : [];
+}
+
+/** Character references that spell a URL host in an attribute: numeric (`&#46;`, `&#x2e;`) and the few named ones for `.`, `/` and `:`. */
+const NAMED_REFERENCES: Record<string, string> = { period: '.', sol: '/', colon: ':', amp: '&' };
+function decodeReferences(text: string): string {
+  return text.replace(/&(?:#(\d{1,7})|#[xX]([0-9a-fA-F]{1,6})|([a-z]+));?/g, (whole, dec?: string, hex?: string, name?: string) => {
+    const code = dec !== undefined ? Number(dec) : hex !== undefined ? parseInt(hex, 16) : undefined;
+    if (code !== undefined) return code <= 0x10ffff ? String.fromCodePoint(code) : whole;
+    return NAMED_REFERENCES[name ?? ''] ?? whole;
+  });
+}
+
+/**
+ * The WhatsApp community link is read only by the /discord page (site-data section 8, D-41): nowhere else in `dist/`. The
+ * host alone fails too (fail closed: it has no other use on the site), and so does an entity-encoded one, which a browser
+ * resolves to the same host (`chat&#46;whatsapp.com`).
+ */
+export function whatsappInviteLink(text: string, file: string, isInvitePage: boolean): Finding[] {
+  return !isInvitePage && /chat\.whatsapp\.com/i.test(decodeReferences(text)) ? [err(file, 'the WhatsApp community link may appear only on the /discord page (D-41)')] : [];
 }
 
 const DISCORD_URL = /(?:https?:)?\/\/(?:[a-z0-9-]+\.)*discord(?:app)?\.(?:com|gg)(?:\/[^\s"'<>)]*)?/gi;

@@ -1,0 +1,16 @@
+---
+// Text link with an arrow after the text (DESIGN.md "Links de texto"): papel, underlined, no box.
+import Icon from './Icon.astro';
+
+interface Props {
+  href: string;
+  label: string;
+}
+
+const { href, label } = Astro.props;
+---
+
+<a href={href} class="link-text inline-flex min-h-[44px] items-center gap-8 text-body">
+  <span>{label}</span>
+  <Icon name="arrow-right" />
+</a>

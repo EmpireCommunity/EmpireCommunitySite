@@ -1,0 +1,39 @@
+---
+// Strip of numbers (DESIGN.md "Faixa de números"): up to three figures in a row between two pauta rules, separated by
+// a vertical rule. Number in Figure (tabular), label below in Body-sm papel-suave. No animation, no counter, no date
+// (R-8). An item without data is dropped by the caller; an empty strip is not rendered at all.
+// The Discord figure carries `data-members-discord`: the build value is already in the HTML, and the script below only
+// swaps it for the live one when /data/members.json answers (docs/contracts/members-json.md section 3).
+interface Item {
+  value: string;
+  label: string;
+  live?: boolean;
+}
+
+interface Props {
+  items: readonly Item[];
+}
+
+const { items } = Astro.props;
+---
+
+{
+  items.length > 0 && (
+    <div class="border-y border-pauta">
+      <ul class="flex flex-col sm:flex-row">
+        {items.map((item) => (
+          <li class="py-24 sm:border-l sm:border-pauta sm:pr-32 sm:pl-32 sm:first:border-l-0 sm:first:pl-0">
+            <p class="font-display text-figure tabular-nums text-papel">
+              {item.live ? <span data-members-discord>{item.value}</span> : item.value}
+            </p>
+            <p class="text-body-sm text-papel-suave">{item.label}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+<script>
+  import '../scripts/members.ts';
+</script>

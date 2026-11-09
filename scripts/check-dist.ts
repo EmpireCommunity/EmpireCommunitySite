@@ -4,7 +4,8 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { parse } from 'yaml';
 import {
-  discordLinks, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, membersFallback, paymentGuard, paymentWords, whatsappAbsent,
+  discordLinks, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, mainContent, membersFallback, paymentGuard, paymentWords,
+  whatsappAbsent, whatsappInviteLink,
   type Finding,
 } from './lib/dist-checks.ts';
 import { PENDING } from './lib/pending.ts';
@@ -77,8 +78,18 @@ const whatsappScope = files.filter(
   (file) => file.startsWith('en-us/') || file === 'llms.txt' || file === 'index.html' ||
     LEGAL_SLUGS.some((slug) => file.startsWith(`pt-br/${slug}/`)),
 );
-for (const file of whatsappScope) add(...whatsappAbsent(read(distDir, file), file));
+// The pt-BR legal pages are scanned on their own text (<main>): the pt-BR footer, shared on every page, lists WhatsApp.
+for (const file of whatsappScope) {
+  const html = read(distDir, file);
+  add(...whatsappAbsent(file.startsWith('pt-br/') ? mainContent(html) : html, file));
+}
 for (const file of listFiles('src/content/legal')) add(...whatsappAbsent(read('src/content/legal', file), `src/content/legal/${file}`));
+
+// D-41: the WhatsApp community link is read only by the /discord page.
+// Stylesheets are scanned here too (a URL in `content:` or `url()` would publish the link); the other scans keep TEXT_EXTENSIONS.
+for (const file of files.filter((f) => TEXT_EXTENSIONS.test(f) || f.endsWith('.css'))) {
+  add(...whatsappInviteLink(read(distDir, file), file, file === 'discord/index.html'));
+}
 
 // D-29: one Discord link; the invite only in /discord and only with the configured code, with no script.
 const invitePage = 'discord/index.html';

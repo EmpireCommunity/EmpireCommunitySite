@@ -1,6 +1,5 @@
-// docs/contracts/site-data.md section 5. src/data/community.yaml is not shipped until the owner supplies a
-// verified `discord.membersBuiltIn` (the value is never invented); the collection in src/content.config.ts
-// is optional for now and validates this schema whenever the file exists.
+// docs/contracts/site-data.md section 5. `discord.membersBuiltIn` is required: a verified reading set by the owner, never
+// invented. It feeds the HTML and `dist/data/members.json` (members-json section 4).
 import { z } from 'astro/zod';
 import { IsoDate, Localized } from './common.ts';
 

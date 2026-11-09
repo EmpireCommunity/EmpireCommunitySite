@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import {
-  discordLinks, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, membersFallback, paymentGuard, whatsappAbsent,
+  discordLinks, hreflangReciprocity, htmlLang, mainContent, inlineExecutable, languageSelector, membersFallback, paymentGuard, whatsappAbsent, whatsappInviteLink,
 } from '../scripts/lib/dist-checks.ts';
 import { checkWorkflow } from '../scripts/lib/workflow-rules.ts';
 
@@ -197,4 +201,42 @@ test('the language selector maps each page to its equivalent and marks only the 
   assert.equal(check(nav(pt, en, pt.replace('hreflang="pt-BR"', 'hreflang="pt-br"'))), 1, 'unsupported hreflang value');
   assert.equal(check(nav(pt, en) + nav(pt)), 1, 'a second selector is checked on its own');
   assert.equal(check('<p>no selector</p>'), 1, 'no selector at all');
+});
+
+test('the WhatsApp community link is allowed only on the /discord page', () => {
+  const link = '<a href="https://chat.whatsapp.com/abc">';
+  assert.equal(whatsappInviteLink(link, 'discord/index.html', true).length, 0);
+  assert.equal(whatsappInviteLink(link, 'pt-br/join/index.html', false).length, 1);
+  assert.equal(whatsappInviteLink('<a href="https://empirecommunity.org/discord">WhatsApp</a>', 'pt-br/index.html', false).length, 0);
+  for (const encoded of ['chat&#46;whatsapp.com', 'chat&#x2E;whatsapp.com', 'chat&period;whatsapp.com', 'chat&#46whatsapp.com']) {
+    assert.equal(whatsappInviteLink(`<a href="https://${encoded}/abc">`, 'pt-br/join/index.html', false).length, 1, encoded);
+  }
+});
+
+test('check-dist reports D-41 for an invite outside /discord, in HTML and in CSS, and none for the /discord page', () => {
+  const dist = mkdtempSync(join(tmpdir(), 'check-dist-'));
+  const link = '<a href="https://chat.whatsapp.com/abc">';
+  try {
+    const fixture: Record<string, string> = {
+      'pt-br/join/index.html': link,
+      'assets/site.css': 'a::after{content:"https://chat.whatsapp.com/abc"}',
+      'discord/index.html': link,
+    };
+    for (const [file, body] of Object.entries(fixture)) {
+      mkdirSync(dirname(join(dist, file)), { recursive: true });
+      writeFileSync(join(dist, file), body);
+    }
+    const out = spawnSync(process.execPath, ['scripts/check-dist.ts', dist], { encoding: 'utf8' }).stdout;
+    const d41 = out.split('\n').filter((line) => line.includes('(D-41)'));
+    assert.deepEqual(d41.map((line) => /file=([^:]+)::/.exec(line)?.[1]).sort(), ['assets/site.css', 'pt-br/join/index.html']);
+  } finally {
+    rmSync(dist, { recursive: true, force: true });
+  }
+});
+
+test('legal pages are scanned on their <main> only, so the shared pt-BR footer may list the channel', () => {
+  const page = '<footer>WhatsApp</footer><main><p>texto legal</p></main>';
+  assert.equal(whatsappAbsent(mainContent(page), 'pt-br/terms-of-service/index.html').length, 0);
+  assert.equal(whatsappAbsent(mainContent('<main>WhatsApp</main>'), 'f').length, 1);
+  assert.equal(mainContent('no main here'), 'no main here');
 });

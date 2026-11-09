@@ -25,12 +25,11 @@ const site = defineCollection({
   schema: SiteSchema.extend({ id: z.literal('site') }),
 });
 
-// Optional until the owner supplies a verified `discord.membersBuiltIn`; validated whenever the file exists.
+// Required: it carries the verified `discord.membersBuiltIn` the HTML and the origin members.json are built from.
 const community = defineCollection({
   loader: yamlLoader({
     path: 'src/data/community.yaml',
     parse: (text, source) => parseSingleDocument(text, source, 'community'),
-    optional: true,
   }),
   schema: CommunitySchema.extend({ id: z.literal('community') }),
 });

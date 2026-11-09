@@ -1,0 +1,22 @@
+---
+// Channel button (DESIGN.md "Botões de canal"): Discord and WhatsApp are the same component, no brand color, none
+// primary. 56 px high, 4 px corners, papel fill with violeta-ata text, 20 px icon on the left, 12 px gap, full width
+// of its cell. The destination is always the /discord page (R-5, D-41), whatever channel the label names.
+import Icon from './Icon.astro';
+
+interface Props {
+  href: string;
+  label: string;
+  icon: 'discord' | 'whatsapp';
+}
+
+const { href, label, icon } = Astro.props;
+---
+
+<a
+  href={href}
+  class="inline-flex h-[56px] w-full items-center justify-center gap-12 rounded-botao bg-papel px-24 text-button text-violeta-ata hover:bg-papel-hover active:bg-papel-active motion-safe:transition-colors"
+>
+  <Icon name={icon} />
+  <span>{label}</span>
+</a>

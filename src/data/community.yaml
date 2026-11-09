@@ -1,0 +1,16 @@
+foundedYear: 2022
+purpose:
+  pt-br: >-
+    A EmpireCommunity existe para que ninguém precise jogar sozinho. Reunimos quem gosta de jogos e de tecnologia em um
+    ambiente amigável e mantemos servidores para que cada pessoa possa entrar no mundo quando quiser, de graça, com o
+    apoio de doações voluntárias.
+  en-us: >-
+    EmpireCommunity exists so that no one has to play alone. We bring together people who enjoy games and technology in
+    a friendly environment, and we keep servers running so that anyone can enter the world whenever they want, for
+    free, with the support of voluntary donations.
+whatsapp:
+  members: 60
+  asOf: 2026-11-09
+discord:
+  # Verified reading on 2026-11-09 from the approved invite (invite endpoint, guild matched). Refresh at each release.
+  membersBuiltIn: 888

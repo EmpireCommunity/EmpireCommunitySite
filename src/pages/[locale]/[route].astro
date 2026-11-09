@@ -6,10 +6,16 @@ import { t } from '../../i18n/index.ts';
 import type { MessageKey } from '../../i18n/index.ts';
 import { INNER_ROUTE_KEYS, LOCALES, isLocale, routeKeyFromSlug, slugOf } from '../../lib/routes.ts';
 
-export const getStaticPaths = (() =>
-  LOCALES.flatMap((locale) =>
-    INNER_ROUTE_KEYS.map((routeKey) => ({ params: { locale, route: slugOf(routeKey) } })),
-  )) satisfies GetStaticPaths;
+// getStaticPaths is hoisted by Astro, so the list of route keys that have their own page file
+// (src/pages/[locale]/<slug>.astro) lives inside it. Add a key to `ownPage` when its page task lands.
+export const getStaticPaths = (() => {
+  const ownPage: readonly string[] = ['join'];
+  return LOCALES.flatMap((locale) =>
+    INNER_ROUTE_KEYS.filter((routeKey) => !ownPage.includes(routeKey)).map((routeKey) => ({
+      params: { locale, route: slugOf(routeKey) },
+    })),
+  );
+}) satisfies GetStaticPaths;
 
 const { locale, route } = Astro.params;
 const routeKey = route === undefined ? undefined : routeKeyFromSlug(route);
