@@ -72,3 +72,47 @@ test('members fallback validates the members.json v1 shape and the built-in sour
   }
   assert.equal(membersFallback('{', 'm').length, 1);
 });
+
+test('regressions of the PR 4 review: dist-checks rules', () => {
+  // inlineExecutable: data-* attributes are not src or type
+  for (const html of ['<script data-src="/a.js">run()</script>', '<script data-type="application/ld+json">run()</script>']) {
+    assert.equal(inlineExecutable(html, 'p').length, 1, html);
+  }
+  // discordLinks: a protocol-relative invite is a Discord URL
+  assert.equal(discordLinks('<a href="//discord.gg/abc123">', 'pt-br/index.html', 'abc123', false).length, 1);
+  // hreflang: swapped locale targets are refused even when each page links back
+  const origin = 'https://e.org';
+  const head = (pt: string, en: string) =>
+    `<link rel="alternate" hreflang="pt-BR" href="${origin}${pt}"><link rel="alternate" hreflang="en-US" href="${origin}${en}">` +
+    `<link rel="alternate" hreflang="x-default" href="${origin}/en-us/">`;
+  const swapped = new Map([
+    ['/pt-br/', `<link rel="canonical" href="${origin}/pt-br/">${head('/en-us/', '/pt-br/')}`],
+    ['/en-us/', `<link rel="canonical" href="${origin}/en-us/">${head('/en-us/', '/pt-br/')}`],
+  ]);
+  assert.ok(hreflangReciprocity(swapped, origin).length > 0);
+  // membersFallback: null root, bare date and a missing offset are findings, never a throw
+  const body = (updatedAt: string) => JSON.stringify({ schema: 1, discord: { members: 5, updatedAt, source: 'built-in' } });
+  for (const text of ['null', '[]', '{"schema":1,"discord":null}', body('2026-11-09'), body('2026-11-09T00:00:00'), body('2026-13-09T00:00:00Z')]) {
+    assert.equal(membersFallback(text, 'm').length, 1, text);
+  }
+  assert.equal(membersFallback(body('2026-11-09T00:00:03.120+00:00'), 'm').length, 0);
+});
+
+test('regressions of the PR 4 review: workflow rules', () => {
+  const pin = 'x/y@' + 'a'.repeat(40);
+  const wf = (over: object, step: object = { uses: pin }) =>
+    ({ on: 'push', permissions: {}, jobs: { a: { 'timeout-minutes': 1, steps: [step], ...over } } });
+  const count = (file: string, workflow: object) => checkWorkflow(file, workflow as never).length;
+  // event data reached through functions or brackets inside a shell step
+  for (const run of ['echo ${{ fromJSON(toJSON(github.event.pull_request)).title }}', 'echo ${{ toJSON(github) }}', "echo ${{ github['event'].pull_request.title }}"]) {
+    assert.equal(count('w', wf({}, { run })), 1, run);
+  }
+  assert.equal(count('w', wf({}, { run: 'echo ${{ github.event_name }} ${{ github.sha }}' })), 0);
+  // on as an array
+  assert.equal(count('w', { ...wf({}), on: ['push', 'pull_request_target'] }), 1);
+  // dynamic environment names fail closed outside worker-deploy.yml
+  for (const environment of ["${{ format('worker-{0}', 'production') }}", { name: '${{ inputs.target }}' }]) {
+    assert.equal(count('.github/workflows/ci.yml', wf({ environment })), 1);
+  }
+  assert.equal(count('.github/workflows/worker-deploy.yml', wf({ environment: 'worker-production' })), 0);
+});

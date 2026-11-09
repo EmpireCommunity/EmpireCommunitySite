@@ -42,7 +42,14 @@ if (service === undefined) {
   if (service.mem_limit !== '32m') fail('mem_limit must be 32m');
   if (service.pids_limit !== 64) fail('pids_limit must be 64');
   if (service.restart !== 'unless-stopped') fail('restart must be unless-stopped');
-  if (service.healthcheck === undefined) fail('healthcheck is required');
+  const tmpfs = [service.tmpfs].flat().filter((item): item is string => typeof item === 'string');
+  if (!tmpfs.some((mount) => mount === '/tmp' || mount.startsWith('/tmp:'))) fail('tmpfs must mount /tmp (nginx writes its pid and temp files there on a read-only filesystem)');
+  if (Array.isArray(service.cap_add) ? service.cap_add.length > 0 : service.cap_add !== undefined) fail('cap_add must be empty or absent');
+  const health = service.healthcheck as { test?: unknown; disable?: unknown } | undefined;
+  const command = Array.isArray(health?.test) ? health.test.map(String) : [String(health?.test ?? '')];
+  if (health === undefined) fail('healthcheck is required');
+  else if (health.disable === true || command[0]?.trim().startsWith('NONE') === true) fail('the healthcheck must not be disabled');
+  else if (!/https?:\/\/[^\s"']+\/healthz(?![\w/-])/.test(command.join(' '))) fail('the healthcheck must probe /healthz');
   for (const forbidden of ['ports', 'volumes', 'environment', 'env_file', 'privileged', 'network_mode', 'devices']) {
     if (service[forbidden] !== undefined) fail(`${forbidden} is not allowed (no published ports, bind mounts, secrets or docker socket)`);
   }

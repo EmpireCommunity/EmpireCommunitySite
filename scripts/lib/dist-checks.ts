@@ -6,13 +6,22 @@ export type Finding = { level: 'error' | 'warning'; file: string; message: strin
 const err = (file: string, message: string): Finding => ({ level: 'error', file, message });
 const warn = (file: string, message: string): Finding => ({ level: 'warning', file, message });
 
+/** Attribute names (lower-cased, exact) and values of one tag's attribute text: `data-src` is not `src`. */
+function attributesOf(text: string): Map<string, string> {
+  const attrs = new Map<string, string>();
+  for (const m of text.matchAll(/([^\s"'<>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g)) {
+    attrs.set((m[1] ?? '').toLowerCase(), m[2] ?? m[3] ?? m[4] ?? '');
+  }
+  return attrs;
+}
+
 /** Inline executable script, `<style>`, `style=` and event-handler attributes break the strict CSP (no unsafe-inline). */
 export function inlineExecutable(html: string, file: string): Finding[] {
   const findings: Finding[] = [];
   for (const match of html.matchAll(/<script\b([^>]*)>/gi)) {
-    const attrs = match[1] ?? '';
-    const isData = /\btype\s*=\s*["']?application\/ld\+json/i.test(attrs);
-    if (!/\bsrc\s*=/i.test(attrs) && !isData) findings.push(err(file, 'inline executable <script>'));
+    const attrs = attributesOf(match[1] ?? '');
+    const isData = attrs.get('type')?.toLowerCase() === 'application/ld+json';
+    if (!attrs.has('src') && !isData) findings.push(err(file, 'inline executable <script>'));
   }
   if (/<style\b/i.test(html)) findings.push(err(file, 'inline <style> element'));
   for (const tag of html.matchAll(/<[a-z][^>]*>/gi)) {
@@ -29,7 +38,7 @@ export function whatsappAbsent(text: string, file: string): Finding[] {
   return WHATSAPP.test(text) ? [err(file, 'WhatsApp reference where the contract forbids it (C-1)')] : [];
 }
 
-const DISCORD_URL = /https?:\/\/(?:[a-z0-9-]+\.)*discord(?:app)?\.(?:com|gg)(?:\/[^\s"'<>)]*)?/gi;
+const DISCORD_URL = /(?:https?:)?\/\/(?:[a-z0-9-]+\.)*discord(?:app)?\.(?:com|gg)(?:\/[^\s"'<>)]*)?/gi;
 
 /**
  * The only Discord link on the site is https://empirecommunity.org/discord (not matched here: another host). A URL on a
@@ -92,6 +101,8 @@ export function pageLinks(html: string): { canonical: string | undefined; altern
   return { canonical: hrefOf(canonical), alternates };
 }
 
+const LOCALE_LABELS: ReadonlyMap<string, string> = new Map([['pt-BR', 'pt-br'], ['en-US', 'en-us']]);
+
 /** C-5: every locale page has a canonical and reciprocal hreflang alternates (including itself and x-default). */
 export function hreflangReciprocity(pages: ReadonlyMap<string, string>, origin: string, extraKnown: ReadonlySet<string> = new Set()): Finding[] {
   const findings: Finding[] = [];
@@ -108,6 +119,12 @@ export function hreflangReciprocity(pages: ReadonlyMap<string, string>, origin: 
         findings.push(err(url, `hreflang ${alt.lang} points outside the site: ${alt.href}`));
         continue;
       }
+      const wanted = LOCALE_LABELS.get(alt.lang);
+      const route = url.replace(/^\/(?:pt-br|en-us)\//, '');
+      if (wanted !== undefined && target !== `/${wanted}/${route}`) {
+        findings.push(err(url, `hreflang ${alt.lang} points to ${target}, expected /${wanted}/${route}`));
+        continue;
+      }
       const back = links.get(target);
       if (back === undefined && alt.lang === 'x-default' && extraKnown.has(target)) continue;
       if (back === undefined) {
@@ -120,6 +137,9 @@ export function hreflangReciprocity(pages: ReadonlyMap<string, string>, origin: 
   return findings;
 }
 
+// RFC 3339 date-time (JSON Schema format date-time): a bare date such as 2026-11-09 is not one.
+const DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/i;
+
 /** Origin fallback of the member count (members-json sections 2 and 4): the schema, built-in source, bounds. */
 export function membersFallback(text: string, file: string): Finding[] {
   let data: unknown;
@@ -128,13 +148,14 @@ export function membersFallback(text: string, file: string): Finding[] {
   } catch {
     return [err(file, 'is not valid JSON')];
   }
-  const root = data as { schema?: unknown; discord?: { members?: unknown; updatedAt?: unknown; source?: unknown } };
+  if (typeof data !== 'object' || data === null) return [err(file, 'must be a JSON object')];
+  const root = data as { schema?: unknown; discord?: { members?: unknown; updatedAt?: unknown; source?: unknown } | null };
   const discord = root.discord;
   const members = discord?.members;
   const valid =
     root.schema === 1 &&
     typeof members === 'number' && Number.isInteger(members) && members >= 1 && members <= 1_000_000 &&
-    typeof discord?.updatedAt === 'string' && !Number.isNaN(Date.parse(discord.updatedAt)) &&
+    typeof discord?.updatedAt === 'string' && DATE_TIME.test(discord.updatedAt) && !Number.isNaN(Date.parse(discord.updatedAt)) &&
     discord.source === 'built-in';
-  return valid ? [] : [err(file, 'does not match members.json v1 (schema 1, integer members 1..1000000, date-time updatedAt, source built-in)')];
+  return valid ? [] : [err(file, 'does not match members.json v1 (schema 1, integer members 1..1000000, RFC 3339 date-time updatedAt, source built-in)')];
 }

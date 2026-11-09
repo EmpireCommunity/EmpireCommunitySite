@@ -51,11 +51,21 @@ await checkPath({ path: '/healthz', status: [200], csp: DEFAULT_CSP, cache: 'no-
 // are there: a 200 carries the location's cache value, and a 404 is served from the 404 page (no-cache).
 const membersProbe = await fetch(`${base}/data/members.json`, { redirect: 'manual' });
 await membersProbe.arrayBuffer();
-await checkPath({ path: '/data/members.json', status: [membersProbe.status === 200 ? 200 : 404], csp: DEFAULT_CSP, cache: membersProbe.status === 200 ? 'public, max-age=300' : NO_CACHE });
+// Once the build generates the fallback (PENDING.membersFallback false) a 404 is a failure, not an allowed outcome.
+const membersOk = membersProbe.status === 200;
+await checkPath({
+  path: '/data/members.json',
+  status: PENDING.membersFallback ? [membersOk ? 200 : 404] : [200],
+  csp: DEFAULT_CSP,
+  cache: membersOk ? 'public, max-age=300' : NO_CACHE,
+});
 
 // A query string never reaches the file (members-json 2.9).
 const members = await checkPath({ path: '/data/members.json?x=1', status: [404], csp: DEFAULT_CSP, cache: NO_CACHE });
 await members.arrayBuffer();
+
+// The method rule wins over the query rule: POST with a query string is 405, never 404 (routing-locale section 6).
+await (await checkPath({ path: '/data/members.json?x=1', status: [405], csp: DEFAULT_CSP, cache: 'public, max-age=300' }, { method: 'POST', body: 'x' })).arrayBuffer();
 
 const asset = /href="(\/_astro\/[^"]+)"/.exec(await home.text())?.[1];
 if (asset === undefined) fail('GET /pt-br/', 'no /_astro/ asset referenced to test');

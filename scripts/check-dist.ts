@@ -83,7 +83,8 @@ for (const file of htmlFiles) {
 // D-28: support pages carry the donations-not-open block; the payment guard runs on dist/ and on the content sources.
 for (const locale of ['pt-br', 'en-us']) {
   const file = `${locale}/support/index.html`;
-  if (files.includes(file) && !read(distDir, file).includes('data-donations="not-open"')) {
+  if (!files.includes(file)) add(pending(PENDING.supportBlock, file, 'the support page is not built'));
+  else if (!read(distDir, file).includes('data-donations="not-open"')) {
     add(pending(PENDING.supportBlock, file, 'missing the data-donations="not-open" block'));
   }
 }

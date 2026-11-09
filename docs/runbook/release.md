@@ -21,9 +21,22 @@ Account and platform settings that exist today live in the private runbook, not 
 5. A failed guard publishes nothing: fix the cause and push a new tag name only if the old tag never produced an image.
    If the image was published but a later step failed, **do not re-run**: ship the next patch version.
 
+## First publication (owner action, once)
+
+GHCR creates a new package as **private**. `release.yml` does not change visibility, and Guindaste does not either:
+that is a package setting the owner changes.
+
+1. After the first successful `release.yml` run (whichever tag publishes first creates the package, an `-rc.N`
+   rehearsal included), the owner opens the package settings of `empirecommunitysite` on GitHub and sets the visibility
+   to **public**.
+2. Verify an anonymous pull from a machine with no GHCR login before any deploy:
+   `docker logout ghcr.io; docker pull ghcr.io/empirecommunity/empirecommunitysite@sha256:<digest>`. A failure
+   ("unauthorized" or "denied") means the package is still private: do not deploy.
+
 ## Deploy (Guindaste, only with the owner's OK for that deploy)
 
-1. Take the digest from the release (`image-digest.txt`) or the run summary.
+1. Take the digest from the release (`image-digest.txt`) or the run summary. The package must already be public
+   (see First publication); the host pulls without a credential.
 2. Verify before pulling (on the owner's machine if the host should not hold a GitHub credential):
    `gh attestation verify oci://ghcr.io/empirecommunity/empirecommunitysite@sha256:<digest> --repo EmpireCommunity/EmpireCommunitySite --signer-workflow EmpireCommunity/EmpireCommunitySite/.github/workflows/release.yml --source-ref refs/tags/vX.Y.Z`.
    Any failure aborts.
