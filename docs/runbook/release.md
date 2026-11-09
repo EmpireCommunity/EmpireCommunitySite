@@ -12,7 +12,7 @@ Account and platform settings that exist today live in the private runbook, not 
 3. After the merge and a green `CI` run on `main`, the owner creates an **annotated** tag on the merge commit:
    `git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z`. `-rc.N` tags are for a rehearsal only.
 4. `release.yml` runs the guards (tag format, annotated, commit in `origin/main`, push `CI` run succeeded on that commit,
-   CHANGELOG section dated and non-empty, compose names the version, image for the version does not exist), then
+   CHANGELOG section dated and non-empty, compose names the version, no flag in `scripts/lib/pending.ts` is true, image for the version does not exist), then
    builds, pushes `ghcr.io/empirecommunity/empirecommunitysite:X.Y.Z` (SBOM and provenance attached), attests the
    digest and creates the GitHub Release with the CHANGELOG notes and `image-digest.txt`. The digest is also in the
    run summary.

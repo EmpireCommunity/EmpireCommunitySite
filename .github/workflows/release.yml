@@ -76,6 +76,18 @@ jobs:
           fi
           echo "CI succeeded for $GITHUB_SHA ($count run(s))."
 
+      - name: No pending-check flag is true (a release never goes out missing /discord, the support block or discovery files)
+        run: |
+          # Flags live in scripts/lib/pending.ts; a missing file also fails, so the guard cannot be bypassed by deleting it.
+          if [ ! -f scripts/lib/pending.ts ]; then
+            echo "::error::scripts/lib/pending.ts is missing."
+            exit 1
+          fi
+          if grep -nE '^[[:space:]]+[A-Za-z]+:[[:space:]]*true,?[[:space:]]*(//.*)?$' scripts/lib/pending.ts; then
+            echo "::error::A pending-check flag is still true (lines above): the page it waits for is not in the site yet."
+            exit 1
+          fi
+
       - name: CHANGELOG has a dated, non-empty section (final releases) and the compose template names the version
         env:
           VERSION: ${{ steps.tag.outputs.version }}

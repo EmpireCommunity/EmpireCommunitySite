@@ -14,4 +14,5 @@ release happens and which version it gets. The release PR (`chore/release-X.Y.Z`
 - CI for the site (quality, build and `dist` checks, image and HTTP header checks, workflow lint, secret scan).
 - Container image on `nginx-unprivileged` (non-root, port 8080, `/healthz`, no access log, `/data/` query blocked).
 - Tag-driven release pipeline with guards, SBOM, provenance and a build provenance attestation.
+- Release guard: `release.yml` fails while any flag in `scripts/lib/pending.ts` is true. `CODEOWNERS` added.
 - Deploy compose template with image `tag@sha256` and the proxy network labels.

@@ -1,0 +1,28 @@
+# Owner of the whole tree (docs/contracts/deploy.md section 9). The explicit lines below name the High-risk
+# surfaces of AGENTS.md and the threat model (deploy, CI and supply chain, data, secrets) so they stay owned if
+# the catch-all is ever narrowed. No approval count is required (D-17).
+*                          @Or4cu1o
+
+# Deploy, CI and supply chain
+/.github/                  @Or4cu1o
+/Dockerfile                @Or4cu1o
+/.dockerignore             @Or4cu1o
+/nginx/                    @Or4cu1o
+/deploy/                   @Or4cu1o
+/scripts/                  @Or4cu1o
+/worker/                   @Or4cu1o
+/package.json              @Or4cu1o
+/pnpm-lock.yaml            @Or4cu1o
+/pnpm-workspace.yaml       @Or4cu1o
+/CHANGELOG.md              @Or4cu1o
+
+# Data, money and legal
+/src/data/                 @Or4cu1o
+/src/schemas/              @Or4cu1o
+/src/lib/team.ts           @Or4cu1o
+/src/lib/support.ts        @Or4cu1o
+/src/content/legal/        @Or4cu1o
+/src/assets/               @Or4cu1o
+
+# Contracts and runbook
+/docs/                     @Or4cu1o
