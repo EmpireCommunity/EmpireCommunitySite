@@ -28,6 +28,7 @@ Estrutura e regras em [`docs/design/information-architecture.md`](../design/info
 | nav.menu.open | Menu | Menu |
 | nav.menu.close | Fechar | Close |
 | nav.skip | Pular para o conteúdo | Skip to content |
+| nav.aria | Principal | Main |
 | lang.nav.aria | Idioma | Language |
 | lang.pt | Português | Português |
 | lang.en | English | English |
@@ -40,7 +41,7 @@ Estrutura e regras em [`docs/design/information-architecture.md`](../design/info
 | cta.discord | Entrar no Discord | Join the Discord |
 | cta.whatsapp | Entrar no WhatsApp | — |
 | count.discord | {{n}} membros no Discord | {{n}} Discord members |
-| count.whatsapp | {{n}} membros no WhatsApp `[PENDING P-08]` | — |
+| count.whatsapp | {{n}} membros no WhatsApp | — |
 | count.repos | {{n}} repositórios públicos | {{n}} public repositories |
 
 ### Status
@@ -78,6 +79,8 @@ Estrutura e regras em [`docs/design/information-architecture.md`](../design/info
 | hero.title | Uma comunidade brasileira que mantém servidores de jogos e desenvolve software. | A Brazilian community that runs game servers and builds software. |
 | hero.lead | Somos jogadores e aficionados por tecnologia. Tudo aqui é gratuito, vive de doações voluntárias e nada é vendido. | We are gamers and technology enthusiasts. Everything here is free, runs on voluntary donations, and nothing is for sale. |
 | hero.link | Ver projetos | See projects |
+| purpose.title | Propósito | Purpose |
+| purpose.body | A EmpireCommunity existe para que ninguém precise jogar sozinho. Reunimos quem gosta de jogos e de tecnologia em um ambiente amigável e mantemos servidores para que cada pessoa possa entrar no mundo quando quiser, de graça, com o apoio de doações voluntárias. | EmpireCommunity exists so that no one has to play alone. We bring together people who enjoy games and technology in a friendly environment, and we keep servers running so that anyone can enter the world whenever they want, for free, with the support of voluntary donations. |
 | what.title | O que fazemos | What we do |
 | what.servers.title | Servidores de jogos | Game servers |
 | what.servers.body | Hospedamos servidores para os membros jogarem. O Minecraft está no ar; Palworld, Project Zomboid e Factorio chegam em breve. | We host game servers for our members. Minecraft is live; Palworld, Project Zomboid and Factorio are coming soon. |
@@ -90,8 +93,6 @@ Estrutura e regras em [`docs/design/information-architecture.md`](../design/info
 | servers.request | Pedir um jogo | Request a game |
 | funding.title | Como nos mantemos | How we are funded |
 | funding.body | A EmpireCommunity vive de doações voluntárias. O primeiro marco é de R$ 3.000, para montar um servidor próprio, com Xeon e 128 GB de RAM, que vai hospedar mais servidores de jogos. Depois dele, continuam os custos da comunidade: energia dos servidores, melhorias, hospedagem e domínios. As doações em dinheiro ainda não estão abertas. | EmpireCommunity runs on voluntary donations. The first milestone is R$ 3,000, to build our own server, with a Xeon and 128 GB of RAM, to host more game servers. After that, community costs continue: server power, upgrades, hosting and domains. Money donations are not open yet. |
-| funding.progress | {{secured}} de R$ 3.000 `[PENDING P-03]` | {{secured}} of R$ 3,000 `[PENDING P-03]` |
-| funding.progress.criterion | O progresso conta o valor das peças já compradas ou doadas, não dinheiro recebido. | Progress counts the value of parts already bought or donated, not money received. |
 | funding.link | Apoiar | Support us |
 | join.title | Faça parte. | Join us. |
 | join.body | A entrada é gratuita. | Joining is free. |
@@ -130,8 +131,7 @@ Estrutura e regras em [`docs/design/information-architecture.md`](../design/info
 | lead | O que está disponível para jogar hoje, o que vem a seguir e onde tudo isso roda. | What you can play today, what comes next, and where it all runs. |
 | servers.title | Servidores de jogos | Game servers |
 | minecraft.name | Minecraft | Minecraft |
-| minecraft.access | Para jogar, fale com a comunidade no Discord ou no WhatsApp. | To play, talk to the community on Discord. |
-| minecraft.details | {{endereço, versão e requisitos}} `[PENDING P-09]` | {{address, version and requirements}} `[PENDING P-09]` |
+| minecraft.access | O acesso se dá pelo Discord, que em breve funcionará como whitelist dos servidores. | Access is through Discord, which will soon act as the servers' whitelist. |
 | palworld.name | Palworld | Palworld |
 | zomboid.name | Project Zomboid | Project Zomboid |
 | factorio.name | Factorio | Factorio |
@@ -156,7 +156,7 @@ Estrutura e regras em [`docs/design/information-architecture.md`](../design/info
 | discord.title | Discord | Discord |
 | discord.body | O servidor EmpireCommunity. Conversa e pedidos de jogos. | The EmpireCommunity server. Most members are Brazilian. Discord is also how people from other countries reach us for contact, support and collaboration on open source projects. |
 | whatsapp.title | WhatsApp | — |
-| whatsapp.body | O grupo EmpireCommunity. Conversa e pedidos de jogos. | — |
+| whatsapp.body | Uma comunidade de 12 grupos. Conversa e pedidos de jogos. | — |
 | do.title | O que dá para fazer | What you can do |
 | do.play.title | Jogar | Play |
 | do.play.body | Veja quais servidores estão no ar. | See which servers are live. |
@@ -174,7 +174,7 @@ Estrutura e regras em [`docs/design/information-architecture.md`](../design/info
 | faq.request.q | Posso pedir um jogo? | Can I request a game? |
 | faq.request.a | Pode. Faça o pedido no Discord ou no WhatsApp. | Yes. Ask on Discord. |
 | faq.abroad.q | Não moro no Brasil. Posso participar? | I don't live in Brazil. Can I join? |
-| faq.abroad.a | Pode, pelo Discord. É nele que atendemos quem é de fora. O grupo de WhatsApp é de brasileiros. | Yes, on Discord. That is where we talk with people from other countries. |
+| faq.abroad.a | Pode, pelo Discord. É nele que atendemos quem é de fora. A comunidade no WhatsApp é de brasileiros. | Yes, on Discord. That is where we talk with people from other countries. |
 | faq.contact.q | Como falo com a equipe? | How do I reach the team? |
 | faq.contact.a | O caminho mais rápido é o Discord. Também atendemos por contact@empirecommunity.org. | Discord is the fastest way. You can also write to contact@empirecommunity.org. |
 
@@ -217,15 +217,16 @@ Estrutura e regras em [`docs/design/information-architecture.md`](../design/info
 | meta.description | Quem mantém a EmpireCommunity, como ela funciona e seus endereços oficiais. | Who runs EmpireCommunity, how it works, and its official addresses. |
 | title | Organização | Organization |
 | lead | A EmpireCommunity é uma comunidade de jogadores e aficionados por tecnologia, sediada no Brasil. | EmpireCommunity is a community of gamers and technology enthusiasts, based in Brazil. |
-| since | Desde {{year}} `[PENDING P-06]` | Since {{year}} `[PENDING P-06]` |
-| purpose.title | Propósito | Purpose |
-| purpose.body | `[PENDING P-07]` | `[PENDING P-07]` |
+| since | Desde {{year}} | Since {{year}} |
+| origin.title | Como começou | How it started |
+| origin.p1 | Tudo começou com a dificuldade de encontrar pessoas para jogar junto. O fundador sempre gostou de jogos de estratégia e de construção e imaginava como seria jogá-los com amigos. Só que jogar junto não bastava: o mundo só existia enquanto alguém estivesse online. Daí veio a vontade de hospedar os jogos, para que cada um pudesse entrar a qualquer momento. | It all started with the difficulty of finding people to play with. The founder always enjoyed strategy and building games and imagined what it would be like to play them with friends. But playing together was not enough: the world only existed while someone was online. That led to the desire to host the games, so that anyone could join at any time. |
+| origin.p2 | Em 20 de agosto de 2022 nasceu o servidor no Discord. Foram chegando pessoas com o mesmo interesse, a comunidade cresceu e, juntos, arrecadamos verba para hospedar servidores, principalmente de Minecraft com modpacks. | On August 20, 2022, the Discord server was born. People with the same interest kept arriving, the community grew and, together, we raised funds to host servers, mainly Minecraft with modpacks. |
 | how.title | Como funciona | How it works |
 | how.free | Tudo é gratuito e vive de doações voluntárias. | Everything is free and runs on voluntary donations. |
 | how.sold | Nada é vendido. | Nothing is for sale. |
 | how.data | Este site não vende dados de usuários e só os compartilha com os fornecedores necessários para funcionar, como explica a Política de Privacidade. | This website does not sell user data and shares it only with the providers needed to run it, as the Privacy Policy explains. |
 | names.title | Nomes | Names |
-| names.community | **EmpireCommunity** é a organização e a comunidade, e dá nome ao servidor no Discord e ao grupo no WhatsApp. | **EmpireCommunity** is the organization and the community, and the name of its Discord server. |
+| names.community | **EmpireCommunity** é a organização e a comunidade, e dá nome ao servidor no Discord e à comunidade no WhatsApp. | **EmpireCommunity** is the organization and the community, and the name of its Discord server. |
 | names.hub | **EmpireHub** é o produto de jogos de mesa dentro do Discord. | **EmpireHub** is the tabletop games product inside Discord. |
 | founder.title | Fundador | Founder |
 | founder.name | Leonne Martins `[PENDING P-05: consentimento]` | Leonne Martins `[PENDING P-05: consent]` |
@@ -266,6 +267,51 @@ Uma única versão, com os dois idiomas na mesma página (`routing-locale`).
 | 404.title.en | Page not found |
 | 404.body.en | This address does not exist or has moved. |
 | 404.link.en | Go to the home page |
+
+## Regras da comunidade: `/discord` (D-41)
+
+Uma única URL, com os dois idiomas na mesma página: pt-BR primeiro, en-US depois. Comportamento em `routing-locale`,
+dados em `site-data` §14 e layout na §7.10 da arquitetura. Nenhum texto desta seção cita o WhatsApp, e nenhum pode dizer
+ou sugerir que a confirmação fica registrada, é verificada ou é exigida pelo site.
+
+| Id | pt-BR | en-US |
+|---|---|---|
+| discord.meta.title | Regras da comunidade: EmpireCommunity | Community rules: EmpireCommunity |
+| discord.meta.description | As regras da comunidade EmpireCommunity e como entrar. | The EmpireCommunity rules and how to join. |
+| discord.heading | Regras da comunidade | Community rules |
+| discord.updated | Atualizadas em {{date}} | Updated on {{date}} |
+| discord.jump | Read in English | Read in English |
+| discord.agree | Li as regras e concordo com elas. Ao marcar, os botões para entrar aparecem logo abaixo. | I have read the rules and agree with them. Ticking this box shows the join buttons just below. |
+| discord.pending | Marque a caixa acima para ver os botões. | Tick the box above to see the buttons. |
+| discord.links.lead | Escolha por onde entrar. | Join us on Discord. |
+
+`{{date}}` vem de `updatedOn` (`2025-02-27`): `27 de fevereiro de 2025` em pt-BR e `February 27, 2025` em en-US.
+`discord.jump` fica em inglês nos dois valores e aparece só no container pt-BR, com `lang="en-US"`.
+
+Rótulos dos botões, vindos de `join-channels.yaml` (`site-data` §3 e §8): `Discord` e `WhatsApp` no container pt-BR;
+`Discord` no container en-US.
+
+### Texto das regras
+
+Coluna pt-BR: texto literal do dono, sem revisão, inclusive número, dois-pontos e pontuação; a única alteração do dono foi
+retirar a marcação de emoji do Discord. Coluna en-US: tradução fiel da Bússola, que mantém o nome do canal. `<br>` marca
+a quebra de linha do original.
+
+| Id | pt-BR | en-US |
+|---|---|---|
+| rules.spam.title | 1 - Proibição de Spam: | 1 - No Spam: |
+| rules.spam.body | Não envie mensagens repetitivas, conteúdo não solicitado ou links excessivos em nenhum canal do servidor. Isso inclui spam de emojis, caracteres ou mensagens idênticas. | Do not send repetitive messages, unsolicited content or excessive links in any channel of the server. This includes spamming emojis, characters or identical messages. |
+| rules.false-identity.title | 2 - Identidade Falsa: | 2 - False Identity: |
+| rules.false-identity.body | Não finja ser outra pessoa, use identidades falsas ou compartilhe informações pessoais de terceiros sem permissão. Seja honesto sobre quem você é. | Do not pretend to be another person, use false identities or share third parties' personal information without permission. Be honest about who you are. |
+| rules.advertising.title | 3 - Proibição de Divulgação nos Canais/Privado de Membros: | 3 - No Advertising in Channels or Members' Private Messages: |
+| rules.advertising.body | Não envie mensagens de divulgação ou convites nos canais do servidor ou por mensagem privada sem permissão explícita. Isso inclui promover servidores, produtos ou serviços sem autorização. | Do not send advertising messages or invitations in the server's channels or by private message without explicit permission. This includes promoting servers, products or services without authorization. |
+| rules.hate.title | 4 - Sem Propagação de Ódio: | 4 - No Spreading of Hate: |
+| rules.hate.body | Não compartilhe ou promova discurso de ódio, discriminação, racismo, sexismo, homofobia, transfobia, ou qualquer forma de preconceito ou intolerância com o intuito de ofensa. Piadas de humor negro e brincadeiras entre amigos são permitidas até certo limite, desde que não tenham o intuito de ofender ou denegrir alguém. | Do not share or promote hate speech, discrimination, racism, sexism, homophobia, transphobia, or any form of prejudice or intolerance with the intent to offend. Dark humor jokes and banter among friends are allowed up to a certain limit, as long as they are not intended to offend or demean anyone. |
+| rules.discord-guidelines.title | 5 - Seguir as Diretrizes do Discord: | 5 - Follow Discord's Guidelines: |
+| rules.discord-guidelines.body | Todos os membros devem seguir as Diretrizes do Discord em todos os canais e interações dentro do servidor. Isso inclui o cumprimento dos Termos de Serviço, Diretrizes da Comunidade e Política de Privacidade do Discord.<br>https://discord.com/terms | All members must follow Discord's Guidelines in all channels and interactions within the server. This includes complying with Discord's Terms of Service, Community Guidelines and Privacy Policy.<br>https://discord.com/terms |
+| rules.adult-content.title | 6 - Conteúdo explícito +18: | 6 - Explicit 18+ Content: |
+| rules.adult-content.body | Proibido qualquer publicação de conteúdo destinado a adultos como pornografia, nudes, drogas, violência explícita, linguagem vulgar e temas adultos. Exceto no canal #🔞┃sapecagens, o qual é necessário comprovação de idade pelo discord e destinado para discussões sobre temas maduros, humor adulto e memes, desde que não sejam explícitos. | Any posting of content intended for adults, such as pornography, nudes, drugs, explicit violence, vulgar language and adult themes, is prohibited. The exception is the #🔞┃sapecagens channel, which requires age verification through Discord and is intended for discussions of mature topics, adult humor and memes, as long as they are not explicit. |
+| rules.closing | Qualquer violação dessa regra resultará em medidas disciplinares apropriadas. | Any violation of this rule will result in appropriate disciplinary action. |
 
 ---
 

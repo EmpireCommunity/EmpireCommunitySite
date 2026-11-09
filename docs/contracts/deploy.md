@@ -3,7 +3,7 @@
 - Version: 1. Owner: Alicerce. Consumers: Forja (workflows, Dockerfile, checks), Guindaste (host procedure, Cloudflare
   setup, runbook), Sentinela (review), Ensaio (negative tests).
 - Decisions: D-10 (build in CI), D-17 (repository protection model), D-18 (Worker deploy through GitHub Actions with
-  owner approval), D-20 (logging), D-24 (releases by tag, as in EmpireMuse). Operational steps: `docs/runbook/release.md`
+  owner approval), D-20 (logging), D-24 (releases by tag, as in EmpireMuse), D-41 (the `/discord` page and its integrity row). Operational steps: `docs/runbook/release.md`
   (Guindaste); this document holds the controls that runbook must respect. Stack: [ADR-0001](../adr/0001-stack.md). Worker credential:
   [ADR-0003](../adr/0003-members-worker-deploy-credential.md).
 - This repository is public. The document states **required controls only**. Account and platform settings that exist
@@ -164,7 +164,7 @@ root until the Cloudflare rules exist) warn only, through the same flag mechanis
 |---|---|
 | No payment instruction (D-28) | `/pt-br/support/` and `/en-us/support/` carry the `data-donations="not-open"` block and none of the payment-guard markers of site-data section 10 (`data-pix`, payment-provider host or short link, BR Code marker, key-shaped strings, e-mail outside the allowlist), and the same holds for the home page of both locales. |
 | Rewriting features | The delivered support page has no Cloudflare e-mail obfuscation or script-rewriting markers, so a re-enabled feature is detected. |
-| Discord entry (D-29) | `/discord` answers 200 with no `Location` header; its visible link and its `<meta http-equiv="refresh">` target are the same single `https://discord.com/invite/<code>` URL, with or without a query string on the request; the page has no script and no other invite URL; the public invite lookup for that code returns the server id configured in `src/data/site.yaml` on `main`. |
+| Discord entry (D-29, D-41) | `/discord` answers 200 with no `Location` header (the page shows the rules and never redirects); every Discord invite URL on it, one per language container, is the same `https://discord.com/invite/<code>` URL, with or without a query string on the request; the plain-text `https://discord.com/terms` of rule 5 is allowed as text, not in an attribute (site-data section 12, Terms URL exception) and is not an invite; the page has no script, no `<meta http-equiv="refresh">` and no other invite URL; the public invite lookup for that code returns the server id configured in `src/data/site.yaml` on `main`. The monitor does not tick the checkbox and does not check the WhatsApp link. |
 | Root | `/?utm_source=ci` answers `302` to `/en-us/?utm_source=ci` from the (non-Brazilian) runner. The Brazilian case is checked by hand (C-8). |
 | Member count | `/data/members.json` validates against the schema, `source` is not `built-in`, and `updatedAt` is not older than 3 days. |
 | Headers | `/pt-br/` and `/en-us/support/` carry the expected CSP and the other headers of routing-locale section 6. |
