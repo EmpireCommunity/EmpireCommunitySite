@@ -139,6 +139,40 @@ export function hreflangReciprocity(pages: ReadonlyMap<string, string>, origin: 
   return findings;
 }
 
+/** `<html lang>` (WCAG 3.1.1): a locale page carries its locale; the chooser, the 404 and /discord are en-US (routing-locale sections 1 and 3). */
+export function htmlLang(html: string, file: string, expected: 'pt-BR' | 'en-US'): Finding[] {
+  const tag = /<html\b([^>]*)>/i.exec(html)?.[1] ?? '';
+  const lang = attributesOf(tag).get('lang');
+  return lang === expected ? [] : [err(file, `<html lang> is ${lang ?? 'missing'}, expected ${expected}`)];
+}
+
+/**
+ * Language selector (routing-locale section 2): every link with `hreflang` goes to the equivalent page in that locale
+ * (same route), carries `lang`, and only the link to the page's own locale is `aria-current="true"`. Both locales must be present.
+ */
+export function languageSelector(html: string, file: string, locale: 'pt-br' | 'en-us', route: string): Finding[] {
+  const findings: Finding[] = [];
+  const seen = new Set<string>();
+  for (const match of html.matchAll(/<a\b([^>]*)>/gi)) {
+    const attrs = attributesOf(match[1] ?? '');
+    const target = attrs.get('hreflang');
+    if (target === undefined) continue;
+    const targetLocale = LOCALE_LABELS.get(target);
+    if (targetLocale === undefined) continue;
+    seen.add(targetLocale);
+    const wanted = `/${targetLocale}/${route}`;
+    if (attrs.get('href') !== wanted) findings.push(err(file, `selector link ${target} goes to ${attrs.get('href') ?? 'nothing'}, expected ${wanted}`));
+    if (attrs.get('lang') !== target) findings.push(err(file, `selector link ${target} has no matching lang attribute`));
+    if ((attrs.get('aria-current') === 'true') !== (targetLocale === locale)) {
+      findings.push(err(file, `selector link ${target} has the wrong aria-current`));
+    }
+  }
+  for (const needed of LOCALE_LABELS.values()) {
+    if (!seen.has(needed)) findings.push(err(file, `selector has no link to ${needed}`));
+  }
+  return findings;
+}
+
 // RFC 3339 date-time (JSON Schema format date-time): a bare date such as 2026-11-09 is not one.
 const DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/i;
 

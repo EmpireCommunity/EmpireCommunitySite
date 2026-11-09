@@ -1,3 +1,4 @@
+import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'astro/config';
 
@@ -25,6 +26,14 @@ export default defineConfig({
       redirectToDefaultLocale: false,
     },
   },
+  integrations: [
+    // routing-locale section 5: every locale URL, hreflang pairs from the `i18n` option. The filter lists only pages
+    // under a locale folder, so `/`, `/404/` and `/discord/` (noindex, no locale) never reach the sitemap.
+    sitemap({
+      i18n: { defaultLocale: 'pt-br', locales: { 'pt-br': 'pt-BR', 'en-us': 'en-US' } },
+      filter: (page) => /^\/(pt-br|en-us)\//.test(new URL(page).pathname),
+    }),
+  ],
   vite: {
     plugins: [tailwindcss()],
     build: { assetsInlineLimit: 0 },

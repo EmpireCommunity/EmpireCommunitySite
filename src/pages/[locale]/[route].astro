@@ -17,7 +17,7 @@ if (!isLocale(locale) || routeKey === undefined) throw new Error(`unexpected rou
 ---
 
 <BaseLayout locale={locale} routeKey={routeKey}>
-  <main id="content">
-    <h1>{t(locale, `meta.${routeKey}.title` as MessageKey)}</h1>
-  </main>
+  <div class="frame section-y">
+    <h1 class="font-display text-display text-papel">{t(locale, `meta.${routeKey}.title` as MessageKey)}</h1>
+  </div>
 </BaseLayout>

@@ -1,0 +1,86 @@
+---
+// Footer of every locale page: four groups (information-architecture section 4), `violeta-noite`, the page "descends a tone".
+// Community lists only the channels that have verified data. The Discord link is the one in site.yaml
+// (https://empirecommunity.org/discord). WhatsApp is not rendered here: its link comes from join-channels.yaml, which
+// is still empty, and it never appears in en-US output (C-1).
+import { getEntry } from 'astro:content';
+import { t } from '../i18n/index.ts';
+import { LEGAL_ITEMS, NAV_ITEMS } from '../lib/navigation.ts';
+import { routePath } from '../lib/routes.ts';
+import type { Locale } from '../lib/routes.ts';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const site = await getEntry('site', 'site');
+if (site === undefined) throw new Error('src/data/site.yaml is missing: the footer needs the contact and community links');
+const { contact, links } = site.data;
+
+const linkClass =
+  'link-text inline-flex min-h-[44px] items-center text-body-sm text-papel-suave hover:text-papel motion-safe:transition-colors';
+const headingClass = 'text-body-sm font-medium text-papel';
+---
+
+<footer class="bg-violeta-noite pt-64 pb-48 text-papel-suave">
+  <div class="frame">
+    <div class="grid gap-x-24 gap-y-32 sm:grid-cols-2 lg:grid-cols-4">
+      <section>
+        <h2 class={headingClass}>{t(locale, 'footer.site')}</h2>
+        <ul class="mt-8">
+          {
+            NAV_ITEMS.map((item) => (
+              <li>
+                <a href={routePath(locale, item.key)} class={linkClass}>
+                  {t(locale, item.label)}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </section>
+
+      <section>
+        <h2 class={headingClass}>{t(locale, 'footer.community')}</h2>
+        <ul class="mt-8">
+          <li>
+            <a href={links.discord} class={linkClass}>{t(locale, 'footer.discord')}</a>
+          </li>
+          <li>
+            <a href={links.github} class={linkClass}>{t(locale, 'footer.github')}</a>
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class={headingClass}>{t(locale, 'footer.contact')}</h2>
+        <ul class="mt-8">
+          <li>
+            <a href={`mailto:${contact.general}`} class={linkClass}>{contact.general}</a>
+          </li>
+          <li>
+            <a href={`mailto:${contact.legal}`} class={linkClass}>{contact.legal}</a>
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class={headingClass}>{t(locale, 'footer.legal')}</h2>
+        <ul class="mt-8">
+          {
+            LEGAL_ITEMS.map((item) => (
+              <li>
+                <a href={routePath(locale, item.key)} class={linkClass}>
+                  {t(locale, item.label)}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </section>
+    </div>
+
+    <p class="mt-48 text-label text-papel-apagado">{t(locale, 'footer.line')}</p>
+  </div>
+</footer>

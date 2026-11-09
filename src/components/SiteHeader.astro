@@ -1,0 +1,97 @@
+---
+// Header of every locale page (information-architecture section 4, DESIGN.md "Layout" and "Navigation").
+// - 1024 px and up: 72 px row with wordmark, the five pages and the language selector.
+// - Below 1024 px: 56 px row with wordmark, selector and a Menu button; the pages move into the menu panel.
+// - Below 640 px: the selector goes to a 44 px strip above the row (two full names do not fit beside the logo).
+// The menu is a native <details>: it works with no script and no client framework, the browser exposes the
+// expanded state, and the open panel sits in the flow, so it pushes the page down instead of covering it.
+import { t } from '../i18n/index.ts';
+import { NAV_ITEMS } from '../lib/navigation.ts';
+import { routePath } from '../lib/routes.ts';
+import type { Locale, RouteKey } from '../lib/routes.ts';
+import LanguageSelector from './LanguageSelector.astro';
+import Wordmark from './Wordmark.astro';
+
+interface Props {
+  locale: Locale;
+  routeKey: RouteKey;
+}
+
+const { locale, routeKey } = Astro.props;
+
+const pageLink =
+  'inline-flex min-h-[44px] items-center text-papel-suave hover:text-papel aria-[current=page]:text-papel aria-[current=page]:underline aria-[current=page]:decoration-1 aria-[current=page]:underline-offset-8 motion-safe:transition-colors';
+---
+
+<header class="bg-violeta-ata">
+  <div class="sm:hidden">
+    <div class="frame flex h-[44px] items-center justify-end">
+      <LanguageSelector locale={locale} routeKey={routeKey} />
+    </div>
+  </div>
+
+  <div class="relative">
+    <div class="frame">
+      <div class="flex h-[56px] items-center gap-24 pr-[96px] lg:h-[72px] lg:pr-0">
+        <a
+          href={routePath(locale, 'home')}
+          aria-label={t(locale, 'a11y.logo')}
+          aria-current={routeKey === 'home' ? 'page' : undefined}
+          class="inline-flex min-h-[44px] items-center"
+        >
+          <Wordmark />
+        </a>
+
+        <nav aria-label={t(locale, 'nav.aria')} class="hidden lg:block">
+          <ul class="flex gap-8">
+            {
+              NAV_ITEMS.map((item) => (
+                <li>
+                  <a
+                    href={routePath(locale, item.key)}
+                    aria-current={routeKey === item.key ? 'page' : undefined}
+                    class={`${pageLink} px-8 text-nav`}
+                  >
+                    {t(locale, item.label)}
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+        </nav>
+
+        <div class="ml-auto hidden sm:block">
+          <LanguageSelector locale={locale} routeKey={routeKey} />
+        </div>
+      </div>
+    </div>
+
+    <details class="group lg:hidden">
+      <summary
+        class="absolute top-[6px] right-16 flex h-[44px] cursor-pointer list-none items-center rounded-botao border border-pauta-forte px-16 text-nav text-papel select-none group-open:border-papel hover:border-papel motion-safe:transition-colors sm:right-32 [&::-webkit-details-marker]:hidden"
+      >
+        <span class="group-open:hidden">{t(locale, 'nav.menu.open')}</span>
+        <span class="hidden group-open:inline">{t(locale, 'nav.menu.close')}</span>
+      </summary>
+      <div class="border-t border-pauta bg-violeta-capa">
+        <nav aria-label={t(locale, 'nav.aria')} class="frame py-24">
+          <ul>
+            {
+              NAV_ITEMS.map((item) => (
+                <li>
+                  <a
+                    href={routePath(locale, item.key)}
+                    aria-current={routeKey === item.key ? 'page' : undefined}
+                    class={`${pageLink} w-full py-8 text-title`}
+                  >
+                    {t(locale, item.label)}
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+        </nav>
+      </div>
+    </details>
+  </div>
+</header>

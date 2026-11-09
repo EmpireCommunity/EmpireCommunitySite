@@ -17,3 +17,10 @@ release happens and which version it gets. The release PR (`chore/release-X.Y.Z`
 - Release guard: `release.yml` fails while any flag in `scripts/lib/pending.ts` is true. `CODEOWNERS` added.
 - Release guard: the tag must be the tip of `origin/main`. nginx redirects slashless locale URLs and serves `/discord` directly (200). HTTP test covers `POST /healthz`, slashless redirect and `/discord`. Workflow lint: only `worker-deploy.yml` may name `worker-production`. `dist` check for the member-count fallback (pending flag `membersFallback`).
 - Deploy compose template with image `tag@sha256` and the proxy network labels.
+- Site shell: violet design tokens (D-30) in `@theme`, header with the language selector, skip link and a script-free mobile menu, footer, and the `main` landmark in `BaseLayout`. A shared `NeutralLayout` gives the root chooser, the 404 and the future `/discord` page `html lang="en-US"` with the other language marked per element. Text wordmark with one swap point (`Wordmark.astro`) until the owner approves the logo. `Status` mark and the mapping from schema status values to the design names.
+- Self-hosted fonts (Source Serif 4, Public Sans, variable, latin, SIL OFL 1.1) from `@fontsource-variable/*` 5.3.1 and 5.3.0, with the license texts in `public/fonts/` and `LICENSES.md`. No external font or script.
+- Sitemap through `@astrojs/sitemap` 3.7.4 (MIT), locale pages only with `hreflang` pairs. `dist` checks for `html lang` and for the language selector targets.
+
+### Changed
+
+- The old green tokens are gone; the `folha-suave` token was dropped with the band it served.

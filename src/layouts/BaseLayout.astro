@@ -1,7 +1,10 @@
 ---
-// Head rules: docs/contracts/routing-locale.md section 4. No header, selector or content here:
-// those belong to the page and component tasks (Bússola's spec).
+// Frame of every locale page: head rules (docs/contracts/routing-locale.md section 4), skip link, header with the
+// language selector, the <main id="content"> that pages fill, and the footer. A page only supplies its content.
 import '../styles/global.css';
+import FontPreload from '../components/FontPreload.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import SiteHeader from '../components/SiteHeader.astro';
 import { t } from '../i18n/index.ts';
 import type { MessageKey } from '../i18n/index.ts';
 import { alternates, HTML_LANG, LOCALES, OG_LOCALE, routePath, xDefaultPath } from '../lib/routes.ts';
@@ -42,8 +45,19 @@ const otherLocales = LOCALES.filter((other) => other !== locale);
     <meta property="og:url" content={absolute(routePath(locale, routeKey))} />
     <meta property="og:locale" content={OG_LOCALE[locale]} />
     {otherLocales.map((other) => <meta property="og:locale:alternate" content={OG_LOCALE[other]} />)}
+    <FontPreload />
   </head>
-  <body>
-    <slot />
+  <body class="flex min-h-screen flex-col">
+    <a
+      href="#content"
+      class="absolute top-8 left-8 z-10 -translate-y-[200%] rounded-botao bg-papel px-16 py-12 text-nav text-violeta-ata focus:translate-y-0"
+    >
+      {t(locale, 'nav.skip')}
+    </a>
+    <SiteHeader locale={locale} routeKey={routeKey} />
+    <main id="content" tabindex="-1" class="flex-1">
+      <slot />
+    </main>
+    <SiteFooter locale={locale} />
   </body>
 </html>

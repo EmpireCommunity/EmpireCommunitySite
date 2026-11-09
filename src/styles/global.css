@@ -1,64 +1,83 @@
 @import 'tailwindcss';
 
 /*
- * Design tokens. Source of truth: EmpireAssets/docs/EmpireCommunity-DESIGN.md (frontmatter).
+ * Design tokens. Source of truth: EmpireAssets/docs/EmpireCommunity-DESIGN.md (frontmatter), direction
+ * "O Livro-Ata Aberto" in the violet family (owner decision D-30, final).
  * Naming follows the design record: colors.papel -> --color-papel, spacing.24 -> --spacing-24,
  * rounded.botao -> --radius-botao.
  *
  * Rule: no color value exists outside this block. Components use the tokens through utilities
- * (bg-verde-ata, text-papel) or var(--color-*). `static` emits every token as a CSS variable.
+ * (bg-violeta-ata, text-papel) or var(--color-*). `static` emits every token as a CSS variable.
+ * There is no chromatic accent: violet lives only in backgrounds and neutrals, saturated color
+ * is for status and money values (the "Color Is Data" rule).
  *
- * STATUS: the design record is a proposal awaiting owner approval. The background greens
- * (verde-ata, verde-capa, verde-noite) are under owner review: change their values here only.
+ * Spacing note: `--spacing-N` is N px, so `p-16` is 16px and `h-56` is 56px for the keys below. Any other
+ * number falls back to Tailwind's default scale (`p-10` is 40px). Use arbitrary values for sizes not in the scale.
  */
 @theme static {
-  /* Background greens: UNDER OWNER REVIEW */
-  --color-verde-ata: #10241d;
-  --color-verde-capa: #183229;
-  --color-verde-noite: #0a1813;
+  /* Backgrounds: page, menu panel, footer */
+  --color-violeta-ata: #271837;
+  --color-violeta-capa: #342444;
+  --color-violeta-noite: #1b0d28;
 
   /* Paper and neutrals */
   --color-papel: #efece0;
   --color-papel-hover: #dbd8c9;
   --color-papel-active: #c6c3b3;
-  --color-papel-suave: #bcc3b3;
-  --color-papel-apagado: #9aa79b;
-  --color-folha-suave: #3a4f45;
-  --color-pauta: #2f473d;
-  --color-pauta-forte: #6f897b;
-  --color-margem: #8f4d3d;
+  --color-papel-suave: #c8c0d3;
+  --color-papel-apagado: #a9a0b6;
+  --color-pauta: #473a57;
+  --color-pauta-forte: #8f80a0;
+  --color-margem: #ba654f;
 
   /* Data colors: status vocabulary and ledger values only */
   --color-status-no-ar: #8ddcaa;
   --color-status-desenvolvimento: #e9bd6e;
   --color-status-em-breve: #a9cbe9;
-  --color-livro-entrada: #93e0b2;
-  --color-livro-saida: #f3aa92;
+  --color-livro-entrada: #a4eec3;
+  --color-livro-saida: #f0967f;
 
-  /* Families. The fonts are self-hosted (SIL OFL) in a later task; fallbacks work until then. */
+  /* Families. Both are self-hosted (SIL OFL), see the @font-face rules below. */
   --font-display: 'Source Serif 4 Variable', Georgia, 'Times New Roman', serif;
   --font-sans: 'Public Sans Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
-  /* Type scale (fluid between 390 and 1440 px where the record says so) */
+  /* Type scale. Display, headline and figure are fluid between 390 and 1440 px (the record's formulas). */
   --text-display: clamp(2.5rem, 1.757rem + 3.048vw, 4.5rem);
   --text-display--line-height: 1.08;
   --text-display--letter-spacing: -0.01em;
+  --text-display--font-weight: 300;
   --text-headline: clamp(2rem, 1.768rem + 0.952vw, 2.625rem);
   --text-headline--line-height: 1.15;
+  --text-headline--font-weight: 300;
   --text-title: 1.5rem;
   --text-title--line-height: 1.25;
+  --text-title--font-weight: 400;
   --text-figure: clamp(2rem, 1.814rem + 0.762vw, 2.5rem);
   --text-figure--line-height: 1.1;
+  --text-figure--font-weight: 300;
   --text-lead: 1.25rem;
   --text-lead--line-height: 1.5;
+  --text-lead--font-weight: 400;
   --text-body: 1.125rem;
   --text-body--line-height: 1.5;
+  --text-body--font-weight: 400;
   --text-body-sm: 1rem;
   --text-body-sm--line-height: 1.5;
+  --text-body-sm--font-weight: 400;
+  --text-nav: 1rem;
+  --text-nav--line-height: 1.3;
+  --text-nav--font-weight: 400;
+  --text-button: 1.125rem;
+  --text-button--line-height: 1.2;
+  --text-button--font-weight: 500;
   --text-label: 0.875rem;
   --text-label--line-height: 1.35;
+  --text-label--font-weight: 500;
+  --text-ledger: 1.125rem;
+  --text-ledger--line-height: 1.4;
+  --text-ledger--font-weight: 500;
 
-  /* Shape */
+  /* Shape: square everywhere, 4 px only on buttons and the skip link */
   --radius-botao: 4px;
 
   /* Spacing (8 px base, 4 and 12 for fine adjustment) */
@@ -72,14 +91,44 @@
   --spacing-64: 64px;
   --spacing-96: 96px;
   --spacing-128: 128px;
+
+  /* Hover and state transitions: 120 ms color changes (record, "Components") */
+  --default-transition-duration: 120ms;
+}
+
+/*
+ * Fonts: Source Serif 4 and Public Sans, variable, `latin` subset, upright only, from the Fontsource packages
+ * (SIL OFL 1.1, license texts in public/fonts and LICENSES.md). Files are used exactly as the packages ship
+ * them. Vite hashes them into /_astro/ (immutable cache, same origin, so `font-src 'self'` is enough).
+ */
+@font-face {
+  font-family: 'Source Serif 4 Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 900;
+  src: url('@fontsource-variable/source-serif-4/files/source-serif-4-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Public Sans Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/public-sans/files/public-sans-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
 @layer base {
   html {
     color-scheme: dark;
-    background-color: var(--color-verde-ata);
+    background-color: var(--color-violeta-ata);
     color: var(--color-papel);
     font-family: var(--font-sans);
+    /* Scrollbar: track violeta-ata, thumb pauta-forte */
+    scrollbar-color: var(--color-pauta-forte) var(--color-violeta-ata);
   }
 
   body {
@@ -88,8 +137,67 @@
     line-height: var(--text-body--line-height);
   }
 
+  /* Focus: 2 px papel ring, always :focus-visible. */
   :focus-visible {
     outline: 2px solid var(--color-papel);
     outline-offset: 2px;
+  }
+
+  /* The skip link moves focus here; a container that is not a control shows no ring. */
+  main:focus {
+    outline: none;
+  }
+
+  ::selection {
+    background-color: var(--color-papel);
+    color: var(--color-violeta-ata);
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+    /* A long word in Display size (for example "EmpireCommunity:") must wrap, not widen the page at 320 px. */
+    overflow-wrap: break-word;
+  }
+}
+
+/* Page frame: 12-column grid area, 1312 px of content on a 1440 px page, side margins 16 / 32 / 64 px. */
+@utility frame {
+  width: 100%;
+  max-width: calc(1312px + 2 * var(--spacing-64));
+  margin-inline: auto;
+  padding-inline: var(--spacing-16);
+
+  @media (width >= 40rem) {
+    padding-inline: var(--spacing-32);
+  }
+
+  @media (width >= 64rem) {
+    padding-inline: var(--spacing-64);
+  }
+}
+
+/* Vertical rhythm of a section: 64 px, 96 px from 1024 px. */
+@utility section-y {
+  padding-block: var(--spacing-64);
+
+  @media (width >= 64rem) {
+    padding-block: var(--spacing-96);
+  }
+}
+
+/* Text link: same color as the text around it, always underlined 1 px, 2 px on hover, papel-hover when pressed. */
+@utility link-text {
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+
+  &:hover {
+    text-decoration-thickness: 2px;
+  }
+
+  &:active {
+    color: var(--color-papel-hover);
   }
 }

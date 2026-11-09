@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  discordLinks, hreflangReciprocity, inlineExecutable, membersFallback, paymentGuard, whatsappAbsent,
+  discordLinks, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, membersFallback, paymentGuard, whatsappAbsent,
 } from '../scripts/lib/dist-checks.ts';
 import { checkWorkflow } from '../scripts/lib/workflow-rules.ts';
 
@@ -172,4 +172,20 @@ test('regressions of the PR 4 re-review: workflow rules', () => {
   assert.equal(count('w', { ...noOn, true: { pull_request_target: {} } }), 1);
   // the protected environment name is matched case-insensitively
   assert.equal(count('.github/workflows/ci.yml', wf({ environment: 'Worker-Production' })), 1);
+});
+
+test('html lang must match the page: a locale for locale pages, en-US for the neutral pages', () => {
+  assert.equal(htmlLang('<!doctype html><html lang="en-US"><head>', 'index.html', 'en-US').length, 0);
+  assert.equal(htmlLang('<html>', 'index.html', 'en-US').length, 1);
+  assert.equal(htmlLang('<html lang="pt-BR">', 'en-us/index.html', 'en-US').length, 1);
+});
+
+test('the language selector maps each page to its equivalent and marks only the current locale', () => {
+  const ok =
+    '<a href="/pt-br/join/" hreflang="pt-BR" lang="pt-BR" aria-current="true">Português</a>' +
+    '<a href="/en-us/join/" hreflang="en-US" lang="en-US">English</a>';
+  assert.equal(languageSelector(ok, 'p', 'pt-br', 'join/').length, 0);
+  assert.equal(languageSelector(ok.replace('/en-us/join/', '/en-us/'), 'p', 'pt-br', 'join/').length, 1);
+  assert.equal(languageSelector(ok.replace(' aria-current="true"', ''), 'p', 'pt-br', 'join/').length, 1);
+  assert.equal(languageSelector(ok.replace(/<a[^>]*en-US[^<]*<\/a>/, ''), 'p', 'pt-br', 'join/').length, 1);
 });
