@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
-import { HttpsUrl, Localized } from '../src/schemas/common.ts';
+import { HttpsUrl, Image, IsoDate, Localized } from '../src/schemas/common.ts';
 import { GameServerSchema } from '../src/schemas/game-servers.ts';
 import { JoinChannelSchema } from '../src/schemas/join-channels.ts';
+import { LegalSchema } from '../src/schemas/legal.ts';
 import { ProjectSchema } from '../src/schemas/projects.ts';
 import { TeamMemberSchema } from '../src/schemas/team.ts';
 
@@ -78,5 +79,49 @@ describe('entity rules', () => {
     assert.equal(JoinChannelSchema.safeParse(leaked).success, false);
     const discord = { id: 'discord', url: 'https://discord.gg/abc', audience: ['pt-br', 'en-us'], label: both('Discord'), description: both('x') };
     assert.equal(JoinChannelSchema.safeParse(discord).success, false);
+    assert.equal(JoinChannelSchema.safeParse({ ...discord, url: 'https://empirecommunity.org/discord' }).success, true);
+  });
+});
+
+describe('IsoDate', () => {
+  test('accepts real dates, including 29 February in a leap year', () => {
+    for (const date of ['2026-12-01', '2028-02-29', '2026-12-31']) assert.equal(IsoDate.safeParse(date).success, true, date);
+  });
+  test('rejects dates that are not in the calendar', () => {
+    for (const date of ['2026-02-30', '2027-02-29', '2026-13-01', '2026-00-10', '2026-04-31', '2026-1-01'])
+      assert.equal(IsoDate.safeParse(date).success, false, date);
+  });
+});
+
+describe('Image src stays inside src/assets', () => {
+  const image = (src: string) => Image.safeParse({ src, decorative: true }).success;
+  test('accepts files under assets', () => {
+    for (const src of ['../assets/logo.webp', '../assets/team/p-3f9a1c7d2b40.jpg', '../assets/a.b-c_d.png'])
+      assert.equal(image(src), true, src);
+  });
+  test('rejects paths that leave src/assets or are not plain files', () => {
+    const escapes = [
+      '../assets/../../private/photo.png',
+      '../assets/../secret.png',
+      '../../assets/logo.png',
+      '../assets/./logo.png',
+      '../assets//logo.png',
+      '../assets/.hidden.png',
+      '../assets/logo.svg',
+      'assets/logo.png',
+    ];
+    for (const src of escapes) assert.equal(image(src), false, src);
+  });
+});
+
+describe('legal front matter', () => {
+  const front = { title: 'Termos', slug: 'terms-of-service', locale: 'pt-br', version: '1.0' };
+  test('an unquoted YAML date (parsed as a Date) and an ISO string are both accepted', () => {
+    assert.equal(LegalSchema.safeParse({ ...front, effectiveDate: new Date(Date.UTC(2026, 11, 1)) }).success, true);
+    assert.equal(LegalSchema.safeParse({ ...front, effectiveDate: '2026-12-01' }).success, true);
+  });
+  test('an invalid date is still rejected', () => {
+    assert.equal(LegalSchema.safeParse({ ...front, effectiveDate: new Date(Number.NaN) }).success, false);
+    assert.equal(LegalSchema.safeParse({ ...front, effectiveDate: '2026-02-30' }).success, false);
   });
 });

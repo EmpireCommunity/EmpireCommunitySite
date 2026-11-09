@@ -11,8 +11,8 @@ Rules for any human or agent working in this repository. Stack and contracts: `d
   The `worktrees/` folder is ignored by git and by Docker.
 - Branch names are `type/short-name`. Commits follow Conventional Commits
   (`feat fix docs style refactor perf test build ci chore revert`, optional scope).
-- Never push to `main`, never force-push, never rewrite shared history. Pushing, opening PRs and merging need the
-  owner's explicit OK.
+- Never push to `main`, never force-push, never rewrite shared history. Pushing a branch, opening PRs and merging
+  have the owner's standing OK (D-31); releases, deploys and GitHub settings still need the owner's explicit OK each time.
 - Run `gitleaks git --pre-commit --staged --redact` before every commit. Never commit secrets or `.env` files
   (use `.env.example`).
 - **`.maestri/` is never committed.** It holds agent workspace data. It is in `.gitignore` and `.dockerignore`.

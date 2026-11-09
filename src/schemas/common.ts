@@ -8,7 +8,18 @@ export type LocaleCode = z.infer<typeof Locale>;
 export const Id = z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/);
 /** Opaque, random, never derived from a name or nickname. */
 export const PersonId = z.string().regex(/^p-[0-9a-f]{12}$/);
-export const IsoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
+/** True only for a date that exists in the calendar (rejects 2026-02-30 and 2025-02-29). */
+export function isCalendarDate(value: string): boolean {
+  const [year = 0, month = 0, day = 0] = value.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
+export const IsoDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine(isCalendarDate, { message: 'not a real calendar date' });
 
 const noMarkup = (value: string): boolean => !/[<>]/.test(value);
 
@@ -57,8 +68,13 @@ export const HttpsUrl = z
   .startsWith('https://')
   .refine(isCleanHttpsUrl, { message: 'must be a valid https URL without credentials or tracking parameters' });
 
-/** Files live in src/assets/**; the size and metadata checks are CI steps (site-data section 2). */
-const IMAGE_SRC = /^(\.\.\/)+assets\/[A-Za-z0-9._/-]+\.(webp|avif|jpe?g|png)$/;
+/**
+ * Files live in src/assets/**; the size and metadata checks are CI steps (site-data section 2). Data files sit in
+ * src/data, so the path is exactly `../assets/...`. A path segment cannot start with a dot, so `..`, `.` and
+ * empty segments (the ways out of src/assets) do not match.
+ */
+const IMAGE_SRC =
+  /^\.\.\/assets\/(?:[A-Za-z0-9_-][A-Za-z0-9._-]*\/)*[A-Za-z0-9_-][A-Za-z0-9._-]*\.(?:webp|avif|jpe?g|png)$/;
 
 export const Image = z
   .strictObject({

@@ -1,8 +1,15 @@
 // Collections and Zod schemas: docs/contracts/site-data.md section 1. Any schema error fails the build.
+// YAML files go through `yamlLoader` (not Astro's `file()`), so a malformed, missing or duplicate-id file
+// fails the build too. Cross-entry rules run after each load.
 import { defineCollection } from 'astro:content';
-import { file, glob } from 'astro/loaders';
+import { glob } from 'astro/loaders';
+import type { Loader } from 'astro/loaders';
 import { z } from 'astro/zod';
-import { singleDocument } from './lib/yaml-document.ts';
+import { assertLegalParity, type LegalDoc } from './lib/legal-rules.ts';
+import { assertSingleFounder } from './lib/team-rules.ts';
+import { parseEntryList, parseSingleDocument } from './lib/yaml-entries.ts';
+import { yamlLoader } from './lib/yaml-loader.ts';
+import { CommunitySchema } from './schemas/community.ts';
 import { GameServerSchema } from './schemas/game-servers.ts';
 import { JoinChannelSchema } from './schemas/join-channels.ts';
 import { LegalSchema } from './schemas/legal.ts';
@@ -11,33 +18,68 @@ import { SiteSchema } from './schemas/site.ts';
 import { TeamMemberSchema } from './schemas/team.ts';
 
 const site = defineCollection({
-  loader: file('src/data/site.yaml', { parser: singleDocument('site') }),
+  loader: yamlLoader({
+    path: 'src/data/site.yaml',
+    parse: (text, source) => parseSingleDocument(text, source, 'site'),
+  }),
   schema: SiteSchema.extend({ id: z.literal('site') }),
 });
 
+// Optional until the owner supplies a verified `discord.membersBuiltIn`; validated whenever the file exists.
+const community = defineCollection({
+  loader: yamlLoader({
+    path: 'src/data/community.yaml',
+    parse: (text, source) => parseSingleDocument(text, source, 'community'),
+    optional: true,
+  }),
+  schema: CommunitySchema.extend({ id: z.literal('community') }),
+});
+
 const projects = defineCollection({
-  loader: file('src/data/projects.yaml'),
+  loader: yamlLoader({ path: 'src/data/projects.yaml', parse: parseEntryList }),
   schema: ProjectSchema,
 });
 
 const gameServers = defineCollection({
-  loader: file('src/data/game-servers.yaml'),
+  loader: yamlLoader({ path: 'src/data/game-servers.yaml', parse: parseEntryList }),
   schema: GameServerSchema,
 });
 
 const joinChannels = defineCollection({
-  loader: file('src/data/join-channels.yaml'),
+  loader: yamlLoader({ path: 'src/data/join-channels.yaml', parse: parseEntryList }),
   schema: JoinChannelSchema,
 });
 
 const team = defineCollection({
-  loader: file('src/data/team.yaml'),
+  loader: yamlLoader({ path: 'src/data/team.yaml', parse: parseEntryList, validate: assertSingleFounder }),
   schema: TeamMemberSchema,
 });
 
-const legal = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/legal' }),
-  schema: LegalSchema,
-});
+// The front matter `slug` would make both locales share one id, so the id is the relative path
+// (`pt-br/terms-of-service`). The parity rules run after every load.
+function legalLoader(): Loader {
+  const inner = glob({
+    pattern: '**/*.md',
+    base: './src/content/legal',
+    generateId: ({ entry }) => entry.replace(/\.md$/, ''),
+  });
+  return {
+    ...inner,
+    load: async (context) => {
+      await inner.load(context);
+      const docs = context.store.values().map((entry): LegalDoc => ({
+        filePath: entry.filePath ?? entry.id,
+        locale: String(entry.data['locale']),
+        slug: String(entry.data['slug']),
+        version: String(entry.data['version']),
+        effectiveDate: String(entry.data['effectiveDate']),
+        body: entry.body ?? '',
+      }));
+      assertLegalParity(docs);
+    },
+  };
+}
 
-export const collections = { site, projects, gameServers, joinChannels, team, legal };
+const legal = defineCollection({ loader: legalLoader(), schema: LegalSchema });
+
+export const collections = { site, community, projects, gameServers, joinChannels, team, legal };
