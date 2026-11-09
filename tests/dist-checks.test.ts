@@ -45,8 +45,8 @@ test('hreflang must be reciprocal and canonical must be the page itself', () => 
   const head = (self: string, other: string) =>
     `<link rel="canonical" href="${origin}${self}"><link rel="alternate" hreflang="pt-BR" href="${origin}/pt-br/">` +
     `<link rel="alternate" hreflang="en-US" href="${origin}/en-us/"><link rel="alternate" hreflang="x-default" href="${origin}${other}">`;
-  const ok = new Map([['/pt-br/', head('/pt-br/', '/en-us/')], ['/en-us/', head('/en-us/', '/en-us/')]]);
-  assert.equal(hreflangReciprocity(ok, origin).length, 0);
+  const ok = new Map([['/pt-br/', head('/pt-br/', '/')], ['/en-us/', head('/en-us/', '/')]]);
+  assert.equal(hreflangReciprocity(ok, origin, new Set(['/'])).length, 0);
   const broken = new Map(ok).set('/en-us/', '<link rel="canonical" href="https://e.org/en-us/">');
   assert.ok(hreflangReciprocity(broken, origin).length > 0);
 });
@@ -84,7 +84,7 @@ test('regressions of the PR 4 review: dist-checks rules', () => {
   const origin = 'https://e.org';
   const head = (pt: string, en: string) =>
     `<link rel="alternate" hreflang="pt-BR" href="${origin}${pt}"><link rel="alternate" hreflang="en-US" href="${origin}${en}">` +
-    `<link rel="alternate" hreflang="x-default" href="${origin}/en-us/">`;
+    `<link rel="alternate" hreflang="x-default" href="${origin}/">`;
   const swapped = new Map([
     ['/pt-br/', `<link rel="canonical" href="${origin}/pt-br/">${head('/en-us/', '/pt-br/')}`],
     ['/en-us/', `<link rel="canonical" href="${origin}/en-us/">${head('/en-us/', '/pt-br/')}`],
@@ -123,13 +123,53 @@ test('a removed hreflang backlink is reported even when every language label is 
     `<link rel="alternate" hreflang="pt-BR" href="${origin}/pt-br/"><link rel="alternate" hreflang="en-US" href="${origin}/en-us/">` +
     `<link rel="alternate" hreflang="x-default" href="${origin}${xDefault}">`;
   const page = (self: string, links: string) => `<link rel="canonical" href="${origin}${self}">${links}`;
-  const whole = new Map([['/pt-br/', page('/pt-br/', alternates('/en-us/'))], ['/en-us/', page('/en-us/', alternates('/en-us/'))]]);
-  assert.equal(hreflangReciprocity(whole, origin).length, 0);
+  const whole = new Map([['/pt-br/', page('/pt-br/', alternates('/'))], ['/en-us/', page('/en-us/', alternates('/'))]]);
+  assert.equal(hreflangReciprocity(whole, origin, new Set(['/'])).length, 0);
   // /en-us/ keeps all three labels but no longer links back to /pt-br/ (its pt-BR alternate points elsewhere).
   const noBacklink = new Map(whole).set(
     '/en-us/',
-    page('/en-us/', `<link rel="alternate" hreflang="pt-BR" href="${origin}/pt-br/other/"><link rel="alternate" hreflang="en-US" href="${origin}/en-us/"><link rel="alternate" hreflang="x-default" href="${origin}/en-us/">`),
+    page('/en-us/', `<link rel="alternate" hreflang="pt-BR" href="${origin}/pt-br/other/"><link rel="alternate" hreflang="en-US" href="${origin}/en-us/"><link rel="alternate" hreflang="x-default" href="${origin}/">`),
   );
   const findings = hreflangReciprocity(noBacklink, origin);
   assert.ok(findings.some((f) => f.file === '/pt-br/' && /not reciprocal/.test(f.message)), 'the page that lost its backlink is reported');
+});
+
+test('regressions of the PR 4 re-review: first duplicate attribute, x-default targets', () => {
+  // browsers use the first of two identical attributes
+  assert.equal(inlineExecutable('<script type="application/ld+json" type="text/javascript">{}</script>', 'p').length, 0);
+  assert.equal(inlineExecutable('<script type="text/javascript" type="application/ld+json">run()</script>', 'p').length, 1);
+  // x-default is / on a home page and the en-US page on an inner page
+  const origin = 'https://e.org';
+  const links = (route: string, xDefault: string) =>
+    `<link rel="canonical" href="${origin}/pt-br/${route}"><link rel="alternate" hreflang="pt-BR" href="${origin}/pt-br/${route}">` +
+    `<link rel="alternate" hreflang="en-US" href="${origin}/en-us/${route}"><link rel="alternate" hreflang="x-default" href="${origin}${xDefault}">`;
+  const en = (route: string) =>
+    `<link rel="canonical" href="${origin}/en-us/${route}"><link rel="alternate" hreflang="pt-BR" href="${origin}/pt-br/${route}">` +
+    `<link rel="alternate" hreflang="en-US" href="${origin}/en-us/${route}"><link rel="alternate" hreflang="x-default" href="${origin}${route === '' ? '/' : `/en-us/${route}`}">`;
+  const pair = (route: string, xDefault: string) => new Map([[`/pt-br/${route}`, links(route, xDefault)], [`/en-us/${route}`, en(route)]]);
+  assert.equal(hreflangReciprocity(pair('', '/'), origin, new Set(['/'])).length, 0);
+  assert.equal(hreflangReciprocity(pair('projects/', '/en-us/projects/'), origin).length, 0);
+  for (const [route, wrong] of [['', '/en-us/'], ['projects/', '/'], ['projects/', '/pt-br/projects/']] as const) {
+    assert.ok(hreflangReciprocity(pair(route, wrong), origin, new Set(['/'])).length > 0, `${route} ${wrong}`);
+  }
+});
+
+test('regressions of the PR 4 re-review: workflow rules', () => {
+  const pin = 'x/y@' + 'a'.repeat(40);
+  const wf = (over: object, step: object = { uses: pin }) =>
+    ({ on: 'push', permissions: {}, jobs: { a: { 'timeout-minutes': 1, steps: [step], ...over } } });
+  const count = (file: string, workflow: object) => checkWorkflow(file, workflow as never).length;
+  // branch names are attacker-controlled too
+  for (const expr of ['github.ref_name', 'github.base_ref', 'github.head_ref', 'github.ref']) {
+    assert.equal(count('w', wf({}, { run: `echo \${{ ${expr} }}` })), 1, expr);
+  }
+  // no usable on key fails closed; a key parsed as boolean true is read as on
+  const noOn: Record<string, unknown> = { ...wf({}) };
+  delete noOn.on;
+  assert.equal(count('w', noOn), 1);
+  assert.equal(count('w', { ...noOn, on: null }), 1);
+  assert.equal(count('w', { ...noOn, true: 'push' }), 0);
+  assert.equal(count('w', { ...noOn, true: { pull_request_target: {} } }), 1);
+  // the protected environment name is matched case-insensitively
+  assert.equal(count('.github/workflows/ci.yml', wf({ environment: 'Worker-Production' })), 1);
 });

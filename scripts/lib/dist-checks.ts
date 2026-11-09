@@ -6,11 +6,12 @@ export type Finding = { level: 'error' | 'warning'; file: string; message: strin
 const err = (file: string, message: string): Finding => ({ level: 'error', file, message });
 const warn = (file: string, message: string): Finding => ({ level: 'warning', file, message });
 
-/** Attribute names (lower-cased, exact) and values of one tag's attribute text: `data-src` is not `src`. */
+/** Attribute names (lower-cased, exact) and values of one tag's attribute text: `data-src` is not `src`; the first duplicate wins. */
 function attributesOf(text: string): Map<string, string> {
   const attrs = new Map<string, string>();
   for (const m of text.matchAll(/([^\s"'<>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g)) {
-    attrs.set((m[1] ?? '').toLowerCase(), m[2] ?? m[3] ?? m[4] ?? '');
+    const name = (m[1] ?? '').toLowerCase();
+    if (!attrs.has(name)) attrs.set(name, m[2] ?? m[3] ?? m[4] ?? ''); // browsers keep the FIRST of a duplicate attribute
   }
   return attrs;
 }
@@ -119,10 +120,11 @@ export function hreflangReciprocity(pages: ReadonlyMap<string, string>, origin: 
         findings.push(err(url, `hreflang ${alt.lang} points outside the site: ${alt.href}`));
         continue;
       }
-      const wanted = LOCALE_LABELS.get(alt.lang);
       const route = url.replace(/^\/(?:pt-br|en-us)\//, '');
-      if (wanted !== undefined && target !== `/${wanted}/${route}`) {
-        findings.push(err(url, `hreflang ${alt.lang} points to ${target}, expected /${wanted}/${route}`));
+      // x-default: the root chooser on the two home pages, the matching en-US page on inner pages (routing-locale section 4).
+      const wantedPath = alt.lang === 'x-default' ? (route === '' ? '/' : `/en-us/${route}`) : LOCALE_LABELS.has(alt.lang) ? `/${LOCALE_LABELS.get(alt.lang)}/${route}` : undefined;
+      if (wantedPath !== undefined && target !== wantedPath) {
+        findings.push(err(url, `hreflang ${alt.lang} points to ${target}, expected ${wantedPath}`));
         continue;
       }
       const back = links.get(target);

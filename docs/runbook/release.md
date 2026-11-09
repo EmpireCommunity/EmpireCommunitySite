@@ -38,7 +38,7 @@ that is a package setting the owner changes.
 1. Take the digest from the release (`image-digest.txt`) or the run summary. The package must already be public
    (see First publication); the host pulls without a credential.
 2. Verify before pulling (on the owner's machine if the host should not hold a GitHub credential):
-   `gh attestation verify oci://ghcr.io/empirecommunity/empirecommunitysite@sha256:<digest> --repo EmpireCommunity/EmpireCommunitySite --signer-workflow EmpireCommunity/EmpireCommunitySite/.github/workflows/release.yml --source-ref refs/tags/vX.Y.Z`.
+   `gh attestation verify oci://ghcr.io/empirecommunity/empirecommunitysite@sha256:<digest> --repo EmpireCommunity/EmpireCommunitySite --cert-identity https://github.com/EmpireCommunity/EmpireCommunitySite/.github/workflows/release.yml@refs/tags/vX.Y.Z --cert-oidc-issuer https://token.actions.githubusercontent.com`.
    Any failure aborts.
 3. On the host: dated backup of the compose file beside it, set `image:` to `...:X.Y.Z@sha256:<digest>`,
    `docker compose up -d --wait`, then run the HTTP header test against the public URL
