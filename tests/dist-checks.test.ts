@@ -334,7 +334,7 @@ test('legal Markdown: raw HTML fails, autolinks and plain text pass; the effecti
 });
 
 test('analytics beacon: exactly one, only that src and token, and none where it is excluded (D-52)', () => {
-  const token = '0123456789abcdef0123456789abcdef';
+  const token = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
   const beacon = (src = 'https://static.cloudflareinsights.com/beacon.min.js', data = `{&quot;token&quot;:&quot;${token}&quot;}`, type = 'module') =>
     `<script type="${type}" src="${src}" data-cf-beacon="${data}"></script>`;
   assert.equal(analyticsBeacon(`<head>${beacon()}</head>`, 'p', true, token).length, 0);
