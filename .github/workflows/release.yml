@@ -1,9 +1,10 @@
 name: Release
 
 # Release process: docs/runbook/release.md (D-24). A merge to main never builds. The owner tags vX.Y.Z on the merge
-# commit after green CI; this workflow then guards the tag, publishes the image to GHCR, attests it and creates the
-# GitHub Release. The host pulls by digest after verifying the attestation (docs/contracts/deploy.md section 6).
-# Nothing here holds a credential for the host, and there is no secret: the run's own token is the only credential.
+# commit after green CI; this workflow then guards the tag, publishes the image to Docker Hub (public project, public
+# image), attests it and creates the GitHub Release. The host pulls by digest after verifying the attestation
+# (docs/contracts/deploy.md section 6). Nothing here holds a credential for the host. The only secrets are the org
+# secrets DOCKERHUB_USERNAME and DOCKERHUB_TOKEN, used by the login step of the publish job and nowhere else.
 on:
   push:
     tags:
@@ -17,7 +18,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  IMAGE: ghcr.io/empirecommunity/empirecommunitysite
+  IMAGE: docker.io/empirecommunity/empirecommunity-site-org
 
 jobs:
   verify:
@@ -110,7 +111,6 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
-      packages: write
       id-token: write
       attestations: write
     outputs:
@@ -124,23 +124,23 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      - name: Log in to GHCR with the run token
+      - name: Log in to Docker Hub
         uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ github.token }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Refuse a version whose image already exists
         env:
           VERSION: ${{ needs.verify.outputs.version }}
         run: |
           # A published version is never rebuilt: a re-run would produce another digest under the same tag.
+          # Docker Hub answers "repository does not exist" until the first push creates the repository.
           if out="$(docker buildx imagetools inspect "${IMAGE}:${VERSION}" 2>&1)"; then
             echo "::error::${IMAGE}:${VERSION} already exists; ship the next patch version instead."
             exit 1
           fi
-          if ! grep -qiE 'not found|manifest unknown|name unknown|no such manifest' <<< "$out"; then
+          if ! grep -qiE 'not found|manifest unknown|name unknown|no such manifest|repository does not exist' <<< "$out"; then
             echo "::error::Could not confirm the tag is free: $out"
             exit 1
           fi
@@ -176,6 +176,8 @@ jobs:
           subject-name: ${{ env.IMAGE }}
           subject-digest: ${{ steps.digest.outputs.value }}
           push-to-registry: true
+          # Storage records describe GHCR packages and would need the artifact-metadata permission; Docker Hub has none.
+          create-storage-record: false
 
       - name: Print the deploy reference
         env:
