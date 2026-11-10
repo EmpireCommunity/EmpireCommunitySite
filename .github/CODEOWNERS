@@ -10,7 +10,6 @@
 /nginx/                    @Or4cu1o
 /deploy/                   @Or4cu1o
 /scripts/                  @Or4cu1o
-/worker/                   @Or4cu1o
 /package.json              @Or4cu1o
 /pnpm-lock.yaml            @Or4cu1o
 /pnpm-workspace.yaml       @Or4cu1o

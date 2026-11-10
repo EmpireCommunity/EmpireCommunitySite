@@ -65,12 +65,6 @@ test('workflow hygiene: unpinned action, missing permissions and pull_request_ta
   assert.equal(checkWorkflow('w', bad).length, 5);
 });
 
-test('workflow rule: only worker-deploy.yml may name the worker-production environment', () => {
-  const wf = { on: 'push', permissions: {}, jobs: { a: { 'timeout-minutes': 1, environment: 'worker-production', steps: [] } } };
-  assert.equal(checkWorkflow('.github/workflows/worker-deploy.yml', wf).length, 0);
-  assert.equal(checkWorkflow('.github/workflows/ci.yml', wf).length, 1);
-});
-
 test('members fallback validates the members.json v1 shape and the built-in source', () => {
   const ok = { schema: 1, discord: { members: 888, updatedAt: '2026-11-09T00:00:03.120Z', source: 'built-in' } };
   assert.equal(membersFallback(JSON.stringify(ok), 'm').length, 0);
@@ -117,11 +111,6 @@ test('regressions of the PR 4 review: workflow rules', () => {
   assert.equal(count('w', wf({}, { run: 'echo ${{ github.event_name }} ${{ github.sha }}' })), 0);
   // on as an array
   assert.equal(count('w', { ...wf({}), on: ['push', 'pull_request_target'] }), 1);
-  // dynamic environment names fail closed outside worker-deploy.yml
-  for (const environment of ["${{ format('worker-{0}', 'production') }}", { name: '${{ inputs.target }}' }]) {
-    assert.equal(count('.github/workflows/ci.yml', wf({ environment })), 1);
-  }
-  assert.equal(count('.github/workflows/worker-deploy.yml', wf({ environment: 'worker-production' })), 0);
 });
 
 test('a removed hreflang backlink is reported even when every language label is present', () => {
@@ -177,8 +166,6 @@ test('regressions of the PR 4 re-review: workflow rules', () => {
   assert.equal(count('w', { ...noOn, on: null }), 1);
   assert.equal(count('w', { ...noOn, true: 'push' }), 0);
   assert.equal(count('w', { ...noOn, true: { pull_request_target: {} } }), 1);
-  // the protected environment name is matched case-insensitively
-  assert.equal(count('.github/workflows/ci.yml', wf({ environment: 'Worker-Production' })), 1);
 });
 
 test('html lang must match the page: a locale for locale pages, en-US for the neutral pages', () => {

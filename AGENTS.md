@@ -42,7 +42,7 @@ pnpm dev | pnpm build | pnpm check (astro check) | pnpm lint | pnpm test
 
 | Level | Paths and changes |
 |---|---|
-| **High** | Personal data: `src/data/team.yaml`, `src/schemas/team.ts`, `src/lib/team.ts`, team images. Money and donations: any support, donation or payment code and data. Secrets and tokens. Deploy, CI and supply chain: `.github/`, `Dockerfile`, `deploy/`, `worker/`, `package.json` dependencies, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.dockerignore`. Legal text with controller or data-handling claims. |
+| **High** | Personal data: `src/data/team.yaml`, `src/schemas/team.ts`, `src/lib/team.ts`, team images. Money and donations: any support, donation or payment code and data. Secrets and tokens. Deploy, CI and supply chain: `.github/`, `Dockerfile`, `deploy/`, `package.json` dependencies, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.dockerignore`. The member-count Worker lives in its own repository (`EmpireCommunity/EmpireCommunitySite-Worker`, deploys through Workers Builds, D-55) and is not part of this map. Legal text with controller or data-handling claims. |
 | **Medium** | Bug fixes and behavior changes: `src/schemas/` (other than team), `src/content.config.ts`, `src/lib/`, `src/i18n/index.ts`, `astro.config.ts`, routing and locale rules, head tags. |
 | **Low** | Copy and translations, styling and tokens, assets, docs, version bumps. |
 
