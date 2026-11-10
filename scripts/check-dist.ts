@@ -8,7 +8,7 @@ import { formatRulesDate, inviteUrl } from '../src/lib/community-rules.ts';
 import { CommunityRulesSchema } from '../src/schemas/community-rules.ts';
 import { TeamMemberSchema } from '../src/schemas/team.ts';
 import {
-  discordLinks, discordPage, gateCss, hasEffectiveDate, legalMarkdownHtml, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, mainContent, membersFallback, paymentGuard, paymentWords, personData, supportPage, donationsBlockElsewhere,
+  analyticsBeacon, discordLinks, discordPage, gateCss, hasEffectiveDate, legalMarkdownHtml, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, mainContent, membersFallback, paymentGuard, paymentWords, personData, supportPage, donationsBlockElsewhere,
   whatsappAbsent, whatsappInviteLink,
   type Finding,
 } from './lib/dist-checks.ts';
@@ -41,9 +41,10 @@ if (!existsSync(distDir)) {
   process.exit(1);
 }
 
-const site = parse(read('src/data', 'site.yaml')) as { contact?: Record<string, string>; discord?: { inviteCode?: string } };
+const site = parse(read('src/data', 'site.yaml')) as { contact?: Record<string, string>; discord?: { inviteCode?: string }; analytics?: { webAnalyticsToken?: string } };
 const allowedEmails = new Set(Object.values(site.contact ?? {}).map((email) => email.toLowerCase()));
 const inviteCode = site.discord?.inviteCode;
+const beaconToken = site.analytics?.webAnalyticsToken ?? '';
 
 const files = listFiles(distDir);
 const htmlFiles = files.filter((file) => file.endsWith('.html'));
@@ -150,6 +151,12 @@ if (files.includes(invitePage) && inviteCode !== undefined) {
     .filter((href) => files.includes(href));
   if (stylesheets.length === 0) add({ level: 'error', file: invitePage, message: 'no built stylesheet is linked: the gate CSS cannot be checked' });
   else add(...gateCss(stylesheets.map((href) => read(distDir, href)).join('\n'), stylesheets.join(', ')));
+}
+
+// D-52: the Web Analytics beacon on every locale page except Apoiar, and on no other page (root chooser, 404, /discord).
+for (const file of htmlFiles) {
+  const expected = localePages.includes(file) && !/^(pt-br|en-us)\/support\//.test(file);
+  add(...analyticsBeacon(read(distDir, file), file, expected, beaconToken));
 }
 
 // D-28: support pages carry the donations-not-open block; the payment guard runs on dist/ and on the content sources.

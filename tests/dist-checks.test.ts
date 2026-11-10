@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import {
-  discordLinks, discordPage, gateCss, hasEffectiveDate, legalMarkdownHtml, hreflangReciprocity, htmlLang, mainContent, inlineExecutable, languageSelector, membersFallback, paymentGuard, personData, supportPage, donationsBlockElsewhere, whatsappAbsent, whatsappInviteLink,
+  analyticsBeacon, discordLinks, discordPage, gateCss, hasEffectiveDate, legalMarkdownHtml, hreflangReciprocity, htmlLang, mainContent, inlineExecutable, languageSelector, membersFallback, paymentGuard, personData, supportPage, donationsBlockElsewhere, whatsappAbsent, whatsappInviteLink,
 } from '../scripts/lib/dist-checks.ts';
 import { checkWorkflow } from '../scripts/lib/workflow-rules.ts';
 
@@ -331,4 +331,27 @@ test('legal Markdown: raw HTML fails, autolinks and plain text pass; the effecti
   assert.equal(hasEffectiveDate(`${front}text`), false);
   assert.equal(hasEffectiveDate('---\ntitle: T\neffectiveDate: 2026-12-01\n---\ntext'), true);
   assert.equal(hasEffectiveDate('---\ntitle: T\n---\neffectiveDate: 2026-12-01'), false);
+});
+
+test('analytics beacon: exactly one, only that src and token, and none where it is excluded (D-52)', () => {
+  const token = 'cb5b8896c4a74076a14900c181cb4458';
+  const beacon = (src = 'https://static.cloudflareinsights.com/beacon.min.js', data = `{&quot;token&quot;:&quot;${token}&quot;}`, type = 'module') =>
+    `<script type="${type}" src="${src}" data-cf-beacon="${data}"></script>`;
+  assert.equal(analyticsBeacon(`<head>${beacon()}</head>`, 'p', true, token).length, 0);
+  assert.equal(analyticsBeacon('<head></head>', 'p', false, token).length, 0);
+  const bad: [string, string][] = [
+    ['none', '<head></head>'],
+    ['two', beacon() + beacon()],
+    ['another host', beacon('https://evil.test/beacon.min.js')],
+    ['another path', beacon('https://static.cloudflareinsights.com/other.js')],
+    ['a classic script', beacon(undefined, undefined, 'text/javascript')],
+    ['another token', beacon(undefined, '{&quot;token&quot;:&quot;00000000000000000000000000000000&quot;}')],
+    ['an extra key', beacon(undefined, `{&quot;token&quot;:&quot;${token}&quot;,&quot;spa&quot;:true}`)],
+    ['not JSON', beacon(undefined, 'token')],
+  ];
+  for (const [label, html] of bad) assert.equal(errors(analyticsBeacon(html, 'p', true, token)), 1, label);
+  // Excluded pages: the script, the attribute or the host alone is enough to fail.
+  for (const html of [beacon(), '<script data-cf-beacon="{}"></script>', '<link href="https://static.cloudflareinsights.com/">']) {
+    assert.equal(errors(analyticsBeacon(html, 'p', false, token)), 1, html);
+  }
 });

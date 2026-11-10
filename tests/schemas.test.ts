@@ -139,6 +139,7 @@ describe('site and community data (site-data sections 4 and 5)', () => {
     contact: { general: 'contact@empirecommunity.org', legal: 'legal@empirecommunity.org' },
     links: { discord: 'https://empirecommunity.org/discord', github: 'https://github.com/EmpireCommunity', contributing: 'https://github.com/EmpireCommunity/.github/blob/main/CONTRIBUTING.md' },
     discord: { inviteCode: 'abc-123', guildId: '1010657521775681556' },
+    analytics: { webAnalyticsToken: 'cb5b8896c4a74076a14900c181cb4458' },
   };
 
   test('accepts a valid invite code and guild id', () => {
@@ -151,6 +152,8 @@ describe('site and community data (site-data sections 4 and 5)', () => {
     ['a guild id given as a number (it would lose precision)', { ...site, discord: { ...site.discord, guildId: 1010657521775 } }],
     ['a guild id that is too short', { ...site, discord: { ...site.discord, guildId: '12345' } }],
     ['no discord block', { ...site, discord: undefined }],
+    ['an analytics token that is not 32 hex characters', { ...site, analytics: { webAnalyticsToken: 'not-a-token' } }],
+    ['an unknown analytics key', { ...site, analytics: { ...site.analytics, extra: 'x' } }],
   ];
   for (const [label, input] of rejected) {
     test(`site rejects ${label}`, () => {

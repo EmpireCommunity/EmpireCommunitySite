@@ -1,0 +1,11 @@
+---
+// Cloudflare Web Analytics, manual snippet (D-52, docs/contracts/routing-locale.md section 5): an external module script
+// from static.cloudflareinsights.com with the public site token in a data attribute. No inline script, so the strict CSP
+// holds (the default policy allows exactly that host). Included by BaseLayout on every locale page except Apoiar, which
+// has no analytics host in its CSP; the neutral pages (root chooser, 404, /discord) have no script at all.
+import { getSite } from '../lib/site-data.ts';
+
+const { analytics } = await getSite();
+---
+
+<script is:inline type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon={JSON.stringify({ token: analytics.webAnalyticsToken })}></script>

@@ -285,6 +285,36 @@ export function supportPage(html: string, file: string, notOpenMessage: string):
   return findings;
 }
 
+export const BEACON_SRC = 'https://static.cloudflareinsights.com/beacon.min.js';
+
+/**
+ * Cloudflare Web Analytics (routing-locale section 5, D-52). A locale page other than Apoiar carries exactly one beacon:
+ * an external module script from the Cloudflare host whose `data-cf-beacon` holds the configured token and nothing else.
+ * The support pages, the root chooser, the 404 and /discord carry none (the neutral pages have no script at all).
+ */
+export function analyticsBeacon(html: string, file: string, expected: boolean, token: string): Finding[] {
+  const scripts = [...html.matchAll(/<script\b([^>]*)>/gi)].map((match) => attributesOf(match[1] ?? ''));
+  const beacons = scripts.filter((attrs) => (attrs.get('src') ?? '').includes('cloudflareinsights') || attrs.has('data-cf-beacon'));
+  const mentioned = /cloudflareinsights|data-cf-beacon/i.test(html);
+  if (!expected) return mentioned ? [err(file, 'this page carries no analytics beacon (routing-locale section 5, site-data section 10)')] : [];
+  if (beacons.length !== 1) return [err(file, `expected exactly one analytics beacon, found ${beacons.length}`)];
+  const attrs = beacons[0];
+  const findings: Finding[] = [];
+  if (attrs?.get('src') !== BEACON_SRC) findings.push(err(file, `the beacon src must be exactly ${BEACON_SRC}`));
+  if (attrs?.get('type')?.toLowerCase() !== 'module') findings.push(err(file, 'the beacon is an external module script'));
+  let config: unknown;
+  try {
+    config = JSON.parse(decodeEntities(attrs?.get('data-cf-beacon') ?? ''));
+  } catch {
+    config = undefined;
+  }
+  const keys = typeof config === 'object' && config !== null ? Object.keys(config) : [];
+  if (keys.join() !== 'token' || (config as { token?: unknown }).token !== token) {
+    findings.push(err(file, 'data-cf-beacon must hold only the site token from site.yaml'));
+  }
+  return findings;
+}
+
 /** The donations block belongs to the support pages only: no other page states or suggests that a donation can be made. */
 export function donationsBlockElsewhere(html: string, file: string): Finding[] {
   return /data-donations\s*=/i.test(html) ? [err(file, 'data-donations belongs to the support pages only')] : [];
