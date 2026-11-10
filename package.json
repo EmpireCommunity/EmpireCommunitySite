@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.12",
-    "@astrojs/markdown-satteri": "0.4.7",
+    "@astrojs/markdown-satteri": "^0.4.7",
     "@astrojs/sitemap": "^3.7.4",
     "@eslint/js": "^10.0.1",
     "@fontsource-variable/public-sans": "^5.3.0",
