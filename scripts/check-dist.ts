@@ -44,7 +44,13 @@ if (!existsSync(distDir)) {
 const site = parse(read('src/data', 'site.yaml')) as { contact?: Record<string, string>; discord?: { inviteCode?: string }; analytics?: { webAnalyticsToken?: string } };
 const allowedEmails = new Set(Object.values(site.contact ?? {}).map((email) => email.toLowerCase()));
 const inviteCode = site.discord?.inviteCode;
-const beaconToken = site.analytics?.webAnalyticsToken ?? '';
+const webAnalyticsToken = site.analytics?.webAnalyticsToken;
+if (webAnalyticsToken === undefined || webAnalyticsToken === '') {
+  console.log('::error file=src/data/site.yaml::analytics.webAnalyticsToken is not set in src/data/site.yaml: the Web Analytics beacon cannot be checked (D-52)');
+  process.exitCode = 1;
+}
+// Only `analyticsBeacon` gets the empty fallback; the error above already fails the run.
+const beaconToken = webAnalyticsToken ?? '';
 
 const files = listFiles(distDir);
 const htmlFiles = files.filter((file) => file.endsWith('.html'));
