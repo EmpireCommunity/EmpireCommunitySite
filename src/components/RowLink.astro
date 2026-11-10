@@ -1,5 +1,5 @@
 ---
-// Link inside a ruled line (`links` slot of RegisterRow): Body-sm, always underlined, never wraps, 44 px touch target.
+// Link inside a ruled line (`links` slot of RegisterRow): Body-sm, always underlined, never wraps, 44 x 44 px touch target (short words like Site get the width from min-w).
 interface Props {
   href: string;
   label: string;
@@ -8,4 +8,4 @@ interface Props {
 const { href, label } = Astro.props;
 ---
 
-<a {href} class="link-text inline-flex min-h-[44px] items-center gap-8 text-body-sm whitespace-nowrap">{label}</a>
+<a {href} class="link-text inline-flex min-h-[44px] min-w-[44px] items-center gap-8 text-body-sm whitespace-nowrap">{label}</a>

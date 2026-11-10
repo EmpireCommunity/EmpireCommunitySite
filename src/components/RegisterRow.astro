@@ -8,11 +8,15 @@ interface Props {
   description?: string | undefined;
   /** Reserve the links column on desktop even when this row has no link, so descriptions and status line up across rows. Pass it on every row of a list where some row has a link. */
   linksColumn?: boolean;
-  /** For a list that spans the full page width (not inside the Índice): a wider name column, for long names. */
+  /** A wider name column (18rem) for lists whose names must not break, such as brand names like EmpireCommunitySite. */
   wide?: boolean;
+  /** Makes the name itself the link (an address that answers): 44 px touch target, underlined like every link. */
+  nameHref?: string | undefined;
 }
 
-const { name, description, linksColumn = false, wide = false } = Astro.props;
+const { name, description, linksColumn = false, wide = false, nameHref } = Astro.props;
+// An address (`github.com/EmpireCommunity`) may break after a slash, never inside a word.
+const nameParts = name.split('/');
 const hasStatus = Astro.slots.has('status');
 const hasLinks = Astro.slots.has('links');
 // Class names are written out in full so Tailwind can see them.
@@ -21,7 +25,9 @@ const columns = hasStatus
     ? wide
       ? 'lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)_11rem_9rem]'
       : 'lg:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_11rem_9rem]'
-    : 'lg:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_11rem]'
+    : wide
+      ? 'lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)_11rem]'
+      : 'lg:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_11rem]'
   : linksColumn
     ? 'lg:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_10rem]'
     : 'lg:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]';
@@ -31,7 +37,15 @@ const rowHeight = linksColumn ? 'lg:min-h-[92px]' : '';
 ---
 
 <li class={`grid gap-x-24 gap-y-8 border-t border-pauta py-24 sm:grid-cols-[1fr_auto] ${columns} ${rowHeight}`}>
-  <p class="font-display text-title text-papel [overflow-wrap:anywhere] sm:col-start-1 lg:row-start-1">{name}</p>
+  <p class="font-display text-title text-papel [overflow-wrap:anywhere] sm:col-start-1 lg:row-start-1">
+    {
+      nameHref === undefined ? (
+        nameParts.map((part, index) => (index === 0 ? part : <>/<wbr />{part}</>))
+      ) : (
+        <a href={nameHref} class="link-text -my-8 inline-block py-8">{nameParts.map((part, index) => (index === 0 ? part : <>/<wbr />{part}</>))}</a>
+      )
+    }
+  </p>
   {hasStatus && <div class="sm:col-start-2 sm:row-start-1 lg:col-start-3"><slot name="status" /></div>}
   {
     description !== undefined && (

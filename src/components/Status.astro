@@ -6,13 +6,16 @@ import { t } from '../i18n/index.ts';
 import { STATUS_LABEL, statusKind } from '../lib/status.ts';
 import type { DataStatus } from '../lib/status.ts';
 import type { Locale } from '../lib/routes.ts';
+import type { MessageKey } from '../i18n/index.ts';
 
 interface Props {
   locale: Locale;
   status: DataStatus;
+  /** A label of its own for the status (for example "Em montagem" for the coming-soon glyph); the default is the status name. */
+  label?: MessageKey;
 }
 
-const { locale, status } = Astro.props;
+const { locale, status, label } = Astro.props;
 const kind = statusKind(status);
 
 const COLOR_CLASS = {
@@ -33,5 +36,5 @@ const COLOR_CLASS = {
     )}
     {kind === 'soon' && <circle cx="6" cy="6" r="4.25" stroke-width="1.5" />}
   </svg>
-  {t(locale, STATUS_LABEL[kind])}
+  {t(locale, label ?? STATUS_LABEL[kind])}
 </span>

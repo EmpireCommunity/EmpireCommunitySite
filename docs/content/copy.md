@@ -236,9 +236,6 @@ Estrutura e regras em [`docs/design/information-architecture.md`](../design/info
 | team.title | Equipe | Team |
 | team.items | `[PENDING P-04]` | `[PENDING P-04]` |
 | addresses.title | Endereços oficiais | Official addresses |
-| addresses.col.address | Endereço | Address |
-| addresses.col.purpose | Função | Purpose |
-| addresses.col.status | Situação | Status |
 | addresses.main | Este site | This website |
 | addresses.muse | Site e painel do EmpireMuse | EmpireMuse website and panel |
 | addresses.hub | Site do EmpireHub | EmpireHub website |

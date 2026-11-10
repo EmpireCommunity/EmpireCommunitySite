@@ -113,34 +113,15 @@ const addresses: Address[] = [
       }
 
       <IndexSection title={t(locale, 'organization.addresses.title')} rows>
-        <table class="w-full text-left">
-          <thead class="max-md:sr-only">
-            <tr class="text-label text-papel-suave">
-              <th scope="col" class="py-16 pr-16 font-normal">{t(locale, 'organization.addresses.col.address')}</th>
-              <th scope="col" class="py-16 pr-16 font-normal">{t(locale, 'organization.addresses.col.purpose')}</th>
-              <th scope="col" class="py-16 font-normal">{t(locale, 'organization.addresses.col.status')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {
-              addresses.map((address) => (
-                <tr class="border-t border-pauta max-md:grid max-md:gap-y-8 max-md:py-24">
-                  <th scope="row" class="py-12 pr-16 align-middle text-body-sm font-normal text-papel [overflow-wrap:anywhere] max-md:py-0">
-                    {address.url === undefined ? (
-                      address.host
-                    ) : (
-                      <a href={address.url} class="link-text inline-flex min-h-[44px] items-center">{address.host}</a>
-                    )}
-                  </th>
-                  <td class="py-12 pr-16 align-middle text-body-sm text-papel-suave max-md:py-0">{t(locale, address.purpose)}</td>
-                  <td class="py-12 align-middle max-md:py-0">
-                    <Status locale={locale} status={address.status} />
-                  </td>
-                </tr>
-              ))
-            }
-          </tbody>
-        </table>
+        <RegisterList>
+          {
+            addresses.map((address) => (
+              <RegisterRow name={address.host} nameHref={address.url} description={t(locale, address.purpose)} wide>
+                <Status slot="status" locale={locale} status={address.status} />
+              </RegisterRow>
+            ))
+          }
+        </RegisterList>
         <div class="border-t border-pauta">
           <p class="max-w-[68ch] py-24 text-body-sm text-papel-suave">{t(locale, 'organization.addresses.note')}</p>
         </div>
