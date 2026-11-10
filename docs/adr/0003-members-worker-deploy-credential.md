@@ -1,7 +1,8 @@
 # ADR-0003: Deploy credential for the member-count Worker
 
-- Status: **Accepted** by the owner (D-18, 2026-11-08): GitHub Actions with a protected environment and owner
-  approval. This replaces the earlier recommendation (Workers Builds) after the security review of the design (T-5).
+- Status: **Superseded** by [ADR-0004](0004-members-worker-workers-builds.md) (D-55, 2026-11-10). Kept as history. It
+  was **Accepted** by the owner (D-18, 2026-11-08): GitHub Actions with a protected environment and owner approval,
+  replacing the earlier recommendation (Workers Builds) after the security review of the design (T-5).
 - Author: Alicerce. Task refs: T-4, T-4b. Spec: [members-json](../contracts/members-json.md), pipeline rules in
   [deploy](../contracts/deploy.md).
 - Risk: High surface (deploy boundary, supply chain). The Worker holds no secret itself; the credential that can

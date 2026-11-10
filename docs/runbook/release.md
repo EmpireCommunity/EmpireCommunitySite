@@ -64,7 +64,7 @@ may change the setting nor whether existing tags become mutable again: check a t
 ## Checks (names are the required status checks)
 
 `Quality (check, lint, tests)`, `Build and dist checks`, `Image checks and HTTP header test`, `Workflow lint`,
-`Secret scan`. The worker configuration check joins them with the Worker (T-14).
+`Secret scan`. The Worker has its own repository and checks (deploy section 12).
 
 Scans of `dist/` that wait for their page are listed in `scripts/lib/pending.ts`: they warn until the page exists.
 The PR that adds the page flips its flag so the check becomes blocking.

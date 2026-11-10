@@ -2,10 +2,10 @@
 
 - Version: 1. Owner: Alicerce. Consumers: Forja (workflows, Dockerfile, checks), Guindaste (host procedure, Cloudflare
   setup, runbook), Sentinela (review), Ensaio (negative tests).
-- Decisions: D-10 (build in CI), D-17 (repository protection model), D-18 (Worker deploy through GitHub Actions with
-  owner approval), D-20 (logging), D-24 (releases by tag, as in EmpireMuse), D-41 (the `/discord` page and its integrity row). Operational steps: `docs/runbook/release.md`
-  (Guindaste); this document holds the controls that runbook must respect. Stack: [ADR-0001](../adr/0001-stack.md). Worker credential:
-  [ADR-0003](../adr/0003-members-worker-deploy-credential.md).
+- Decisions: D-10 (build in CI), D-17 (repository protection model), D-55 (the member-count Worker deploys through Workers Builds from its own repository; it supersedes D-18),
+  D-20 (logging), D-24 (releases by tag, as in EmpireMuse), D-41 (the `/discord` page and its integrity row). Operational steps: `docs/runbook/release.md`
+  (Guindaste); this document holds the controls that runbook must respect. Stack: [ADR-0001](../adr/0001-stack.md). Worker deploy:
+  [ADR-0004](../adr/0004-members-worker-workers-builds.md) and section 12.
 - This repository is public. The document states **required controls only**. Account and platform settings that exist
   today are not described here; the owner and Guindaste keep them in the private runbook.
 - Keywords MUST, SHOULD, MAY are used as in RFC 2119.
@@ -19,40 +19,36 @@
    and never see a secret.
 3. **Verify before pull, deploy by digest.** The host deploys an image identified by digest, and only after verifying
    its build provenance attestation.
-4. **Every deploy has an explicit owner OK** (global rule). The pipeline makes that step possible, it does not replace it.
+4. **Every deploy has an explicit owner OK** (global rule). The pipeline makes that step possible, it does not replace it. The one exception in form is the Worker (section 12): it deploys on merge to its own repository's `main`, so the owner's explicit OK is given **for each merge** there.
 5. **Small and boring.** Few workflows, each with the least permissions, every third-party action pinned.
 
 ## 2. Workflows
 
 | File | Trigger | Does | Permissions | Secrets |
 |---|---|---|---|---|
-| `ci.yml` | `pull_request`, push to `main` | lint, typecheck, tests, build, content and `dist` checks (section 4), image build and image checks, HTTP header test, worker config check (arrives with the Worker, T-14), workflow lint, secret scan | `contents: read` | none |
+| `ci.yml` | `pull_request`, push to `main` | lint, typecheck, tests, build, content and `dist` checks (section 4), image build and image checks, HTTP header test, workflow lint, secret scan | `contents: read` | none |
 | `release.yml` | push of a tag `vX.Y.Z` (or `vX.Y.Z-rc.N`, a rehearsal) | **guards** (section 5), then build the image, push `X.Y.Z` (`X.Y.Z-rc.N` for a rehearsal) to Docker Hub with SBOM and provenance, create the attestation, create the GitHub Release with the changelog notes and `image-digest.txt`, print the digest in the run summary | `permissions: {}` at top; guards job `contents: read`; publish job adds `id-token: write`, `attestations: write` (no `packages`, nothing is published to GHCR); release job `contents: write` | `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (org secrets), read only by the login step of the publish job |
-| `worker-deploy.yml` | push to `main` touching `worker/**` or `src/data/site.yaml` (the invite, members-json 2.6), manual dispatch from `main` | deploys the Worker behind the protected environment | per ADR-0003 | environment secrets only |
 | `integrity.yml` | schedule, manual | checks the live site for invariants the release guards cannot see (section 8); not written yet | `contents: read` | none |
 
-`release.yml` and `worker-deploy.yml` MUST NOT be reachable from a pull request or a fork. If a job needs write
+`release.yml` MUST NOT be reachable from a pull request or a fork. This repository has no Cloudflare credential and no workflow that deploys the Worker (section 12). If a job needs write
 permission, it is a separate job with its own `permissions` block.
 
 ## 3. Workflow hygiene (all workflows)
 
 - Every `uses:` pinned to a full commit SHA, with the version in a trailing comment. Dependabot keeps them current,
-  with **no auto-merge**, and also covers `worker/`, Docker and npm.
+  with **no auto-merge**, and also covers Docker and npm.
 - Top-level `permissions: {}` (or `contents: read`) and explicit grants per job.
 - **No `pull_request_target`**, and no workflow that runs untrusted code with secrets or a write token. No
   `workflow_run` that consumes artifacts built from a fork.
 - No expression from event data (titles, branch names, commit messages, PR bodies) is interpolated into a shell step;
   pass it through an environment variable and quote it.
 - `actions/checkout` with `persist-credentials: false`. `timeout-minutes` on every job. `concurrency` on `release.yml`
-  and `worker-deploy.yml` (one run at a time, never cancelling a release in progress).
+  (one run at a time, never cancelling a release in progress).
 - Installs use the committed lockfile (`--frozen-lockfile`) from the npm registry with integrity hashes; lifecycle
   scripts only for the allowlist in ADR-0001.
 - Repository settings the owner applies (depends on the owner): fork pull request workflows require approval; the
   default token is read-only; only the listed actions are allowed; the apps installed on the repository are limited to
   what is needed; strong authentication on the accounts involved.
-- **The environment `worker-production` is named by `worker-deploy.yml` only.** GitHub cannot restrict an environment
-  to one workflow file, so workflow lint fails any other workflow file that contains `environment:` with that name;
-  together with the owner's approval of every such job this is the control (ADR-0003).
 - `.maestri/`, local worktrees, `.git/`, `.github/`, environment files and `node_modules/` are excluded by
   `.dockerignore` (and `.maestri/` and worktrees by `.gitignore`), so the image build context never includes them. The
   context otherwise holds what the build stage needs (sources, lockfile, scripts, nginx configuration); the **runtime
@@ -167,6 +163,7 @@ root until the Cloudflare rules exist) warn only, through the same flag mechanis
 | Discord entry (D-29, D-41) | `/discord` answers 200 with no `Location` header (the page shows the rules and never redirects); every Discord invite URL on it, one per language container, is the same `https://discord.com/invite/<code>` URL, with or without a query string on the request; the plain-text `https://discord.com/terms` of rule 5 is allowed as text, not in an attribute (site-data section 12, Terms URL exception) and is not an invite; the page has no script, no `<meta http-equiv="refresh">` and no other invite URL; the public invite lookup for that code returns the server id configured in `src/data/site.yaml` on `main`. The monitor does not tick the checkbox and does not check the WhatsApp link. |
 | Root | `/?utm_source=ci` answers `302` to `/en-us/?utm_source=ci` from the (non-Brazilian) runner. The Brazilian case is checked by hand (C-8). |
 | Member count | `/data/members.json` validates against the schema, `source` is not `built-in`, and `updatedAt` is not older than 3 days. |
+| Invite copies agree (members-json 2.6) | The public `wrangler.jsonc` on `main` of the Worker repository carries the same `DISCORD_GUILD_ID` as `src/data/site.yaml` on `main`; a different `DISCORD_INVITE_CODE` fails too, which is expected only between steps 2 and 3 of the rotation and clears on the next run. Reads public raw files only. Warns while the Worker repository has no `wrangler.jsonc`. |
 | Headers | `/pt-br/` and `/en-us/support/` carry the expected CSP and the other headers of routing-locale section 6. |
 
 Limits: GitHub may disable scheduled workflows of a public repository after a long period without repository
@@ -180,8 +177,7 @@ Applied to `main` by the owner; the list states the control, not the current set
 - Changes reach `main` **only by pull request**; no direct push, no force push, no deletion of `main`; the rules apply
   to administrators as well.
 - **Required status checks** must pass: quality (lint, typecheck, tests); build with content and `dist` checks; image
-  checks and HTTP header test; workflow lint and secret scan; and the worker configuration check once the Worker
-  exists (T-14). The check names are fixed in `ci.yml` and listed in `docs/runbook/release.md`.
+  checks and HTTP header test; workflow lint and secret scan. The check names are fixed in `ci.yml` and listed in `docs/runbook/release.md`.
 - A `CODEOWNERS` file is kept in the repository (owner for the whole tree) for future use. **No required approval
   count is specified**, because the actor and the approver may be the same account (D-17); the compensating controls
   are this document's controls: required checks, PR-only merges, the release guards and the owner-only immutable
@@ -192,9 +188,7 @@ Applied to `main` by the owner; the list states the control, not the current set
 
 - A pull request that adds a `traefik.*` label to the Dockerfile, or a label outside the allowed set of section 4 to
   the compose template, fails `ci.yml`. The allowed compose labels of section 4 pass.
-- A workflow file other than `worker-deploy.yml` that names the environment `worker-production` fails `ci.yml`.
-- A fork or pull request run cannot publish an image, cannot read an environment secret and cannot trigger
-  `worker-deploy.yml`.
+- A fork or pull request run cannot publish an image, and cannot read an environment secret.
 - An image built outside `release.yml` on a `vX.Y.Z` tag, or with a modified digest, fails the attestation verification.
 - `release.yml` publishes nothing for: a lightweight tag, a tag whose commit is not on `main`, a commit without a green `CI` run, a missing or empty changelog section, a compose template that names another version, a pending-check flag still `true`, or a version whose image already exists.
 - A push to `main` builds and publishes no image.
@@ -205,7 +199,34 @@ Applied to `main` by the owner; the list states the control, not the current set
 ## 11. Depends on the owner
 
 Strong authentication on the GitHub, Cloudflare and host provider accounts; applying and keeping the repository
-settings of sections 3 and 9; the rule that only the owner creates `v*` tags and that they cannot be moved or deleted (section 5); the protected environment and the two expiring tokens (ADR-0003); keeping failed-run
+settings of sections 3 and 9; the rule that only the owner creates `v*` tags and that they cannot be moved or deleted (section 5); the Workers Builds setup of ADR-0004 (connection, preview builds off, dedicated trimmed token) and its runbook checklist; keeping failed-run
 notifications on; confirming the approved invite code in the pull request that sets it; the Cloudflare dashboard items copied into
-the runbook (the two root redirect rules, the `/data/` rules, the Worker route, features off). `/discord` needs no
+the runbook (the two root redirect rules, the `/data/` rules, the Worker route, features off); an explicit OK for each merge to the Worker repository's `main` (section 12). `/discord` needs no
 dashboard item (D-29).
+
+## 12. Worker repository (D-55)
+
+The member-count Worker is not built, deployed or checked by anything in this repository. It lives in
+`EmpireCommunity/EmpireCommunitySite-Worker` (public, code only) and is deployed by Cloudflare Workers Builds on
+merge to its `main` ([ADR-0004](../adr/0004-members-worker-workers-builds.md), [members-json](members-json.md)
+section 6). These are the **required controls** for that repository, stated here because they are the deploy boundary:
+
+- **Before Workers Builds is connected**: the checks below exist and are required on `main`; `CODEOWNERS` names the
+  owner for the whole tree; Actions are restricted to the listed actions, pinned by commit SHA. `main` takes pull
+  requests only, applies to administrators, allows no force push and requires resolved conversations.
+- **Required checks** (fixed names): `Quality (lint, typecheck, tests)`; `Config check`; `Workflow lint`; `Secret scan`.
+  `Config check` enforces members-json 2.1 on `wrangler.jsonc` (no `routes`, `route`, `env`, `keep_vars` or
+  `triggers.routes`; `workers_dev` and `preview_urls` false; observability off; the single cron; `MEMBERS_KV`; invite
+  and guild variables present and well formed) and fails on a `console.` call in `src/`. `Workflow lint` fails any
+  workflow that references a `CLOUDFLARE_` secret or runs `wrangler deploy` (only Workers Builds deploys), uses
+  `pull_request_target`, has an unpinned action, lacks `permissions: contents: read`, `persist-credentials: false` or
+  `timeout-minutes`.
+- **Each merge to that `main` is a production deploy** and needs the owner's explicit OK for that merge; the standing
+  merge OK of D-31 covers this repository only. Dependabot weekly, grouped, no auto-merge.
+- **Workers Builds settings** (dashboard, outside the repository's reach, so verified by the owner at setup and by
+  Guindaste monthly): production branch `main`; **Enable Preview Builds off**; no build variables; the dedicated
+  build token (ADR-0004 item 6) selected; the Cloudflare GitHub app limited to the repositories that need it (this
+  Worker repository and `github-worker-relay`).
+- Negative tests (Ensaio): a pull request that adds a route, `keep_vars`, a second cron or `workers_dev: true` to
+  `wrangler.jsonc` fails `Config check`; a workflow that references a Cloudflare secret fails `Workflow lint`; a push
+  to a branch other than `main` produces no build in the Workers Builds history.
