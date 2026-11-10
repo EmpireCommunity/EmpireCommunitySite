@@ -58,7 +58,7 @@ only after a checkbox is ticked, the join links. The `<meta http-equiv="refresh"
   only. Rules text and date come from `src/data/community-rules.yaml` (one source, site-data section 14). The
   WhatsApp community link comes from the `whatsapp` entry of `join-channels.yaml` (one source, site-data section 8). The
   invite code comes only from `src/data/site.yaml` (`discord.inviteCode`, site-data section 4), the approved invite,
-  and is the same value the Worker (members-json 2.6) and the integrity check read. The superseded invite is not
+  and is the value the integrity check compares with the Worker repository's copy (members-json 2.6). The superseded invite is not
   kept anywhere in the repository.
 - **Two language containers, each self-contained.** `<html lang="en-US">` (the neutral-page rule of section 3) with
   exactly two sibling containers in `<main>`, `lang="pt-BR"` and `lang="en-US"`. Each holds, in its own language, the
@@ -91,7 +91,7 @@ only after a checkbox is ticked, the join links. The `<meta http-equiv="refresh"
   External links carry `rel="noopener noreferrer"`.
 - **Changing the invite or the rules** is a pull request (`discord.inviteCode`, or `community-rules.yaml` with a new
   `updatedOn`), merged and deployed through [deploy](deploy.md); the Worker follows an invite change through its own
-  deploy (members-json 2.6). No dashboard step.
+  repository and deploy (members-json 2.6, D-55). No dashboard step.
 - Checks: the build scans of site-data section 12 (invite URL pattern, WhatsApp scope, page structure), the HTTP test
   of section 6 (`/discord` answers 200, no `Location` header), a browser test of the gate (section 7, C-9) and the
   integrity monitor of [deploy](deploy.md) section 8.

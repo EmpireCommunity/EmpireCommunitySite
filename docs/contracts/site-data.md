@@ -118,8 +118,9 @@ analytics:                                          # Cloudflare Web Analytics, 
 ```
 
 `links.discord` is a literal in the schema. `discord.inviteCode` and `discord.guildId` are the **only** place the
-approved invite is defined: the `/discord` page ([routing-locale](routing-locale.md)), the Worker
-([members-json](members-json.md) 2.6) and the integrity check read them. A search over `src/` fails the build if any
+approved invite is defined **in this repository**: the `/discord` page ([routing-locale](routing-locale.md)) and the integrity
+check read them. The Worker repository holds its own copy of the two public values, and a scheduled check compares them
+([members-json](members-json.md) 2.6, D-55). A search over `src/` fails the build if any
 Discord invite URL (`discord.gg/...`, `discord.com/invite/...`) or any other copy of the code appears. The built
 `/discord` page is the one place an invite URL exists in `dist/`, and every join button elsewhere links to
 `links.discord` (D-41), not to the invite.
@@ -205,7 +206,7 @@ whatsapp:                                 # pt-BR only; optional
   rules and ticks the box before the real links appear. The `discord` entry's `url` is therefore the page address, as
   before. The `whatsapp` entry's `url` (the community link, D-37) is **read only by the `/discord` page**, inside its pt-BR
   container; no other page, component, head tag or data file renders it, and no other application source holds it
-  (`src/` outside `join-channels.yaml`, `worker/`, `scripts/`). Documentation examples, such as the one above, are not
+  (`src/` outside `join-channels.yaml`, and `scripts/`). Documentation examples, such as the one above, are not
   sources and may show it; in `dist/` it appears only on `/discord` (section 12). That is its one source. The Discord invite has one source too (`site.yaml`, section 4). Whether the
   pt-BR join page shows one button or one per channel is a layout choice (Bússola); either way every `href` is
   `links.discord`.

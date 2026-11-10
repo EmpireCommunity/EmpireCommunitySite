@@ -5,7 +5,8 @@
 - Related: [site-data](../contracts/site-data.md), [members-json](../contracts/members-json.md),
   [routing-locale](../contracts/routing-locale.md), [deploy](../contracts/deploy.md),
   [ADR-0002](0002-locale-entry-routing.md),
-  [ADR-0003](0003-members-worker-deploy-credential.md).
+  [ADR-0003](0003-members-worker-deploy-credential.md) (superseded),
+  [ADR-0004](0004-members-worker-workers-builds.md).
 
 ## Context
 
@@ -38,7 +39,7 @@ file in it is empty and its `package.json` has no dependencies.
 | Package manager | **pnpm**, pinned with `packageManager`, `pnpm-lock.yaml` committed, installs with `--frozen-lockfile` in CI and Docker. Lifecycle scripts only for an explicit allowlist (esbuild, sharp, Tailwind native binary). Use pnpm's minimum release age setting (3 days or more); confirm the exact name in the pnpm 12 docs when scaffolding. |
 | Ranges | Caret inside the current major in `package.json`, exact versions through the lockfile. A major upgrade is its own PR with the changelog read. |
 | TypeScript | `>=5 <7` until `@astrojs/check` declares support for 7 (0.9.12 declares `^5 \|\| ^6`). |
-| Updates | Dependabot weekly, grouped, for npm (site and `worker/`), Docker and GitHub Actions; security updates immediately; **no auto-merge**. GitHub Actions pinned by commit SHA; both Docker images pinned by digest. The lockfile resolves only from the npm registry and keeps integrity hashes. |
+| Updates | Dependabot weekly, grouped, for npm (the site), Docker and GitHub Actions; security updates immediately; **no auto-merge**. GitHub Actions pinned by commit SHA; both Docker images pinned by digest. The lockfile resolves only from the npm registry and keeps integrity hashes. |
 | New packages | Check license and maintenance first (global rule). Prefer none: a 14-page site does not need a utility library. |
 | Fonts | Self-hosted open fonts (the Co2 fonts are proprietary). No third-party font or script CDN. |
 

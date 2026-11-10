@@ -1,9 +1,12 @@
 # Contract: `/data/members.json` (live member count)
 
-- Version: **1** (`schema: 1`). Owner: Alicerce. Producer: Cloudflare Worker (this repository, `worker/`). Consumers:
+- Version: **1** (`schema: 1`). Owner: Alicerce. Producer: Cloudflare Worker, in its own repository `EmpireCommunity/EmpireCommunitySite-Worker` (D-55). Consumers:
   the site page script (Vitral), Ensaio (tests), Sentinela (threat model), later EmpireBot as an alternative source.
 - Decisions: D-13 (Worker every 12 h, invite endpoint, no token, served on the site domain, EmpireBot may take over
-  the same contract), D-14 (the page shows only the last value, never a date; exactness does not matter).
+  the same contract), D-14 (the page shows only the last value, never a date; exactness does not matter), D-55 (the
+  Worker lives in its own repository and deploys through Workers Builds on merge to `main`, [ADR-0004](../adr/0004-members-worker-workers-builds.md)).
+- This contract stays in the site repository; the Worker repository links to it and holds code only. A change to the
+  contract is announced to both.
 - A change to this contract is announced to Forja, Vitral and Regente before it lands.
 - Keywords MUST, SHOULD, MAY are used as in RFC 2119.
 
@@ -68,26 +71,31 @@ to the origin file (section 4).
 
 ## 2. Producer: the Worker
 
-### 2.1 Resources and configuration (`worker/wrangler.jsonc`, versioned, no secrets)
+### 2.1 Resources and configuration (`wrangler.jsonc` at the root of the Worker repository, versioned, no secrets)
 
 | Item | Value |
 |---|---|
-| Worker name | `empirecommunity-members` |
-| Route | `empirecommunity.org/data/members.json`, exact pattern, **no trailing `*`**, **fail open**. **Not declared in `wrangler.jsonc`**: created once by hand in the Cloudflare dashboard (see 2.9). |
+| `name` | `empirecommunity-members`. It must equal the Worker name in the Cloudflare dashboard or the build fails (ADR-0004). |
+| `main`, `compatibility_date` | the entry file and a fixed date, both required by Wrangler |
+| Route | `empirecommunity.org/data/members.json`, exact pattern, **no trailing `*`**, **fail open**. **Not declared in `wrangler.jsonc`** (no `routes`, `route` or `triggers.routes` key, no `env` block): created once by hand in the Cloudflare dashboard (see 2.9). |
 | `workers_dev`, `preview_urls` | both `false` (no `workers.dev` address, no preview URLs) |
-| Cron Trigger | `0 */12 * * *` (UTC, so 00:00 and 12:00). One trigger. |
-| KV binding | `MEMBERS_KV`, one namespace created by hand; its id goes in `wrangler.jsonc` (an id is not a secret) |
+| Cron Trigger | `triggers.crons`: exactly `["0 */12 * * *"]` (UTC, so 00:00 and 12:00). One trigger. |
+| KV binding | `kv_namespaces`: one entry, binding `MEMBERS_KV`, one namespace created by hand; its id goes in `wrangler.jsonc` (an id is not a secret) |
 | `vars.MEMBERS_SOURCE` | `discord-invite` (later `empirebot`) |
-| `vars.DISCORD_INVITE_CODE` | invite code, **not written in `wrangler.jsonc`**: supplied at deploy time from `src/data/site.yaml` `discord.inviteCode` (see 2.6) |
-| `vars.DISCORD_GUILD_ID` | guild id (public), supplied at deploy time from `discord.guildId` in the same file |
+| `vars.DISCORD_INVITE_CODE` | the approved invite code, public, **committed in `wrangler.jsonc`** (see 2.6). Format `^[A-Za-z0-9-]{2,32}$`. |
+| `vars.DISCORD_GUILD_ID` | the guild id, public, committed. Format `^[0-9]{17,20}$`; handled as a string, never a number. |
+| `keep_vars` | **absent**: the repository is the source of truth, so a variable edited in the dashboard is overwritten by the next deploy (Wrangler "source of truth"). |
 | `observability` | `{ "enabled": false }`: Workers Logs, invocation logs and traces off (D-20). The Worker code makes no `console.*` call. See 2.10. |
-| Runtime dependencies | none (only `wrangler` as a dev dependency); tests with `node --test` |
+| Dependencies | no runtime dependency. Development dependencies limited to the tools the checks of this contract need: `wrangler`, `typescript`, `vitest` with `@vitest/coverage-v8`, `@cloudflare/workers-types`, `@types/node`, `eslint` with `typescript-eslint`, `ajv` with `ajv-formats` (schema test of section 7) and `jsonc-parser` (config check) and `yaml` (the workflow lint parses workflow files as YAML, the same parser as the site). Exact versions in a lockfile with integrity hashes, install scripts only for `esbuild` and `workerd`; a new development dependency is a supply chain change with its reason in the pull request (ADR-0004: the build token is in the environment while install scripts run). |
 
-There is no secret in this design: the invite endpoint needs no token and the public endpoint has no write path.
+There is no secret in this design: the invite endpoint needs no token and the public endpoint has no write path. The
+Worker has no build variables or secrets in Workers Builds either.
 
-CI fails the build of `worker/` if `wrangler.jsonc` contains a `routes` or `route` key, if `workers_dev` or
-`preview_urls` is not `false`, or if it defines `DISCORD_INVITE_CODE` or `DISCORD_GUILD_ID` (one source, 2.6). The deploy credential and its limits are in
-[ADR-0003](../adr/0003-members-worker-deploy-credential.md).
+The CI of the Worker repository (deploy [section 12](deploy.md)) fails if `wrangler.jsonc` contains a `routes`,
+`route`, `env` or `keep_vars` key; has `workers_dev` or `preview_urls` other than `false`; lacks `observability`
+disabled; has a `triggers.crons` other than the one entry above; lacks `MEMBERS_KV`; lacks `DISCORD_INVITE_CODE` or
+`DISCORD_GUILD_ID` or has a value that does not match the formats above; or if a `console.` call appears in `src/`. The deploy path, the build token and its limits are in
+[ADR-0004](../adr/0004-members-worker-workers-builds.md).
 
 ### 2.2 KV record
 
@@ -106,7 +114,8 @@ One key, `members:v1`, JSON:
 
 `lastError` is `null` or one short code from the table in 2.4. The public response is built from `members`,
 `updatedAt` and `source` only. The record is written only on a Cron run (success or failure), so about 2 to 4 writes
-per day.
+per day. The one exception: when there is no previous record and the run fails, nothing is written (the record needs
+`members` and `updatedAt`), so a missing key means no run has ever succeeded.
 
 ### 2.3 Cron run (every 12 h)
 
@@ -129,8 +138,8 @@ per day.
 | HTTP 429 | honor `Retry-After` if 10 s or less (one retry), otherwise stop; keep value, count a failure | `rate_limited` | last good |
 | HTTP 404 (invite deleted or code wrong) | no retry; keep value, count a failure | `invite_not_found` | last good |
 | 200 but wrong shape, wrong `code`, wrong `guild.id`, count out of bounds | keep value, count a failure | `invalid_response` | last good |
-| In bounds but a jump (`new < last * 0.5` or `new > last * 2`, only when `last >= 50`) | keep value, `outOfBandStreak + 1`; at 3 consecutive such runs (36 h) accept the new value and reset | `out_of_band` | last good, then new |
-| No previous value and the first run fails | nothing to serve | the code above | origin built-in file |
+| In bounds but a jump (`new < last * 0.5` or `new > last * 2`, only when `last >= 50`) | keep value, count a failure, `outOfBandStreak + 1`; at 3 consecutive such runs (36 h) accept the new value and reset. Any run that is not such a jump (in band, or any failure) resets `outOfBandStreak` to 0, so the three runs are really consecutive | `out_of_band` | last good, then new |
+| No previous value and the first run fails | nothing to serve; `decide` returns `keep` with no record and nothing is written to KV | not stored | origin built-in file |
 | KV read fails or key missing at request time | pass the request through to the origin | n/a | built-in value |
 | Any exception in the HTTP handler | catch (no log), pass through to the origin | n/a | built-in value |
 | Workers Free daily limit exceeded (error 1027) | route is **fail open**: Cloudflare bypasses the Worker | n/a | built-in value |
@@ -149,26 +158,45 @@ days means the Cron is failing, and `lastError` says why (see open questions).
 
 `decide(last, candidate) -> { action: 'write' | 'keep', record }` applies the band rule above and the counters.
 
-### 2.6 Invite code configuration
+### 2.6 Invite code configuration (two copies, one check)
 
-- The invite is defined **once**, in `src/data/site.yaml` (`discord.inviteCode`, `discord.guildId`; site-data section 4),
-  public information reviewed in a PR. The `/discord` page of the site is built from the same value
-  ([routing-locale](routing-locale.md), D-29), so there is no second copy to keep in step and no Cloudflare rule.
-- The Worker gets the two values **at deploy time**: `worker-deploy.yml` reads them from `site.yaml` and passes them
-  to `wrangler deploy` as variables, and runs when that file changes as well as when `worker/**` changes
-  ([ADR-0003](../adr/0003-members-worker-deploy-credential.md)). Not verified: the exact `wrangler deploy --var`
-  syntax for the pinned version; Forja confirms against its documentation, and if it does not fit, a generated
-  non-committed config file is the alternative with the same single source.
-- **Rotating the invite, in this order.** (1) Create the new invite in Discord and keep the old one valid. (2) One PR
-  changes `site.yaml`; merge. The Worker deploys on that merge and starts counting through the new code, while the
-  live site still serves the old one: both must be valid during this window. (3) Release and deploy the site
-  ([deploy](deploy.md)). (4) Open the live `/discord` page and confirm it carries the new invite, and that the new
-  invite lookup returns the configured guild. (5) Only then revoke the old invite. Revoking earlier leaves visitors
-  with a dead link until the site release is live. If an invite is deleted unexpectedly, the count freezes at the last
-  value (row `invite_not_found`) until `site.yaml` holds a valid code and both deploys are done.
-- Rejected: deriving the code by following the `/discord` page at run time (an extra moving part and a self-request,
-  for a value that changes rarely).
-- Only this one invite code is ever used by the Worker, the `/discord` page and the integrity check.
+- The approved invite exists in **two places**, both public and both changed only by pull request: `src/data/site.yaml`
+  (`discord.inviteCode`, `discord.guildId`; site-data section 4) in the site repository, which builds the `/discord`
+  page ([routing-locale](routing-locale.md), D-29), and `vars.DISCORD_INVITE_CODE` and `vars.DISCORD_GUILD_ID` in
+  `wrangler.jsonc` of the Worker repository. Under D-55 the site file is no longer readable at deploy time, so a single
+  source is not possible without moving the value into a dashboard variable.
+- **Why committed variables and not dashboard variables with `keep_vars`** (ADR-0004 item 7): the repository stays the
+  source of truth, reviewed by pull request and covered by the configuration check; a dashboard variable changes with
+  no pull request, is invisible to review and is the kind of setting a stolen token alters silently. The cost is two
+  copies of one public value, and the check below catches a difference.
+- **Consistency check** (a row of the scheduled integrity workflow in the site repository, [deploy](deploy.md)
+  section 8): it reads the public file `wrangler.jsonc` on `main` of the Worker repository and compares both values
+  with `src/data/site.yaml` on `main` of the site. A different guild id is always a failure. A different code is a
+  failure too, which during the rotation below is expected between its steps 2 and 3 and clears on the next run.
+  **Until that workflow exists** (it is not written yet, deploy section 8), the rotation below uses a **manual
+  comparison** instead: the person rotating reads the two public values in `wrangler.jsonc` on `main` of the Worker
+  repository and in `src/data/site.yaml` on `main` of the site, and confirms the guild ids are equal and the codes are
+  equal. The rotation never depends on a check that does not exist.
+- **Rotating the invite, in this order.** (1) Create the new invite in Discord and keep the old one valid. (2) A pull
+  request in the **Worker repository** changes the two variables; merge needs the owner's explicit OK (ADR-0004
+  item 3a) and deploys through Workers Builds: the Worker now counts through the new code (it still checks the guild
+  id). **A merge can land while the build fails**, so confirm in the Workers Builds history that the build and
+  deployment of that merge commit succeeded, and that the deployed Worker version is that commit's. (3) A pull request in the **site repository** changes `site.yaml`; merge, then release and deploy the site
+  ([deploy](deploy.md)). Steps 2 and 3 may be swapped, because both invites are valid until step 5. (4) Verify, all of it: the live
+  `/discord` page carries the new invite; the new invite lookup returns the configured guild; the manual comparison
+  above passes (or, once the integrity workflow exists, its consistency row passes); and the Worker works through the
+  new code, shown by `updatedAt` in the KV record advancing with `lastError` null after the Worker deployment of step 2
+  (run the Cron once or wait for the next one). (5) Only when **a successful production deployment of the Worker
+  commit that carries the new invite** (step 2) **and the live site release** (step 3) are both confirmed, revoke the
+  old invite. Revoking earlier leaves visitors with a dead link until the site release is live, and freezes the count if
+  the Worker deployment never happened. If an invite is deleted
+  unexpectedly, the count freezes at the last value (row `invite_not_found`) until both repositories hold a valid code
+  and both deploys are done.
+- Rejected: reading `site.yaml` at deploy time (not possible across repositories without a token or a fetch at build
+  time, a new moving part in a pipeline that holds the deploy token); deriving the code by following the `/discord`
+  page at run time (an extra moving part and a self-request, for a value that changes rarely).
+- Only this one invite code is ever used by the Worker, the `/discord` page and the integrity check. The superseded
+  invite is not kept in either repository after step 5.
 
 ### 2.7 Public read path
 
@@ -209,7 +237,7 @@ Guindaste copies them into the Ops Runbook with the date applied.
    not verified here; if not available, use the nginx refusal plus a Transform or redirect alternative chosen by
    Guindaste with the owner.
 3. **Route creation.** The route is created once by hand (exact pattern, fail open) and is never created or edited by
-   CI. The deploy token has no route-edit permission (ADR-0003).
+   Workers Builds. The build token has no route-edit permission (ADR-0004). **The two edge rules are in place before the route goes live.**
 4. **What the rate limit does not do.** It is counted per IP, so it limits one client and not the total: one address
    at the allowed rate (about 1 request per second) would use most of the 100,000 daily Worker requests that the
    whole account shares, and a few addresses together would exhaust them. The rule reduces noise; it is not a quota
@@ -217,7 +245,7 @@ Guindaste copies them into the Ops Runbook with the date applied.
    running Workers on the account until the daily reset. Because the route fails open, `/data/members.json` is then
    answered by the origin's built-in file (the count shows the built-in value and the page keeps working), and **every
    other Worker on the account stops too**. Proportionate response for a Free-plan site: the member-count Worker is the
-   only Worker on the account's quota, or lives in its own Cloudflare account (owner decision, ADR-0003); Guindaste
+   only Worker on the account's quota, or lives in its own Cloudflare account (owner decision, ADR-0004); Guindaste
    reviews the Workers request usage in the dashboard after launch and then monthly, and tells the owner when the daily
    use passes half of the limit; the owner then chooses between a paid plan with a higher quota and removing the live
    count (the built-in value stays). Residual risk accepted by the owner.
@@ -230,8 +258,8 @@ Guindaste copies them into the Ops Runbook with the date applied.
 Data minimization: the Worker keeps no request or invocation logs.
 
 - `wrangler.jsonc` sets `observability.enabled` to `false` (this also turns off invocation logs and traces), and the
-  code contains no `console.*` call. CI fails the build of `worker/` if `observability` is missing or not disabled,
-  or if a `console.` call appears in `worker/src/`.
+  code contains no `console.*` call. The CI of the Worker repository fails if `observability` is missing or not disabled,
+  or if a `console.` call appears in `src/`.
 - **Diagnosis uses only the stored record.** An operator with account access reads the KV key `members:v1` in the
   dashboard: `updatedAt` (last success), `lastError` (code), `consecutiveFailures`, `outOfBandStreak`. The public file
   shows `updatedAt` and `source`, which the integrity monitor checks ([deploy](deploy.md) section 8). Nothing else is
@@ -288,22 +316,33 @@ EmpireBot would be hosted and exposed.
 
 ## 6. Deploy
 
-Decision D-18, detailed in [ADR-0003](../adr/0003-members-worker-deploy-credential.md): **GitHub Actions** workflow
-`worker-deploy.yml`, run from `main` only, behind a protected environment that needs the owner's approval, with a
-Workers-Scripts-only token that has an expiry and no route permission. The pipeline rules (pinning, permissions, no
-`pull_request_target`) are in [deploy](deploy.md).
+Decision D-55, detailed in [ADR-0004](../adr/0004-members-worker-workers-builds.md): the Worker lives in
+`EmpireCommunity/EmpireCommunitySite-Worker` and is deployed by **Cloudflare Workers Builds** on merge to `main`
+(production branch `main`, preview builds off, no build variables). No GitHub Actions workflow deploys it and no
+Cloudflare credential exists in GitHub. The build token is a dedicated, trimmed user token held by Cloudflare. The
+controls of the Worker repository are in [deploy](deploy.md) section 12.
 
-One-time setup, each step with the owner's OK:
-1. create the KV namespace by hand and put its id in `wrangler.jsonc`;
-2. create the route by hand (exact pattern, fail open), the two edge rules of 2.9, and confirm both site-wide
-   Cloudflare features in routing-locale section 5 are off;
-3. create the environment and the two expiring tokens (deploy token and zone route-read token, ADR-0003), store
-   them only in the environment;
-4. run the workflow once, then run the Cron once from the dashboard to seed the value.
+**Each merge to the Worker `main` is a production deploy and needs the owner's explicit OK for that merge**; the
+standing merge OK of D-31 covers the site repository only.
 
-Post-deploy check (automatic): only the one expected route points at the Worker, the endpoint returns the schema, and
-the `workers.dev` address does not answer. Rollback: Workers versions and deployments in the dashboard, or remove the
-route (the origin file then serves the built-in value).
+One-time setup, each step with the owner's OK, in this order (the checklist with the exact settings is the Worker
+section of the Ops Runbook):
+1. the Worker repository has its required checks, code owner and restricted actions (deploy section 12), **before**
+   Workers Builds is connected;
+2. create the KV namespace by hand and put its id in `wrangler.jsonc`;
+3. create the dedicated build token with Workers Scripts (edit) and Account Settings (read) and an expiry
+   (ADR-0004 item 6);
+4. import the repository in Workers Builds, production branch `main`, **Enable Preview Builds off** and read it back
+   in the panel, the dedicated token selected, no build variables;
+5. after the first successful build: confirm `workers.dev` and preview URLs are off, then create the **two edge rules
+   of 2.9 first and the route by hand after them** (exact pattern, fail open); confirm both site-wide Cloudflare
+   features in routing-locale section 5 are off;
+6. run the Cron once (or wait for 00:00 or 12:00 UTC) to seed the value.
+
+Checks after a deploy (no workflow does them; ADR-0004 item 7a): the owner reads the zone's Workers route list after each
+Worker deploy and once a month, and sees only the one expected pattern; the public endpoint returns the schema
+(the integrity monitor, [deploy](deploy.md) section 8, checks it every 6 hours). Rollback: revert the pull request,
+or Workers versions in the dashboard, or remove the route (the origin file then serves the built-in value).
 
 ## 7. Tests required (per the testing rule: external contract and pure rules)
 
@@ -316,18 +355,18 @@ route (the origin file then serves the built-in value).
 
 ## 8. For the threat model (Sentinela)
 
-- Assets: integrity of one integer shown on the home page; the deploy credential (ADR-0003); the zone's route
+- Assets: integrity of one integer shown on the home page; the Workers Builds token (ADR-0004); the zone's route
   configuration.
 - No personal data, no cookie, no secret and no user input reaches the Worker. The route has no wildcard and **query
   strings are refused at the edge and at the origin** (2.9), so every accepted request has the same exact form.
 - Required controls, all specified above: mandatory path rate limit and query refusal before the Worker (2.9); route
-  created by hand and absent from the Worker configuration, `workers_dev` and `preview_urls` off, CI check (2.1);
-  deploy token without route permission, with expiry, in a protected environment (ADR-0003); fail-open route and
+  created by hand and absent from the Worker configuration, `workers_dev` and `preview_urls` off, CI check in the Worker repository (2.1);
+  a dedicated, trimmed build token without route permission held by Cloudflare, preview builds off, `main` protected with required checks and the owner's explicit OK for each merge (ADR-0004); fail-open route and
   origin fallback file (2.4, 4); validation of the upstream response by code, guild id, bounds and band (2.5);
   cache keyed on the exact URL (2.7); the integer written with `textContent` only (3); zero runtime dependencies.
 - No Worker logs (D-20, 2.10): there is no per-request record to leak or to retain.
-- Residual, mitigated and not eliminated: a malicious merge or a stolen deploy token can publish any integer; the
-  Workers Scripts permission is account-wide; the account-wide Worker request quota is shared and not bounded by the
+- Residual, mitigated and not eliminated: a malicious merge or a stolen build token can publish any integer; the
+  Workers Scripts permission is account-wide and the token is held by Cloudflare; merge to `main` is the gate (ADR-0004); the account-wide Worker request quota is shared and not bounded by the
   per-IP rate limit (2.9, item 4).
 
 ## 9. Not verified (confirm in a staging deploy before relying on it)
@@ -337,12 +376,18 @@ route (the origin file then serves the built-in value).
 - That Discord does not answer 429 or 403 to Cloudflare Workers egress addresses for the invite endpoint. A live
   call from an ordinary network returned 200; none was made from a Worker. If it fails, the contract still holds (last value and
   built-in file) but the count would freeze; the fallback plan is a different producer behind the same contract.
-- The minimal set of API token permissions for deploy (ADR-0003).
+- The minimal set of permissions of the Workers Builds token, and that a token without Workers Routes (edit) and R2
+  (edit) deploys (Cloudflare documents only the default set); the default of Enable Preview Builds; behavior for pull
+  requests from forks; that `wrangler deploy` with `workers_dev` and `preview_urls` false and no routes succeeds and
+  leaves the hand-made route untouched (the documentation says routes stay with the dashboard when the keys are
+  absent, but this combination is not exercised); that dependency install scripts and the package manager behave as
+  assumed in Workers Builds. See [ADR-0004](../adr/0004-members-worker-workers-builds.md). Confirm in the first real
+  build and record the result in the Ops Runbook.
 
 ## 10. Open questions
 
 1. Alerting when the Cron fails for days: resolved without a secret by the scheduled integrity workflow in
    [deploy](deploy.md) section 8, which fails when `updatedAt` is older than 3 days or `source` is `built-in`; GitHub's
    failed-run notification reaches the owner. Depends on the owner keeping those notifications on.
-2. The owner confirms the approved invite code that goes into `site.yaml` (D-29).
+2. The owner confirms the approved invite code that goes into `site.yaml` and into the Worker repository's `wrangler.jsonc` (D-29, 2.6).
 3. EmpireBot hosting and endpoint (section 5).
