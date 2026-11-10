@@ -242,3 +242,22 @@
     background-color: var(--color-livro-entrada);
   }
 }
+
+/*
+ * The /discord gate (routing-locale "The /discord page", D-41): CSS only, no script. Each language container is a
+ * `.gate`; its join links (`.gate-links`) are `display: none` until its checkbox (`.agree`) is checked. `display: none`
+ * removes them from the tab order and from assistive technology. Without `:has()` the @supports block does not apply
+ * and the links stay visible and usable: that is the intended fallback, so the "tick the box" hint is shown only
+ * where the gate works. The box records nothing; it is a UX confirmation and is bypassable by design.
+ */
+.gate-pending {
+  display: none;
+}
+@supports selector(:has(*)) {
+  .gate:not(:has(.agree:checked)) .gate-links {
+    display: none;
+  }
+  .gate:not(:has(.agree:checked)) .gate-pending {
+    display: block;
+  }
+}

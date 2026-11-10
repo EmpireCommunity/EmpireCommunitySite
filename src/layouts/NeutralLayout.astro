@@ -11,11 +11,13 @@ import Wordmark from '../components/Wordmark.astro';
 
 interface Props {
   title: string;
+  /** Optional description (en-US, the page language). */
+  description?: string;
   /** 404 and /discord are not indexable. */
   noindex?: boolean;
 }
 
-const { title, noindex = false } = Astro.props;
+const { title, description, noindex = false } = Astro.props;
 ---
 
 <!doctype html>
@@ -25,6 +27,7 @@ const { title, noindex = false } = Astro.props;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     {noindex && <meta name="robots" content="noindex" />}
     <title>{title}</title>
+    {description !== undefined && <meta name="description" content={description} />}
     <slot name="head" />
     <BrandHead />
     <FontPreload />

@@ -4,9 +4,9 @@
 
 **Website oficial e portal da comunidade Empire Community.**
 
-[![Website](https://img.shields.io/badge/Website-empirehub.com.br-00C7B7?style=for-the-badge&logo=safari&logoColor=white)](https://empirehub.com.br)
-[![Discord](https://img.shields.io/badge/Discord-EmpireHub-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/KgtyNg9U6H)
-[![CI](https://github.com/Empire-Community/EmpireCommunitySite/actions/workflows/ci.yml/badge.svg)](https://github.com/Empire-Community/EmpireCommunitySite/actions/workflows/ci.yml)
+[![Website](https://img.shields.io/badge/Website-empirecommunity.org-00C7B7?style=for-the-badge&logo=safari&logoColor=white)](https://empirecommunity.org)
+[![Discord](https://img.shields.io/badge/Discord-EmpireCommunity-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://empirecommunity.org/discord)
+[![CI](https://github.com/EmpireCommunity/EmpireCommunitySite/actions/workflows/ci.yml/badge.svg)](https://github.com/EmpireCommunity/EmpireCommunitySite/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
 ---
@@ -48,7 +48,7 @@ com worktrees e o mapa de risco, em [`AGENTS.md`](AGENTS.md).
 
 ## 🤝 Contribuição
 
-Antes de enviar alterações, consulte nossas diretrizes de engenharia e fluxo de trabalho no repositório [`.github`](https://github.com/Empire-Community/.github).
+Antes de enviar alterações, consulte nossas diretrizes de engenharia e fluxo de trabalho no repositório [`.github`](https://github.com/EmpireCommunity/.github).
 
 A raiz do repositório fica sempre na `main`: o trabalho acontece em um worktree, em uma branch `tipo/nome-curto`.
 
