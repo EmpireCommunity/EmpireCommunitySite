@@ -40,10 +40,16 @@ Facts from the Cloudflare documentation, read on 2026-11-10 (all under `https://
    repository. The repository is public (no secret in code).
 2. **Workers Builds on merge to `main`.** Production branch `main`; **Enable Preview Builds is off**, so no branch
    other than `main` is built; no build variables or secrets are defined (the Worker has none). **Supply chain of the
-   build** (the build token is present while dependency install scripts run): install from the committed lockfile
-   with integrity hashes (`npm ci` or the frozen-lockfile equivalent), `wrangler` pinned to an exact version and the
-   only development dependency, the deploy command uses the locked local `wrangler`, no unpinned package is installed
-   at build time, Dependabot without auto-merge.
+   build** (the build token is present while dependency install scripts run): pnpm pinned by `packageManager`; install
+   from the committed lockfile with integrity hashes and `--frozen-lockfile` (plain `npm ci` is not acceptable: it has
+   no allowlist for install scripts); lifecycle scripts only for `esbuild` and `workerd`; a minimum release age of
+   three days, as in the site; exact versions; development dependencies limited to the tools the checks need (the list
+   in [members-json](../contracts/members-json.md) 2.1) and no runtime dependency; `src/` imports no npm package, so
+   nothing from the development dependencies is bundled into the Worker; the **build command only installs** (tests,
+   lint and checks run in GitHub Actions, which holds no Cloudflare credential); the deploy command runs the locked
+   wrangler (`pnpm exec wrangler deploy`); Dependabot without auto-merge. The first build confirms that Workers Builds
+   uses the pinned pnpm and honours the allowlist; if not, the build command must install with scripts ignored except
+   that allowlist.
 3. **`main` is protected** (owner conditions, applied on the repository): changes by pull request only, rules apply to
    administrators, no force push, conversation resolution. **Before Workers Builds is connected**, the CI of the Worker
    repository exists and its checks are required, the owner is the code owner of the whole tree, and actions are pinned

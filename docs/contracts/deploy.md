@@ -217,12 +217,12 @@ section 6). These are the **required controls** for that repository, stated here
 - **Required checks** (fixed names): `Quality (lint, typecheck, tests)`; `Config check`; `Workflow lint`; `Secret scan`.
   `Config check` enforces members-json 2.1 on `wrangler.jsonc` (no `routes`, `route`, `env`, `keep_vars` or
   `triggers.routes`; `workers_dev` and `preview_urls` false; observability off; the single cron; `MEMBERS_KV`; invite
-  and guild variables present and well formed) and fails on a `console.` call in `src/`. `Workflow lint` fails any
+  and guild variables present and well formed) and fails on a `console.` call or an npm package import in `src/`. `Workflow lint` fails any
   workflow that references a `CLOUDFLARE_` secret or runs `wrangler deploy` (only Workers Builds deploys), uses
   `pull_request_target`, has an unpinned action, lacks `permissions: contents: read`, `persist-credentials: false` or
   `timeout-minutes`.
 - **Each merge to that `main` is a production deploy** and needs the owner's explicit OK for that merge; the standing
-  merge OK of D-31 covers this repository only. Dependabot weekly, grouped, no auto-merge.
+  merge OK of D-31 covers the site repository (`EmpireCommunitySite`) only, not this one. Dependabot weekly, grouped, no auto-merge.
 - **Workers Builds settings** (dashboard, outside the repository's reach, so verified by the owner at setup and by
   Guindaste monthly): production branch `main`; **Enable Preview Builds off**; no build variables; the dedicated
   build token (ADR-0004 item 6) selected; the Cloudflare GitHub app limited to the repositories that need it (this
