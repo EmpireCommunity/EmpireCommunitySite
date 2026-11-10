@@ -13,7 +13,7 @@ release happens and which version it gets. The release PR (`chore/release-X.Y.Z`
 
 - CI for the site (quality, build and `dist` checks, image and HTTP header checks, workflow lint, secret scan).
 - Container image on `nginx-unprivileged` (non-root, port 8080, `/healthz`, no access log, `/data/` query blocked).
-- Tag-driven release pipeline with guards, SBOM, provenance and a build provenance attestation. The image is published to Docker Hub as `or4cu1o/empirecommunitysite` (owner rule: public projects on Docker Hub, private ones on GHCR) with the org secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`; the publish job no longer needs `packages: write`. The compose template and its check use the `docker.io/or4cu1o/empirecommunitysite` name.
+- Tag-driven release pipeline with guards, SBOM, provenance and a build provenance attestation. The image is published to Docker Hub as `empirecommunity/empirecommunity-site-org` (owner rule: public projects on Docker Hub, private ones on GHCR) with the org secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`; the publish job no longer needs `packages: write`. The compose template and its check use the `docker.io/empirecommunity/empirecommunity-site-org` name.
 - Release guard: `release.yml` fails while any flag in `scripts/lib/pending.ts` is true. `CODEOWNERS` added.
 - Release guard: the tag must be the tip of `origin/main`. nginx redirects slashless locale URLs and serves `/discord` directly (200). HTTP test covers `POST /healthz`, slashless redirect and `/discord`. Workflow lint: only `worker-deploy.yml` may name `worker-production`. `dist` check for the member-count fallback (pending flag `membersFallback`).
 - Deploy compose template with image `tag@sha256` and the proxy network labels.

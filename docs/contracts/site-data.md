@@ -270,7 +270,8 @@ Target: live removal within 72 hours of a valid request, and purge of published 
    private register; they are never written to the repository, to workflow inputs or to CI logs. The test passes only
    with zero matches.
 5. Purge the Cloudflare cache for the affected pages and image URLs.
-6. **Delete the Docker Hub tags** (`or4cu1o/empirecommunitysite`) published before the removal that still contain the data (they are public). Whether a deleted tag's digest stays pullable until Docker Hub collects it is **not verified**; test an anonymous pull by digest afterwards and, if it still works, ask the owner to delete the repository or contact Docker support.
+6. **Delete the affected Docker Hub tags** (`empirecommunity/empirecommunity-site-org`) published before the removal that still contain the data (they are public). Delete tags or manifests one by one (Docker Hub Tags or Image Management tab, or the tag-delete API); **never delete the repository**, which would also delete the clean image deployed in step 3 and every rollback image. If a tag is immutable, it cannot be deleted until an admin makes it mutable ([release runbook](../runbook/release.md#purging-an-affected-tag)).
+   Docker's docs do not say whether a deleted tag's digest stays pullable until garbage collection, so check by anonymous pull (`docker logout`) of **each** affected digest. The request stays **open** until every affected digest has a confirmed removal: a pull that fails with a rate limit (429) or a service error (5xx) is inconclusive, and so is waiting on the owner or Docker support. Then confirm that the clean digest from step 3 still pulls.
    After this step a rollback may only target a version that does not contain it.
 7. Git history and forks: the entry remains in the commit history and in any clone or fork already made; the person
    was told so beforehand (`historyNoticeGiven`). Rewriting history is **not** the default; it needs the owner's

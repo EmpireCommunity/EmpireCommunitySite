@@ -48,7 +48,7 @@ file in it is empty and its `package.json` has no dependencies.
   `nginxinc/nginx-unprivileged:1.30-alpine-slim` (pinned tag plus digest; stable branch, about 7 MB, a few MB of RAM).
   No Node at runtime.
 - **The build runs in GitHub Actions, never on the host** (D-10). CI runs lint, `astro check`, tests, build and the
-  content checks in site-data. **Only a release tag `vX.Y.Z` on a commit of `main` publishes** an image `X.Y.Z` to Docker Hub (`or4cu1o/empirecommunitysite`, public: the owner rule is Docker Hub for public projects and GHCR for private ones; a merge to
+  content checks in site-data. **Only a release tag `vX.Y.Z` on a commit of `main` publishes** an image `X.Y.Z` to Docker Hub (`empirecommunity/empirecommunity-site-org`, public: the owner rule is Docker Hub for public projects and GHCR for private ones; a merge to
   `main` never builds one, D-24), with a build provenance attestation; pull requests and forks never publish and never
   see a secret (the Docker Hub org secrets are read only by the publish job of the tag workflow). The host pulls **by digest**
   and verifies the attestation first; **CI holds no SSH key or any credential for the host** (pull model).

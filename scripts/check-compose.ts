@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
 
 const file = process.argv[2] ?? 'deploy/compose.yml';
-const IMAGE = /^docker\.io\/or4cu1o\/empirecommunitysite:\d+\.\d+\.\d+(?:-rc\.\d+)?@sha256:[0-9a-f]{64}$/;
+const IMAGE = /^docker\.io\/empirecommunity\/empirecommunity-site-org:\d+\.\d+\.\d+(?:-rc\.\d+)?@sha256:[0-9a-f]{64}$/;
 const ROUTER_RULE = 'Host(`empirecommunity.org`)';
 
 type Service = Record<string, unknown> & { labels?: string[] | Record<string, string> };
@@ -18,7 +18,7 @@ const service = names.length === 1 ? compose.services?.[names[0] ?? ''] : undefi
 if (service === undefined) {
   fail('the template must define exactly one service');
 } else {
-  if (typeof service.image !== 'string' || !IMAGE.test(service.image)) fail('image must be docker.io/or4cu1o/empirecommunitysite:<X.Y.Z>@sha256:<64 hex>');
+  if (typeof service.image !== 'string' || !IMAGE.test(service.image)) fail('image must be docker.io/empirecommunity/empirecommunity-site-org:<X.Y.Z>@sha256:<64 hex>');
 
   // Only these traefik.* keys, with these values (a stray label could route another host name).
   const raw = service.labels ?? [];
