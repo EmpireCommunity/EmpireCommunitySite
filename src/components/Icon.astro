@@ -3,7 +3,7 @@
 // Arrows and plus: Lucide (ISC), stroke 1.5. Discord and WhatsApp marks: Simple Icons (CC0), monochrome.
 // Origins are recorded in LICENSES.md. Add an icon here, never a package.
 interface Props {
-  name: 'arrow-right' | 'plus' | 'discord' | 'whatsapp';
+  name: 'arrow-right' | 'arrow-down' | 'plus' | 'discord' | 'whatsapp';
   size?: number;
   class?: string;
 }
@@ -39,6 +39,14 @@ const isBrand = name === 'discord' || name === 'whatsapp';
       <>
         <path d="M5 12h14" />
         <path d="m12 5 7 7-7 7" />
+      </>
+    )
+  }
+  {
+    name === 'arrow-down' && (
+      <>
+        <path d="M12 5v14" />
+        <path d="m19 12-7 7-7-7" />
       </>
     )
   }

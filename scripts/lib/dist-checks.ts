@@ -90,22 +90,112 @@ export function personData(text: string, file: string, people: readonly { id: st
 
 const DISCORD_URL = /(?:https?:)?\/\/(?:[a-z0-9-]+\.)*discord(?:app)?\.(?:com|gg)(?:\/[^\s"'<>)]*)?/gi;
 
+/** The one Discord address a rule may carry as plain text (site-data section 14, the Terms URL exception of section 12). */
+const TERMS_URL = 'https://discord.com/terms';
+
 /**
  * The only Discord link on the site is https://empirecommunity.org/discord (not matched here: another host). A URL on a
- * Discord host appears only in the /discord page, and only as the invite with the configured code. That page has no
- * script (D-29).
+ * Discord host appears only in the /discord page, and only as the invite with the configured code, plus the Terms URL as
+ * plain text (never inside an attribute). That page has no script (D-29).
  */
 export function discordLinks(html: string, file: string, inviteCode: string, isInvitePage: boolean): Finding[] {
   const findings: Finding[] = [];
   const invite = `https://discord.com/invite/${inviteCode}`;
+  const textOnly = html.replace(/<[^>]*>/g, '');
+  const termsInText = textOnly.split(TERMS_URL).length - 1;
+  let termsTotal = 0;
   for (const url of html.match(DISCORD_URL) ?? []) {
-    if (!isInvitePage || url !== invite) {
-      findings.push(err(file, `Discord URL ${url} is not allowed here${isInvitePage ? ` (only ${invite})` : ''}`));
+    if (isInvitePage && url === TERMS_URL) {
+      termsTotal += 1;
+    } else if (!isInvitePage || url !== invite) {
+      findings.push(err(file, `Discord URL ${url} is not allowed here${isInvitePage ? ` (only ${invite} and ${TERMS_URL} as text)` : ''}`));
     }
   }
+  if (termsTotal > termsInText) findings.push(err(file, `${TERMS_URL} is accepted only as text content, never inside an attribute`));
   if (isInvitePage) {
     if (/<script\b/i.test(html)) findings.push(err(file, 'the /discord page must have no script'));
     if (!html.includes(invite)) findings.push(err(file, `the /discord page does not carry ${invite}`));
+  }
+  return findings;
+}
+
+export interface DiscordPageExpectation {
+  inviteUrl: string;
+  whatsappUrl: string;
+  /** Per language container: the formatted `updatedOn` date and the rule titles, from `community-rules.yaml`. */
+  containers: Record<'pt-BR' | 'en-US', { date: string; titles: readonly string[] }>;
+}
+
+const LANGUAGE_ORDER = ['pt-BR', 'en-US'] as const;
+
+/**
+ * /discord structure (site-data section 12, routing-locale "The /discord page", D-41): exactly two language containers,
+ * pt-BR then en-US; each has one checkbox (id, autocomplete="off", no name) with a matching label, its date and rule
+ * titles, and its join links after the checkbox; the en-US container has the Discord link only; WhatsApp is inside the
+ * pt-BR container only (none in the head); no form, noscript, style attribute or refresh; noindex, no canonical or
+ * hreflang. The inline-script and Discord URL rules run on the page through the shared checks.
+ */
+export function discordPage(html: string, file: string, expected: DiscordPageExpectation): Finding[] {
+  const findings: Finding[] = [];
+  const fail = (message: string) => findings.push(err(file, message));
+  if (/<(?:form|noscript)\b/i.test(html)) fail('the /discord page has a <form> or <noscript>');
+  if (/http-equiv\s*=\s*["']?refresh/i.test(html)) fail('the /discord page has a meta refresh');
+  const robots = [...html.matchAll(/<meta\b[^>]*>/gi)].some((tag) => /\bname=["']robots["']/i.test(tag[0]) && /\bcontent=["'][^"']*noindex/i.test(tag[0]));
+  if (!robots) fail('the /discord page must be noindex');
+  if (/<link\b[^>]*\brel=["'](?:canonical|alternate)["']/i.test(html)) fail('the /discord page has no canonical or hreflang');
+
+  const containers = [...html.matchAll(/<section\b([^>]*\blang=["']([^"']+)["'][^>]*)>([\s\S]*?)<\/section>/gi)];
+  const langs = containers.map((container) => container[2]);
+  if (langs.join() !== LANGUAGE_ORDER.join()) {
+    fail(`expected exactly two language containers (${LANGUAGE_ORDER.join(', ')}), found (${langs.join(', ')})`);
+    return findings;
+  }
+  const hasLink = (inner: string, url: string) => inner.includes(`href="${url}"`);
+  for (const [, , lang, inner = ''] of containers) {
+    const where = `the ${lang} container`;
+    const wanted = expected.containers[lang as 'pt-BR' | 'en-US'];
+    const inputs = [...inner.matchAll(/<input\b[^>]*>/gi)].map((input) => input[0]);
+    const checkbox = inputs[0] ?? '';
+    const id = /\bid=["']([^"']+)["']/i.exec(checkbox)?.[1];
+    if (inputs.length !== 1 || !/\btype=["']checkbox["']/i.test(checkbox)) fail(`${where} needs exactly one checkbox`);
+    else {
+      if (id === undefined) fail(`${where}: the checkbox has no id`);
+      else if (!new RegExp(`<label\\b[^>]*\\bfor=["']${escapeRegExp(id)}["']`, 'i').test(inner)) fail(`${where}: no <label for> matches the checkbox`);
+      if (!/\bautocomplete=["']off["']/i.test(checkbox)) fail(`${where}: the checkbox needs autocomplete="off"`);
+      if (/\sname\s*=/i.test(checkbox)) fail(`${where}: the checkbox must have no name`);
+    }
+    const text = decodeEntities(inner.replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ');
+    if (!text.includes(wanted.date)) fail(`${where} does not show the rules date "${wanted.date}"`);
+    for (const title of wanted.titles) if (!text.includes(title)) fail(`${where} does not show the rule "${title}"`);
+    if ((inner.split(TERMS_URL).length - 1) > 1) fail(`${where}: ${TERMS_URL} appears more than once`);
+    const checkboxAt = inner.indexOf(checkbox);
+    const inviteAt = inner.indexOf(`href="${expected.inviteUrl}"`);
+    if (!hasLink(inner, expected.inviteUrl)) fail(`${where} has no Discord join link`);
+    else if (inviteAt < checkboxAt) fail(`${where}: the join links must follow the checkbox`);
+    if (inner.split(expected.inviteUrl).length - 1 > 1) fail(`${where}: the invite appears more than once`);
+    for (const link of inner.matchAll(/<a\b[^>]*\bhref=["'](https:\/\/(?:discord\.com|chat\.whatsapp\.com)\/[^"']*)["'][^>]*>/gi)) {
+      if (!/\brel=["'][^"']*noopener[^"']*noreferrer|\brel=["'][^"']*noreferrer[^"']*noopener/i.test(link[0])) fail(`${where}: external link ${link[1]} needs rel="noopener noreferrer"`);
+    }
+    const whatsapp = hasLink(inner, expected.whatsappUrl);
+    if (lang === 'pt-BR' && !whatsapp) fail(`${where} has no WhatsApp join link`);
+  }
+  // WhatsApp (the word or the community URL) only inside the pt-BR container, never in the head or the en-US container.
+  const outsidePt = html.replace(containers[0]?.[0] ?? '', '');
+  if (WHATSAPP.test(outsidePt) || /chat\.whatsapp\.com/i.test(decodeReferences(outsidePt))) fail('a WhatsApp reference sits outside the pt-BR container (C-1, D-41)');
+  return findings;
+}
+
+/**
+ * The gate lives in the shared stylesheet: the join links are hidden with `display: none` only inside
+ * `@supports selector(:has(*))`, so a browser without `:has()` keeps them visible (the intended fallback).
+ */
+export function gateCss(css: string, file: string): Finding[] {
+  const supports = /@supports\s+selector\(:has\(\*\)\)\s*\{([\s\S]*)\}/.exec(css)?.[1] ?? '';
+  const hidden = /:not\(:has\(\.agree:checked\)\)\s*\.gate-links\s*\{[^}]*display:\s*none/;
+  const findings: Finding[] = [];
+  if (!hidden.test(supports)) findings.push(err(file, 'the gate rule (.gate-links hidden until .agree is checked) is missing from the @supports selector(:has(*)) block'));
+  if (/\.gate-links\s*\{[^}]*display:\s*none/.test(css.replace(/@supports\s+selector\(:has\(\*\)\)\s*\{[\s\S]*$/, ''))) {
+    findings.push(err(file, 'the join links are hidden outside @supports selector(:has(*)): a browser without :has() could not use them'));
   }
   return findings;
 }

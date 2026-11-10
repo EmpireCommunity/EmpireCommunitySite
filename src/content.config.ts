@@ -10,6 +10,7 @@ import { assertSingleFounder } from './lib/team-rules.ts';
 import { parseEntryList, parseSingleDocument } from './lib/yaml-entries.ts';
 import { yamlLoader } from './lib/yaml-loader.ts';
 import { CommunitySchema } from './schemas/community.ts';
+import { CommunityRulesSchema } from './schemas/community-rules.ts';
 import { GameServerSchema } from './schemas/game-servers.ts';
 import { JoinChannelSchema } from './schemas/join-channels.ts';
 import { LegalSchema } from './schemas/legal.ts';
@@ -59,6 +60,15 @@ const support = defineCollection({
   schema: SupportSchema.extend({ id: z.literal('support') }),
 });
 
+// The /discord page rules (D-41): required, because the page is built from it.
+const communityRules = defineCollection({
+  loader: yamlLoader({
+    path: 'src/data/community-rules.yaml',
+    parse: (text, source) => parseSingleDocument(text, source, 'community-rules'),
+  }),
+  schema: CommunityRulesSchema.safeExtend({ id: z.literal('community-rules') }),
+});
+
 const team = defineCollection({
   loader: yamlLoader({ path: 'src/data/team.yaml', parse: parseEntryList, validate: assertSingleFounder }),
   schema: TeamMemberSchema,
@@ -91,4 +101,4 @@ function legalLoader(): Loader {
 
 const legal = defineCollection({ loader: legalLoader(), schema: LegalSchema });
 
-export const collections = { site, community, projects, gameServers, joinChannels, support, team, legal };
+export const collections = { site, community, projects, gameServers, joinChannels, communityRules, support, team, legal };

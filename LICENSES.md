@@ -21,7 +21,7 @@ Copied into `src/components/Icon.astro` (nothing installed), monochrome, `curren
 
 | Icon | Source | License |
 |---|---|---|
-| Arrow right, plus | Lucide (`arrow-right`, `plus`) | ISC |
+| Arrow right, arrow down, plus | Lucide (`arrow-right`, `arrow-down`, `plus`) | ISC |
 | Discord, WhatsApp marks | Simple Icons 16.37.0 (`discord`, `whatsapp`) | CC0 1.0 |
 
 The brand marks stay trademarks of their owners; they are used only to name the channel a button leads to.

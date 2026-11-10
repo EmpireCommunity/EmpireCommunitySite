@@ -4,9 +4,11 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { parse } from 'yaml';
 import { parseEntryList } from '../src/lib/yaml-entries.ts';
+import { formatRulesDate, inviteUrl } from '../src/lib/community-rules.ts';
+import { CommunityRulesSchema } from '../src/schemas/community-rules.ts';
 import { TeamMemberSchema } from '../src/schemas/team.ts';
 import {
-  discordLinks, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, mainContent, membersFallback, paymentGuard, paymentWords, personData, supportPage, donationsBlockElsewhere,
+  discordLinks, discordPage, gateCss, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, mainContent, membersFallback, paymentGuard, paymentWords, personData, supportPage, donationsBlockElsewhere,
   whatsappAbsent, whatsappInviteLink,
   type Finding,
 } from './lib/dist-checks.ts';
@@ -112,7 +114,8 @@ const people = team.map((person) => ({
 }));
 for (const file of files.filter((f) => TEXT_EXTENSIONS.test(f))) add(...personData(read(distDir, file), file, people));
 
-// D-29: one Discord link; the invite only in /discord and only with the configured code, with no script.
+// D-29, D-41: one Discord link; the invite only in /discord and only with the configured code, with no script; the page
+// structure (two language containers, one checkbox each, the join links after it) is checked against the data files.
 const invitePage = 'discord/index.html';
 if (!files.includes(invitePage)) {
   add(pending(PENDING.discordPage, invitePage, 'the /discord page is not built'));
@@ -123,6 +126,25 @@ for (const file of htmlFiles) {
     continue;
   }
   add(...discordLinks(read(distDir, file), file, inviteCode ?? '', file === invitePage));
+}
+if (files.includes(invitePage) && inviteCode !== undefined) {
+  const rulesResult = CommunityRulesSchema.safeParse(parse(read('src/data', 'community-rules.yaml')));
+  if (!rulesResult.success) throw new Error(`src/data/community-rules.yaml is invalid: ${rulesResult.error.message}`);
+  const rules = rulesResult.data;
+  const channels = parse(read('src/data', 'join-channels.yaml')) as { id: string; url: string }[];
+  const whatsappUrl = channels.find((channel) => channel.id === 'whatsapp')?.url ?? '';
+  const html = read(distDir, invitePage);
+  add(...discordPage(html, invitePage, {
+    inviteUrl: inviteUrl(inviteCode),
+    whatsappUrl,
+    containers: {
+      'pt-BR': { date: formatRulesDate(rules.updatedOn, 'pt-br'), titles: rules.rules.map((rule) => rule.title['pt-br']) },
+      'en-US': { date: formatRulesDate(rules.updatedOn, 'en-us'), titles: rules.rules.map((rule) => rule.title['en-us']) },
+    },
+  }));
+  for (const href of html.matchAll(/<link\b[^>]*\brel=["']stylesheet["'][^>]*\bhref=["']\/([^"']+\.css)["']/gi)) {
+    if (files.includes(href[1] ?? '')) add(...gateCss(read(distDir, href[1] ?? ''), href[1] ?? ''));
+  }
 }
 
 // D-28: support pages carry the donations-not-open block; the payment guard runs on dist/ and on the content sources.
@@ -170,6 +192,18 @@ if (files.includes('sitemap-0.xml')) {
 }
 if (files.includes('robots.txt') && !read(distDir, 'robots.txt').includes(`Sitemap: ${ORIGIN}/sitemap-index.xml`)) {
   add({ level: 'error', file: 'robots.txt', message: 'missing the Sitemap line' });
+}
+
+if (files.includes('robots.txt')) {
+  const robots = read(distDir, 'robots.txt');
+  if (!/^User-agent: \*$/m.test(robots) || !/^Allow: \/$/m.test(robots)) add({ level: 'error', file: 'robots.txt', message: 'expected "User-agent: *" and "Allow: /"' });
+  if (/^Disallow:/m.test(robots)) add({ level: 'error', file: 'robots.txt', message: 'nothing is disallowed (routing-locale section 5)' });
+}
+if (files.includes('llms.txt')) {
+  // English file that links the en-US pages only (routing-locale section 5).
+  for (const url of read(distDir, 'llms.txt').match(/https?:\/\/[^\s)]+/g) ?? []) {
+    if (!url.startsWith(`${ORIGIN}/en-us/`)) add({ level: 'error', file: 'llms.txt', message: `links outside the en-US pages: ${url}` });
+  }
 }
 
 for (const finding of findings) {

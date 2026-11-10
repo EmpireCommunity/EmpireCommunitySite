@@ -1,0 +1,50 @@
+# Community rules shown on /discord (docs/contracts/site-data.md section 14, D-41): the one source of the text and of
+# the "last updated" date. pt-BR is the owner's literal text (do not edit it); en-US is the design team's faithful
+# translation. A newline is a line break. `updatedOn` changes only when the rules text changes, in the same pull request.
+updatedOn: 2025-02-27
+rules:
+  - id: spam
+    title:
+      pt-br: "1 - Proibição de Spam:"
+      en-us: "1 - No Spam:"
+    body:
+      pt-br: "Não envie mensagens repetitivas, conteúdo não solicitado ou links excessivos em nenhum canal do servidor. Isso inclui spam de emojis, caracteres ou mensagens idênticas."
+      en-us: "Do not send repetitive messages, unsolicited content or excessive links in any channel of the server. This includes spamming emojis, characters or identical messages."
+  - id: false-identity
+    title:
+      pt-br: "2 - Identidade Falsa:"
+      en-us: "2 - False Identity:"
+    body:
+      pt-br: "Não finja ser outra pessoa, use identidades falsas ou compartilhe informações pessoais de terceiros sem permissão. Seja honesto sobre quem você é."
+      en-us: "Do not pretend to be another person, use false identities or share third parties' personal information without permission. Be honest about who you are."
+  - id: advertising
+    title:
+      pt-br: "3 - Proibição de Divulgação nos Canais/Privado de Membros:"
+      en-us: "3 - No Advertising in Channels or Members' Private Messages:"
+    body:
+      pt-br: "Não envie mensagens de divulgação ou convites nos canais do servidor ou por mensagem privada sem permissão explícita. Isso inclui promover servidores, produtos ou serviços sem autorização."
+      en-us: "Do not send advertising messages or invitations in the server's channels or by private message without explicit permission. This includes promoting servers, products or services without authorization."
+  - id: hate
+    title:
+      pt-br: "4 - Sem Propagação de Ódio:"
+      en-us: "4 - No Spreading of Hate:"
+    body:
+      pt-br: "Não compartilhe ou promova discurso de ódio, discriminação, racismo, sexismo, homofobia, transfobia, ou qualquer forma de preconceito ou intolerância com o intuito de ofensa. Piadas de humor negro e brincadeiras entre amigos são permitidas até certo limite, desde que não tenham o intuito de ofender ou denegrir alguém."
+      en-us: "Do not share or promote hate speech, discrimination, racism, sexism, homophobia, transphobia, or any form of prejudice or intolerance with the intent to offend. Dark humor jokes and banter among friends are allowed up to a certain limit, as long as they are not intended to offend or demean anyone."
+  - id: discord-guidelines
+    title:
+      pt-br: "5 - Seguir as Diretrizes do Discord:"
+      en-us: "5 - Follow Discord's Guidelines:"
+    body:
+      pt-br: "Todos os membros devem seguir as Diretrizes do Discord em todos os canais e interações dentro do servidor. Isso inclui o cumprimento dos Termos de Serviço, Diretrizes da Comunidade e Política de Privacidade do Discord.\nhttps://discord.com/terms"
+      en-us: "All members must follow Discord's Guidelines in all channels and interactions within the server. This includes complying with Discord's Terms of Service, Community Guidelines and Privacy Policy.\nhttps://discord.com/terms"
+  - id: adult-content
+    title:
+      pt-br: "6 - Conteúdo explícito +18:"
+      en-us: "6 - Explicit 18+ Content:"
+    body:
+      pt-br: "Proibido qualquer publicação de conteúdo destinado a adultos como pornografia, nudes, drogas, violência explícita, linguagem vulgar e temas adultos. Exceto no canal #🔞┃sapecagens, o qual é necessário comprovação de idade pelo discord e destinado para discussões sobre temas maduros, humor adulto e memes, desde que não sejam explícitos."
+      en-us: "Any posting of content intended for adults, such as pornography, nudes, drugs, explicit violence, vulgar language and adult themes, is prohibited. The exception is the #🔞┃sapecagens channel, which requires age verification through Discord and is intended for discussions of mature topics, adult humor and memes, as long as they are not explicit."
+closing:
+  pt-br: "Qualquer violação dessa regra resultará em medidas disciplinares apropriadas."
+  en-us: "Any violation of this rule will result in appropriate disciplinary action."

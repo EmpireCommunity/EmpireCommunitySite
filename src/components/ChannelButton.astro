@@ -8,14 +8,22 @@ interface Props {
   href: string;
   label: string;
   icon: 'discord' | 'whatsapp';
+  /** An external destination (the /discord page's real join links): opens with no opener and no referrer. */
+  external?: boolean;
+  /** Side padding of 8 px below 640 px, for two buttons side by side in a narrow cell (/discord, D-41). */
+  narrow?: boolean;
 }
 
-const { href, label, icon } = Astro.props;
+const { href, label, icon, external = false, narrow = false } = Astro.props;
 ---
 
 <a
   href={href}
-  class="inline-flex h-[56px] w-full items-center justify-center gap-12 rounded-botao bg-papel px-24 text-button text-violeta-ata hover:bg-papel-hover active:bg-papel-active motion-safe:transition-colors"
+  rel={external ? 'noopener noreferrer' : undefined}
+  class:list={[
+    'inline-flex h-[56px] w-full items-center justify-center gap-12 rounded-botao bg-papel text-button text-violeta-ata hover:bg-papel-hover active:bg-papel-active motion-safe:transition-colors',
+    narrow ? 'px-8 sm:px-24' : 'px-24',
+  ]}
 >
   <Icon name={icon} />
   <span>{label}</span>
