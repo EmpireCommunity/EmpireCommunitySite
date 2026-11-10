@@ -138,7 +138,7 @@ per day. The one exception: when there is no previous record and the run fails, 
 | HTTP 429 | honor `Retry-After` if 10 s or less (one retry), otherwise stop; keep value, count a failure | `rate_limited` | last good |
 | HTTP 404 (invite deleted or code wrong) | no retry; keep value, count a failure | `invite_not_found` | last good |
 | 200 but wrong shape, wrong `code`, wrong `guild.id`, count out of bounds | keep value, count a failure | `invalid_response` | last good |
-| In bounds but a jump (`new < last * 0.5` or `new > last * 2`, only when `last >= 50`) | keep value, `outOfBandStreak + 1`; at 3 consecutive such runs (36 h) accept the new value and reset. Any run that is not such a jump (in band, or any failure) resets `outOfBandStreak` to 0, so the three runs are really consecutive | `out_of_band` | last good, then new |
+| In bounds but a jump (`new < last * 0.5` or `new > last * 2`, only when `last >= 50`) | keep value, count a failure, `outOfBandStreak + 1`; at 3 consecutive such runs (36 h) accept the new value and reset. Any run that is not such a jump (in band, or any failure) resets `outOfBandStreak` to 0, so the three runs are really consecutive | `out_of_band` | last good, then new |
 | No previous value and the first run fails | nothing to serve; `decide` returns `keep` with no record and nothing is written to KV | not stored | origin built-in file |
 | KV read fails or key missing at request time | pass the request through to the origin | n/a | built-in value |
 | Any exception in the HTTP handler | catch (no log), pass through to the origin | n/a | built-in value |
