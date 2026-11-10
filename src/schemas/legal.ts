@@ -17,6 +17,8 @@ export const LegalSchema = z.strictObject({
   slug: z.enum(LEGAL_SLUGS),
   locale: Locale,
   version: z.string().regex(/^\d+\.\d+$/),
-  effectiveDate: FrontMatterDate,
+  // Absent until the launch PR sets the same date in all four files (D-51); the build requires it once
+  // PENDING.legalPages is false (src/lib/legal-rules.ts). No placeholder date is ever rendered.
+  effectiveDate: FrontMatterDate.optional(),
 });
 export type Legal = z.infer<typeof LegalSchema>;

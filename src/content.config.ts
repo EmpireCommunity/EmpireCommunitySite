@@ -5,6 +5,7 @@ import { defineCollection } from 'astro:content';
 import { glob } from 'astro/loaders';
 import type { Loader } from 'astro/loaders';
 import { z } from 'astro/zod';
+import { PENDING } from '../scripts/lib/pending.ts';
 import { assertLegalParity, type LegalDoc } from './lib/legal-rules.ts';
 import { assertSingleFounder } from './lib/team-rules.ts';
 import { parseEntryList, parseSingleDocument } from './lib/yaml-entries.ts';
@@ -91,10 +92,11 @@ function legalLoader(): Loader {
         locale: String(entry.data['locale']),
         slug: String(entry.data['slug']),
         version: String(entry.data['version']),
-        effectiveDate: String(entry.data['effectiveDate']),
+        effectiveDate: entry.data['effectiveDate'] === undefined ? undefined : String(entry.data['effectiveDate']),
         body: entry.body ?? '',
       }));
-      assertLegalParity(docs);
+      // The effective date is the launch date (D-51): required only once the launch PR flips the pending flag.
+      assertLegalParity(docs, { effectiveDateRequired: !PENDING.legalPages });
     },
   };
 }

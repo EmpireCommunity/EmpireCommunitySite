@@ -122,6 +122,9 @@ describe('legal front matter', () => {
     assert.equal(LegalSchema.safeParse({ ...front, effectiveDate: new Date(Date.UTC(2026, 11, 1)) }).success, true);
     assert.equal(LegalSchema.safeParse({ ...front, effectiveDate: '2026-12-01' }).success, true);
   });
+  test('no effective date is allowed (set by the launch PR, D-51)', () => {
+    assert.equal(LegalSchema.safeParse(front).success, true);
+  });
   test('an invalid date is still rejected', () => {
     assert.equal(LegalSchema.safeParse({ ...front, effectiveDate: new Date(Number.NaN) }).success, false);
     assert.equal(LegalSchema.safeParse({ ...front, effectiveDate: '2026-02-30' }).success, false);

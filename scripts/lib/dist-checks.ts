@@ -227,12 +227,28 @@ export function gateCss(css: string, file: string): Finding[] {
   return findings;
 }
 
+/**
+ * Legal Markdown has no raw HTML (site-data section 11): the renderer drops it, and the source must not carry any, so the
+ * text a reviewer reads is the text that is published. An autolink (`<https://...>`) is Markdown, not HTML.
+ */
+export function legalMarkdownHtml(markdown: string, file: string): Finding[] {
+  const body = markdown.replace(/^---\r?\n[\s\S]*?\r?\n---/, '');
+  return /<(?!https?:\/\/)[A-Za-z/!?]/.test(body) ? [err(file, 'raw HTML in a legal Markdown text')] : [];
+}
+
+/** True when the front matter of a legal Markdown file sets `effectiveDate` (the launch PR sets it in all four files, D-51). */
+export function hasEffectiveDate(markdown: string): boolean {
+  const front = /^---\r?\n([\s\S]*?)\r?\n---/.exec(markdown)?.[1] ?? '';
+  return /^effectiveDate:\s*\S/m.test(front);
+}
+
 const PAYMENT_MARKERS: [RegExp, string][] = [
   [/data-pix/i, 'attribute data-pix'],
   [/mercadopago|mpago\.la/i, 'payment-provider host or short link'],
   [/br\.gov\.bcb\.pix/i, 'Pix BR Code marker'],
   [/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i, 'UUID-shaped string (random Pix key)'],
   [/\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b|\b\d{14}\b/, 'CNPJ-shaped string'],
+  [/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/, 'CPF-shaped string (the tax id is never written in the repository, D-23)'],
 ];
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/g;
 

@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import {
-  discordLinks, discordPage, gateCss, hreflangReciprocity, htmlLang, mainContent, inlineExecutable, languageSelector, membersFallback, paymentGuard, personData, supportPage, donationsBlockElsewhere, whatsappAbsent, whatsappInviteLink,
+  discordLinks, discordPage, gateCss, hasEffectiveDate, legalMarkdownHtml, hreflangReciprocity, htmlLang, mainContent, inlineExecutable, languageSelector, membersFallback, paymentGuard, personData, supportPage, donationsBlockElsewhere, whatsappAbsent, whatsappInviteLink,
 } from '../scripts/lib/dist-checks.ts';
 import { checkWorkflow } from '../scripts/lib/workflow-rules.ts';
 
@@ -15,7 +15,7 @@ test('payment guard refuses every marker of site-data section 10 and accepts the
   const allowed = new Set(['contact@empirecommunity.org']);
   const bad = [
     '<div data-pix="x">', 'https://mpago.la/abc', '00020126BR.GOV.BCB.PIX', 'key 123e4567-e89b-42d3-a456-426614174000',
-    '12.345.678/0001-95', 'write to someone@example.com',
+    '12.345.678/0001-95', '123.456.789-09', 'write to someone@example.com',
   ];
   for (const text of bad) assert.equal(errors(paymentGuard(text, 'x.html', allowed)), 1, text);
   assert.equal(paymentGuard('contact@empirecommunity.org, p-3f9a1c7d2b40', 'x.html', allowed).length, 0);
@@ -320,4 +320,15 @@ test('the gate hides the join links only inside @supports selector(:has(*))', ()
   assert.equal(errors(gateCss(ok + '.gate-links{display:none}', 'a.css')), 1);
   assert.equal(errors(gateCss('@supports selector(:has(*)){.x{color:red}}.gate:not(:has(.agree:checked)) .gate-links{display:none}', 'a.css')), 1);
   assert.equal(gateCss('@supports selector(:has(*)){@media (width>1px){.x{color:red}}.gate:not(:has(.agree:checked)) .gate-links{display:none}}.a{color:red}', 'a.css').length, 0);
+});
+
+test('legal Markdown: raw HTML fails, autolinks and plain text pass; the effective date is read from the front matter', () => {
+  const front = '---\ntitle: T\nversion: "1.0"\n---\n';
+  assert.equal(legalMarkdownHtml(`${front}## Clause {#a}\n\nSee <https://example.org> and a < b.`, 'f.md').length, 0);
+  for (const body of ['<script>alert(1)</script>', 'text <b>bold</b>', '<!-- note -->', '</div>']) {
+    assert.equal(errors(legalMarkdownHtml(`${front}${body}`, 'f.md')), 1, body);
+  }
+  assert.equal(hasEffectiveDate(`${front}text`), false);
+  assert.equal(hasEffectiveDate('---\ntitle: T\neffectiveDate: 2026-12-01\n---\ntext'), true);
+  assert.equal(hasEffectiveDate('---\ntitle: T\n---\neffectiveDate: 2026-12-01'), false);
 });

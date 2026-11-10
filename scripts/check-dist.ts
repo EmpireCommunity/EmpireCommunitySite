@@ -8,7 +8,7 @@ import { formatRulesDate, inviteUrl } from '../src/lib/community-rules.ts';
 import { CommunityRulesSchema } from '../src/schemas/community-rules.ts';
 import { TeamMemberSchema } from '../src/schemas/team.ts';
 import {
-  discordLinks, discordPage, gateCss, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, mainContent, membersFallback, paymentGuard, paymentWords, personData, supportPage, donationsBlockElsewhere,
+  discordLinks, discordPage, gateCss, hasEffectiveDate, legalMarkdownHtml, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, mainContent, membersFallback, paymentGuard, paymentWords, personData, supportPage, donationsBlockElsewhere,
   whatsappAbsent, whatsappInviteLink,
   type Finding,
 } from './lib/dist-checks.ts';
@@ -175,15 +175,22 @@ for (const dir of ['src/data', 'src/content', 'src/i18n/messages']) {
   for (const file of listFiles(dir)) add(...paymentGuard(read(dir, file), `${dir}/${file}`, allowedEmails));
 }
 
-// Legal pages (site-data section 11): the four pages need a built page and their Markdown text. Until the owner's texts
-// land the routes build as title-only placeholders, so the missing text counts as missing; this keeps the release guard shut.
-const legalSources = new Set(listFiles('src/content/legal'));
+// Legal pages (site-data section 11): the four pages need a built page, their Markdown text and, from the launch PR on, an
+// `effectiveDate` (D-51: the launch date, the same in all four files). While `PENDING.legalPages` is true each gap only warns,
+// which keeps the release guard shut; once it is false the same gaps are errors. The Markdown carries no raw HTML.
 for (const locale of ['pt-br', 'en-us'] as const) {
   for (const key of ['terms', 'privacy'] as const) {
     const page = `${routePath(locale, key).slice(1)}index.html`;
     const source = `${locale}/${slugOf(key)}.md`;
+    const sourcePath = `src/content/legal/${source}`;
     if (!files.includes(page)) add(pending(PENDING.legalPages, page, 'the legal page is not built'));
-    else if (!legalSources.has(source)) add(pending(PENDING.legalPages, `src/content/legal/${source}`, 'the legal text is missing, the page is a placeholder'));
+    if (!existsSync(sourcePath)) {
+      add(pending(PENDING.legalPages, sourcePath, 'the legal text is missing, the page is a placeholder'));
+      continue;
+    }
+    const markdown = read('src/content/legal', source);
+    add(...legalMarkdownHtml(markdown, sourcePath));
+    if (!hasEffectiveDate(markdown)) add(pending(PENDING.legalPages, sourcePath, 'effectiveDate is not set (the launch PR sets the launch date in all four files)'));
   }
 }
 

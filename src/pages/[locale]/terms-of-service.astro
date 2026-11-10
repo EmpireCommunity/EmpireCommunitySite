@@ -1,0 +1,13 @@
+---
+// terms-of-service (information-architecture sections 7.7 and 7.8): the text comes from src/content/legal/<locale>/terms-of-service.md.
+import type { GetStaticPaths } from 'astro';
+import LegalPage from '../../components/LegalPage.astro';
+import { LOCALES, isLocale } from '../../lib/routes.ts';
+
+export const getStaticPaths = (() => LOCALES.map((locale) => ({ params: { locale } }))) satisfies GetStaticPaths;
+
+const { locale } = Astro.params;
+if (!isLocale(locale)) throw new Error(`unexpected locale: ${locale}`);
+---
+
+<LegalPage locale={locale} routeKey="terms" />

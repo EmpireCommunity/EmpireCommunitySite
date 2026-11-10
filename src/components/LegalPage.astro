@@ -1,0 +1,53 @@
+---
+// Legal reading page (information-architecture sections 7.7 and 7.8): title, version, the effective date only when the
+// file has one (no placeholder date, D-51), the table of contents with anchors and the text in one column of up to 68
+// characters. On desktop the title and the contents sit in the left four columns and stay in view; below 1024 px the
+// contents is a list above the text. The text is the rendered Markdown (no raw HTML, explicit heading ids).
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { t } from '../i18n/index.ts';
+import { getLegal } from '../lib/legal.ts';
+import type { LegalKey } from '../lib/legal.ts';
+import { formatRulesDate } from '../lib/community-rules.ts';
+import type { Locale } from '../lib/routes.ts';
+
+interface Props {
+  locale: Locale;
+  routeKey: LegalKey;
+}
+
+const { locale, routeKey } = Astro.props;
+const legal = await getLegal(locale, routeKey);
+---
+
+<BaseLayout locale={locale} routeKey={routeKey}>
+  <div class="frame pt-64 pb-64 lg:pt-96 lg:pb-96">
+    <div class="grid gap-x-24 gap-y-32 lg:grid-cols-12">
+      <div class="lg:col-span-4">
+        <div class="lg:sticky lg:top-24">
+          <h1 class="font-display text-headline text-papel">{legal.title}</h1>
+          <p class="mt-16 text-body-sm text-papel-suave">{t(locale, 'legal.version', { version: legal.version })}</p>
+          {
+            legal.effectiveDate !== undefined && (
+              <p class="mt-4 text-body-sm text-papel-suave">{t(locale, 'legal.effective', { date: formatRulesDate(legal.effectiveDate, locale) })}</p>
+            )
+          }
+          <nav aria-label={t(locale, 'legal.toc')} class="mt-32">
+            <p class="text-label text-papel-suave">{t(locale, 'legal.toc')}</p>
+            <ul class="mt-8 flex flex-col">
+              {
+                legal.clauses.map((clause) => (
+                  <li>
+                    <a href={`#${clause.id}`} class="link-text inline-flex min-h-[44px] items-center text-body-sm">{clause.text}</a>
+                  </li>
+                ))
+              }
+            </ul>
+          </nav>
+        </div>
+      </div>
+      <article class="legal-text lg:col-span-8 lg:pl-32">
+        <legal.Content />
+      </article>
+    </div>
+  </div>
+</BaseLayout>
