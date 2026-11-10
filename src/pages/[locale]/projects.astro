@@ -1,0 +1,68 @@
+---
+// Projetos (information-architecture section 7.2): title and lead with the status legend, the full list (live before in
+// development, then the data-file order), open source. A link exists only for what works today (R-4, D-7): `url` is
+// allowed only when live (the schema enforces it) and `repo` only for a public repository. "Recent activity" has no data
+// source yet (ADR-0001 open point), so the section is not rendered (R-6).
+import type { GetStaticPaths } from 'astro';
+import { getCollection } from 'astro:content';
+import ArrowLink from '../../components/ArrowLink.astro';
+import Index from '../../components/Index.astro';
+import IndexSection from '../../components/IndexSection.astro';
+import RegisterList from '../../components/RegisterList.astro';
+import RegisterRow from '../../components/RegisterRow.astro';
+import RowLink from '../../components/RowLink.astro';
+import Status from '../../components/Status.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { t } from '../../i18n/index.ts';
+import { LOCALES, isLocale } from '../../lib/routes.ts';
+import { getSite } from '../../lib/site-data.ts';
+
+export const getStaticPaths = (() => LOCALES.map((locale) => ({ params: { locale } }))) satisfies GetStaticPaths;
+
+const { locale } = Astro.params;
+if (!isLocale(locale)) throw new Error(`unexpected locale: ${locale}`);
+
+const site = await getSite();
+const projects = (await getCollection('projects'))
+  .map((entry) => entry.data)
+  .sort((a, b) => Number(a.status !== 'live') - Number(b.status !== 'live') || a.order - b.order || a.name.localeCompare(b.name));
+---
+
+<BaseLayout locale={locale} routeKey="projects">
+  <div class="frame pt-64 lg:pt-96">
+    <h1 class="font-display text-display text-papel">{t(locale, 'projects.title')}</h1>
+    <p class="mt-24 max-w-[56ch] text-lead text-papel-suave">{t(locale, 'projects.lead')}</p>
+    <ul class="mt-24 flex max-w-[56ch] flex-col gap-8 pb-48 text-body-sm text-papel-suave lg:pb-48">
+      <li>{t(locale, 'projects.legend.live')}</li>
+      <li>{t(locale, 'projects.legend.development')}</li>
+    </ul>
+
+    {
+      projects.length > 0 && (
+        <RegisterList closed>
+          {projects.map((project) => (
+            <RegisterRow name={project.name} description={project.summary[locale]} linksColumn wide>
+              <Status slot="status" locale={locale} status={project.status} />
+              {project.url !== undefined && <RowLink slot="links" href={project.url} label={t(locale, 'link.site')} />}
+              {project.repo !== undefined && (
+                <RowLink slot="links" href={`https://github.com/${project.repo}`} label={t(locale, 'link.code')} />
+              )}
+            </RegisterRow>
+          ))}
+        </RegisterList>
+      )
+    }
+
+    <div class="-mt-px">
+    <Index closed>
+      <IndexSection title={t(locale, 'projects.open.title')}>
+        <p class="max-w-[68ch] text-body text-papel-suave">{t(locale, 'projects.open.body')}</p>
+        <div class="mt-16 flex flex-wrap gap-x-24">
+          <ArrowLink href={site.links.github} label={t(locale, 'footer.github')} />
+          <ArrowLink href={site.links.contributing} label={t(locale, 'projects.open.guides')} />
+        </div>
+      </IndexSection>
+    </Index>
+    </div>
+  </div>
+</BaseLayout>

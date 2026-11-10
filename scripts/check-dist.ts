@@ -3,8 +3,10 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { parse } from 'yaml';
+import { parseEntryList } from '../src/lib/yaml-entries.ts';
+import { TeamMemberSchema } from '../src/schemas/team.ts';
 import {
-  discordLinks, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, mainContent, membersFallback, paymentGuard, paymentWords,
+  discordLinks, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, mainContent, membersFallback, paymentGuard, paymentWords, personData,
   whatsappAbsent, whatsappInviteLink,
   type Finding,
 } from './lib/dist-checks.ts';
@@ -95,6 +97,20 @@ for (const file of listFiles('src/content/legal')) add(...whatsappAbsent(read('s
 for (const file of files.filter((f) => TEXT_EXTENSIONS.test(f) || f.endsWith('.css'))) {
   add(...whatsappInviteLink(read(distDir, file), file, file === 'discord/index.html'));
 }
+
+// C-4: personal data of team.yaml appears only inside validated person blocks.
+// Same list parser and schema as the `team` collection, so a non-list or a bad entry fails naming the file.
+const TEAM_FILE = 'src/data/team.yaml';
+const team = parseEntryList(read('src/data', 'team.yaml'), TEAM_FILE).map((entry) => {
+  const result = TeamMemberSchema.safeParse(entry);
+  if (!result.success) throw new Error(`${TEAM_FILE}: entry "${entry.id}" is invalid: ${result.error.message}`);
+  return result.data;
+});
+const people = team.map((person) => ({
+  id: person.id,
+  names: [person.name, person.nickname].filter((name): name is string => typeof name === 'string' && name !== ''),
+}));
+for (const file of files.filter((f) => TEXT_EXTENSIONS.test(f))) add(...personData(read(distDir, file), file, people));
 
 // D-29: one Discord link; the invite only in /discord and only with the configured code, with no script.
 const invitePage = 'discord/index.html';

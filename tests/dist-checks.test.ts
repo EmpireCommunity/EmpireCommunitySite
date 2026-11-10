@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import {
-  discordLinks, hreflangReciprocity, htmlLang, mainContent, inlineExecutable, languageSelector, membersFallback, paymentGuard, whatsappAbsent, whatsappInviteLink,
+  discordLinks, hreflangReciprocity, htmlLang, mainContent, inlineExecutable, languageSelector, membersFallback, paymentGuard, personData, whatsappAbsent, whatsappInviteLink,
 } from '../scripts/lib/dist-checks.ts';
 import { checkWorkflow } from '../scripts/lib/workflow-rules.ts';
 
@@ -239,4 +239,14 @@ test('legal pages are scanned on their <main> only, so the shared pt-BR footer m
   assert.equal(whatsappAbsent(mainContent(page), 'pt-br/terms-of-service/index.html').length, 0);
   assert.equal(whatsappAbsent(mainContent('<main>WhatsApp</main>'), 'f').length, 1);
   assert.equal(mainContent('no main here'), 'no main here');
+});
+
+test('team data: a marker without an entry fails, and a name outside its person block fails', () => {
+  const people = [{ id: 'p-3f9a1c7d2b40', names: ['Ana Souza', 'Aninha'] }];
+  const block = '<article data-person-id="p-3f9a1c7d2b40"><p>Ana Souza “Aninha”</p></article>';
+  assert.equal(personData(`<main>${block}</main>`, 'x.html', people).length, 0);
+  assert.equal(personData('<article data-person-id="p-aaaaaaaaaaaa"></article>', 'x.html', people).length, 1, 'unknown id');
+  assert.equal(personData(`${block}<footer>Ana Souza</footer>`, 'x.html', people).length, 1, 'name outside the block');
+  assert.equal(personData('<p>Aninhas</p>', 'x.html', people).length, 0, 'whole words only');
+  assert.equal(personData('<main>no team</main>', 'x.html', []).length, 0);
 });

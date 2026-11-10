@@ -109,6 +109,7 @@ contact:
 links:
   discord: https://empirecommunity.org/discord      # literal; the only Discord link allowed on the site
   github: https://github.com/EmpireCommunity
+  contributing: https://github.com/EmpireCommunity/.github/blob/main/CONTRIBUTING.md   # the organization's contribution guide, linked from Projects
 discord:                                            # the one place the invite is defined (D-29)
   inviteCode: <approved invite code>                # 2 to 32 characters, letters, digits and hyphen
   guildId: "<server id>"                            # 17 to 20 digits, quoted so it stays a string

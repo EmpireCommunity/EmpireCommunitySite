@@ -1,1 +1,29 @@
-[]
+# Live today: Minecraft. Coming soon: Palworld, Project Zomboid, Factorio (owner's list, site-data section 7).
+# No address, IP or port is published. The access sentence is the owner's fact (D-37).
+- id: minecraft
+  name: Minecraft
+  status: live
+  summary:
+    pt-br: "Servidores de Minecraft com modpacks."
+    en-us: "Minecraft servers with modpacks."
+  howToJoin:
+    pt-br: "O acesso se dá pelo Discord, que em breve funcionará como whitelist dos servidores."
+    en-us: "Access is through Discord, which will soon act as the servers' whitelist."
+- id: palworld
+  name: Palworld
+  status: coming-soon
+  summary:
+    pt-br: "Servidor de Palworld."
+    en-us: "Palworld server."
+- id: project-zomboid
+  name: Project Zomboid
+  status: coming-soon
+  summary:
+    pt-br: "Servidor de Project Zomboid."
+    en-us: "Project Zomboid server."
+- id: factorio
+  name: Factorio
+  status: coming-soon
+  summary:
+    pt-br: "Servidor de Factorio."
+    en-us: "Factorio server."

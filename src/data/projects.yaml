@@ -1,1 +1,54 @@
-[]
+# Catalog verified on 2026-11-08 (docs/design/information-architecture.md section 5). A link exists only for what works
+# today (D-7). github-worker-relay is in production (owner, P-10 closed).
+- id: empiremuse
+  name: EmpireMuse
+  kind: bot
+  status: live
+  summary:
+    pt-br: "Bot de música para Discord, com player interativo e painel web. Obra derivada do MuseHeart-MusicBot, de zRitsu (GPL-2.0)."
+    en-us: "Music bot for Discord, with an interactive player and a web panel. Derivative work of MuseHeart-MusicBot, by zRitsu (GPL-2.0)."
+  url: https://muse.empirecommunity.org
+  repo: EmpireCommunity/EmpireMuse
+  order: 10
+- id: github-worker-relay
+  name: github-worker-relay
+  kind: infrastructure
+  status: live
+  summary:
+    pt-br: "Cloudflare Worker que anuncia no Discord as novas versões dos projetos da organização."
+    en-us: "Cloudflare Worker that announces the organization's releases on Discord."
+  repo: EmpireCommunity/github-worker-relay
+  order: 20
+- id: empirecommunitysite
+  name: EmpireCommunitySite
+  kind: site
+  status: live
+  summary:
+    pt-br: "Este site."
+    en-us: "This website."
+  repo: EmpireCommunity/EmpireCommunitySite
+  order: 30
+- id: empirehub
+  name: EmpireHub
+  kind: tool
+  status: in-development
+  summary:
+    pt-br: "Jogos de mesa, tabuleiro e cartas dentro do Discord, como Discord Activity."
+    en-us: "Tabletop, board and card games inside Discord, as a Discord Activity."
+  order: 40
+- id: empirebot
+  name: EmpireBot
+  kind: bot
+  status: in-development
+  summary:
+    pt-br: "Integra o Discord aos servidores de jogos: vínculo de conta, whitelist e cargos."
+    en-us: "Connects Discord to game servers: account linking, whitelist and roles."
+  order: 50
+- id: empirecraft
+  name: EmpireCraft
+  kind: mod
+  status: in-development
+  summary:
+    pt-br: "Mod para Minecraft."
+    en-us: "A Minecraft mod."
+  order: 60
