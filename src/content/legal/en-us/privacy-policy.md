@@ -19,7 +19,7 @@ The website's server keeps no access logs. It keeps only minimal error records, 
 
 ## 4. Usage statistics {#statistics}
 
-We use Cloudflare Web Analytics to learn how many visits the website's pages receive. The Support page and the Discord redirect page do not use this tool, and visits to them are not counted. This tool does not use cookies or local storage in your browser and does not identify people.
+We use Cloudflare Web Analytics to learn how many visits the website's pages receive. The Support page and the community rules page (/discord) do not use this tool, and visits to them are not counted. This tool does not use cookies or local storage in your browser and does not identify people.
 
 ## 5. Language selection {#language}
 

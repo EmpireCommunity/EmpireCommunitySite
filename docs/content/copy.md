@@ -327,6 +327,20 @@ a quebra de linha do original.
 > **Revisão jurídica necessária antes de receber doações:** Privacidade 2, 3 e 9. Não manter registros de acesso é
 > exceção decidida pelo dono (D-20) e precisa ser conferida diante do Marco Civil da Internet.
 
+## Interface das páginas legais
+
+Textos de interface das duas páginas (Termos e Privacidade), usados na página e não no texto legal. A data de vigência só
+aparece quando o arquivo do texto tem `effectiveDate` (a data de lançamento, D-51); sem ela, nada é exibido.
+
+| Id | pt-BR | en-US |
+|---|---|---|
+| legal.version | Versão {{version}} | Version {{version}} |
+| legal.effective | Vigência: {{date}} | Effective date: {{date}} |
+| legal.toc | Sumário | Contents |
+
+`{{version}}` vem do `version` do arquivo (`1.0`); `{{date}}` vem de `effectiveDate`: `1 de dezembro de 2026` em pt-BR e
+`December 1, 2026` em en-US (mesma regra de formatação da data das regras da comunidade).
+
 ## Termos de Uso (pt-BR)
 
 Meta: título "Termos de Uso: EmpireCommunity"; descrição "As regras de uso do site da EmpireCommunity."
@@ -415,7 +429,7 @@ atualiza o número de membros armazena apenas esse número da comunidade e dados
 nenhum dado de visitantes.
 
 **4. Estatísticas de uso.** Usamos o Cloudflare Web Analytics para saber quantas visitas as páginas do site recebem. A
-página Apoiar e a página de redirecionamento para o Discord não usam essa ferramenta, e as visitas a elas não são
+página Apoiar e a página de regras da comunidade (/discord) não usam essa ferramenta, e as visitas a elas não são
 contadas. Essa ferramenta não usa cookies nem armazenamento local no seu navegador e não identifica pessoas.
 
 **5. Escolha de idioma.** Ao acessar o endereço principal, a Cloudflare identifica o país da conexão para enviar você à
@@ -464,7 +478,7 @@ replaced on a short rotation, and are lost when the website's server is recreate
 the member count stores only that community number and technical data about its own update, with no visitor data.
 
 **4. Usage statistics.** We use Cloudflare Web Analytics to learn how many visits the website's pages receive. The
-Support page and the Discord redirect page do not use this tool, and visits to them are not counted. This tool does not
+Support page and the community rules page (/discord) do not use this tool, and visits to them are not counted. This tool does not
 use cookies or local storage in your browser and does not identify people.
 
 **5. Language selection.** When you open the main address, Cloudflare identifies the country of your connection to send

@@ -19,7 +19,7 @@ O servidor do site não mantém registros de acesso. Ele guarda apenas registros
 
 ## 4. Estatísticas de uso {#statistics}
 
-Usamos o Cloudflare Web Analytics para saber quantas visitas as páginas do site recebem. A página Apoiar e a página de redirecionamento para o Discord não usam essa ferramenta, e as visitas a elas não são contadas. Essa ferramenta não usa cookies nem armazenamento local no seu navegador e não identifica pessoas.
+Usamos o Cloudflare Web Analytics para saber quantas visitas as páginas do site recebem. A página Apoiar e a página de regras da comunidade (/discord) não usam essa ferramenta, e as visitas a elas não são contadas. Essa ferramenta não usa cookies nem armazenamento local no seu navegador e não identifica pessoas.
 
 ## 5. Escolha de idioma {#language}
 
