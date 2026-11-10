@@ -316,4 +316,8 @@ test('the gate hides the join links only inside @supports selector(:has(*))', ()
   assert.equal(gateCss(ok, 'a.css').length, 0);
   assert.equal(errors(gateCss('.gate-links{display:none}' + ok, 'a.css')), 1);
   assert.equal(errors(gateCss('.gate-pending{display:none}', 'a.css')), 1);
+  // After the block, or only after it: the check follows balanced braces, so a rule outside the block cannot pass for one inside.
+  assert.equal(errors(gateCss(ok + '.gate-links{display:none}', 'a.css')), 1);
+  assert.equal(errors(gateCss('@supports selector(:has(*)){.x{color:red}}.gate:not(:has(.agree:checked)) .gate-links{display:none}', 'a.css')), 1);
+  assert.equal(gateCss('@supports selector(:has(*)){@media (width>1px){.x{color:red}}.gate:not(:has(.agree:checked)) .gate-links{display:none}}.a{color:red}', 'a.css').length, 0);
 });

@@ -185,18 +185,45 @@ export function discordPage(html: string, file: string, expected: DiscordPageExp
   return findings;
 }
 
+const SUPPORTS_HAS = /@supports\s+selector\(:has\(\*\)\)\s*\{/g;
+
+/** Splits the CSS into the bodies of every `@supports selector(:has(*))` block (balanced braces) and everything outside them. */
+function splitSupportsHas(css: string): { inside: string; outside: string } {
+  let inside = '';
+  let outside = '';
+  let cursor = 0;
+  for (const start of css.matchAll(SUPPORTS_HAS)) {
+    if (start.index < cursor) continue;
+    let depth = 1;
+    let end = start.index + start[0].length;
+    while (end < css.length && depth > 0) {
+      if (css[end] === '{') depth += 1;
+      else if (css[end] === '}') depth -= 1;
+      end += 1;
+    }
+    outside += `${css.slice(cursor, start.index)} `;
+    inside += `${css.slice(start.index + start[0].length, depth === 0 ? end - 1 : end)} `;
+    cursor = end;
+  }
+  return { inside, outside: outside + css.slice(cursor) };
+}
+
 /**
  * The gate lives in the shared stylesheet: the join links are hidden with `display: none` only inside
- * `@supports selector(:has(*))`, so a browser without `:has()` keeps them visible (the intended fallback).
+ * `@supports selector(:has(*))`, so a browser without `:has()` keeps them visible (the intended fallback). The gate rule
+ * must be inside the block, and no rule outside it may hide `.gate-links` without `:has()`.
  */
 export function gateCss(css: string, file: string): Finding[] {
-  const supports = /@supports\s+selector\(:has\(\*\)\)\s*\{([\s\S]*)\}/.exec(css)?.[1] ?? '';
-  const hidden = /:not\(:has\(\.agree:checked\)\)\s*\.gate-links\s*\{[^}]*display:\s*none/;
+  const { inside, outside } = splitSupportsHas(css);
   const findings: Finding[] = [];
-  if (!hidden.test(supports)) findings.push(err(file, 'the gate rule (.gate-links hidden until .agree is checked) is missing from the @supports selector(:has(*)) block'));
-  if (/\.gate-links\s*\{[^}]*display:\s*none/.test(css.replace(/@supports\s+selector\(:has\(\*\)\)\s*\{[\s\S]*$/, ''))) {
-    findings.push(err(file, 'the join links are hidden outside @supports selector(:has(*)): a browser without :has() could not use them'));
+  if (!/:not\(:has\(\.agree:checked\)\)\s*\.gate-links\s*\{[^{}]*display:\s*none/.test(inside)) {
+    findings.push(err(file, 'the gate rule (.gate-links hidden until .agree is checked) is missing from the @supports selector(:has(*)) block'));
   }
+  const hiddenOutside = [...outside.matchAll(/([^{}]+)\{([^{}]*)\}/g)].some(
+    ([, selectors = '', body = '']) =>
+      /display:\s*none/.test(body) && selectors.split(',').some((selector) => selector.trim().endsWith('.gate-links') && !selector.includes(':has(')),
+  );
+  if (hiddenOutside) findings.push(err(file, 'the join links are hidden outside @supports selector(:has(*)): a browser without :has() could not use them'));
   return findings;
 }
 

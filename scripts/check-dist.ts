@@ -143,9 +143,13 @@ if (files.includes(invitePage) && inviteCode !== undefined) {
       'en-US': { date: formatRulesDate(rules.updatedOn, 'en-us'), titles: rules.rules.map((rule) => rule.title['en-us']) },
     },
   }));
-  for (const href of html.matchAll(/<link\b[^>]*\brel=["']stylesheet["'][^>]*\bhref=["']\/([^"']+\.css)["']/gi)) {
-    if (files.includes(href[1] ?? '')) add(...gateCss(read(distDir, href[1] ?? ''), href[1] ?? ''));
-  }
+  // The linked stylesheets, whatever the attribute order; only files that exist in dist/, checked as one combined text.
+  const stylesheets = [...html.matchAll(/<link\b[^>]*>/gi)]
+    .filter((tag) => /\brel=["']?stylesheet\b/i.test(tag[0]))
+    .flatMap((tag) => /\bhref=["']?\/([^"'\s>?#]+\.css)/i.exec(tag[0])?.[1] ?? [])
+    .filter((href) => files.includes(href));
+  if (stylesheets.length === 0) add({ level: 'error', file: invitePage, message: 'no built stylesheet is linked: the gate CSS cannot be checked' });
+  else add(...gateCss(stylesheets.map((href) => read(distDir, href)).join('\n'), stylesheets.join(', ')));
 }
 
 // D-28: support pages carry the donations-not-open block; the payment guard runs on dist/ and on the content sources.
