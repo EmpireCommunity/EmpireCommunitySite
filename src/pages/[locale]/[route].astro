@@ -9,7 +9,7 @@ import { INNER_ROUTE_KEYS, LOCALES, isLocale, routeKeyFromSlug, slugOf } from '.
 // getStaticPaths is hoisted by Astro, so the list of route keys that have their own page file
 // (src/pages/[locale]/<slug>.astro) lives inside it. Add a key to `ownPage` when its page task lands.
 export const getStaticPaths = (() => {
-  const ownPage: readonly string[] = ['join', 'projects', 'game-servers', 'organization', 'support'];
+  const ownPage: readonly string[] = ['join', 'projects', 'game-servers', 'organization', 'support', 'terms', 'privacy'];
   return LOCALES.flatMap((locale) =>
     INNER_ROUTE_KEYS.filter((routeKey) => !ownPage.includes(routeKey)).map((routeKey) => ({
       params: { locale, route: slugOf(routeKey) },

@@ -227,12 +227,28 @@ export function gateCss(css: string, file: string): Finding[] {
   return findings;
 }
 
+/**
+ * Legal Markdown has no raw HTML (site-data section 11): the renderer drops it, and the source must not carry any, so the
+ * text a reviewer reads is the text that is published. An autolink (`<https://...>`) is Markdown, not HTML.
+ */
+export function legalMarkdownHtml(markdown: string, file: string): Finding[] {
+  const body = markdown.replace(/^---\r?\n[\s\S]*?\r?\n---/, '');
+  return /<(?!https?:\/\/)[A-Za-z/!?]/.test(body) ? [err(file, 'raw HTML in a legal Markdown text')] : [];
+}
+
+/** True when the front matter of a legal Markdown file sets `effectiveDate` (the launch PR sets it in all four files, D-51). */
+export function hasEffectiveDate(markdown: string): boolean {
+  const front = /^---\r?\n([\s\S]*?)\r?\n---/.exec(markdown)?.[1] ?? '';
+  return /^effectiveDate:\s*\S/m.test(front);
+}
+
 const PAYMENT_MARKERS: [RegExp, string][] = [
   [/data-pix/i, 'attribute data-pix'],
   [/mercadopago|mpago\.la/i, 'payment-provider host or short link'],
   [/br\.gov\.bcb\.pix/i, 'Pix BR Code marker'],
   [/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i, 'UUID-shaped string (random Pix key)'],
   [/\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b|\b\d{14}\b/, 'CNPJ-shaped string'],
+  [/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/, 'CPF-shaped string (the tax id is never written in the repository, D-23)'],
 ];
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/g;
 
@@ -266,6 +282,36 @@ export function supportPage(html: string, file: string, notOpenMessage: string):
     else if (decodeEntities(inner).trim() !== notOpenMessage) findings.push(err(file, 'the data-donations="not-open" block does not carry support.donations.notOpen'));
   }
   if (/cloudflareinsights|data-cf-beacon/i.test(html)) findings.push(err(file, 'the support pages carry no analytics beacon (site-data section 10)'));
+  return findings;
+}
+
+export const BEACON_SRC = 'https://static.cloudflareinsights.com/beacon.min.js';
+
+/**
+ * Cloudflare Web Analytics (routing-locale section 5, D-52). A locale page other than Apoiar carries exactly one beacon:
+ * an external module script from the Cloudflare host whose `data-cf-beacon` holds the configured token and nothing else.
+ * The support pages, the root chooser, the 404 and /discord carry none (the neutral pages have no script at all).
+ */
+export function analyticsBeacon(html: string, file: string, expected: boolean, token: string): Finding[] {
+  const scripts = [...html.matchAll(/<script\b([^>]*)>/gi)].map((match) => attributesOf(match[1] ?? ''));
+  const beacons = scripts.filter((attrs) => (attrs.get('src') ?? '').includes('cloudflareinsights') || attrs.has('data-cf-beacon'));
+  const mentioned = /cloudflareinsights|data-cf-beacon/i.test(html);
+  if (!expected) return mentioned ? [err(file, 'this page carries no analytics beacon (routing-locale section 5, site-data section 10)')] : [];
+  if (beacons.length !== 1) return [err(file, `expected exactly one analytics beacon, found ${beacons.length}`)];
+  const attrs = beacons[0];
+  const findings: Finding[] = [];
+  if (attrs?.get('src') !== BEACON_SRC) findings.push(err(file, `the beacon src must be exactly ${BEACON_SRC}`));
+  if (attrs?.get('type')?.toLowerCase() !== 'module') findings.push(err(file, 'the beacon is an external module script'));
+  let config: unknown;
+  try {
+    config = JSON.parse(decodeEntities(attrs?.get('data-cf-beacon') ?? ''));
+  } catch {
+    config = undefined;
+  }
+  const keys = typeof config === 'object' && config !== null ? Object.keys(config) : [];
+  if (keys.join() !== 'token' || (config as { token?: unknown }).token !== token) {
+    findings.push(err(file, 'data-cf-beacon must hold only the site token from site.yaml'));
+  }
   return findings;
 }
 

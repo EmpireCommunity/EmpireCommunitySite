@@ -14,7 +14,7 @@ export interface LegalDoc {
   locale: string;
   slug: string;
   version: string;
-  effectiveDate: string;
+  effectiveDate: string | undefined;
   body: string;
 }
 
@@ -30,7 +30,12 @@ export function headingIds(body: string): (string | null)[] {
   return ids;
 }
 
-export function legalIssues(docs: readonly LegalDoc[]): string[] {
+export interface LegalOptions {
+  /** True once the launch PR has flipped `PENDING.legalPages`: every file then carries an `effectiveDate`. */
+  effectiveDateRequired?: boolean;
+}
+
+export function legalIssues(docs: readonly LegalDoc[], { effectiveDateRequired = false }: LegalOptions = {}): string[] {
   // Nothing authored yet: the scaffold ships no legal text. Once any file exists the full set is required.
   if (docs.length === 0) return [];
   const issues: string[] = [];
@@ -41,6 +46,7 @@ export function legalIssues(docs: readonly LegalDoc[]): string[] {
     const name = posix.basename(doc.filePath, '.md');
     if (doc.locale !== folder) issues.push(`${doc.filePath}: locale "${doc.locale}" must equal the folder "${folder}"`);
     if (doc.slug !== name) issues.push(`${doc.filePath}: slug "${doc.slug}" must equal the file name "${name}"`);
+    if (effectiveDateRequired && doc.effectiveDate === undefined) issues.push(`${doc.filePath}: effectiveDate is required once the legal pages are launched`);
     const ids = headingIds(doc.body);
     if (ids.includes(null)) issues.push(`${doc.filePath}: every heading needs an explicit id, e.g. "## Controller {#controller}"`);
     const named = ids.filter((id): id is string => id !== null);
@@ -63,7 +69,7 @@ export function legalIssues(docs: readonly LegalDoc[]): string[] {
   return issues;
 }
 
-export function assertLegalParity(docs: readonly LegalDoc[]): void {
-  const issues = legalIssues(docs);
+export function assertLegalParity(docs: readonly LegalDoc[], options: LegalOptions = {}): void {
+  const issues = legalIssues(docs, options);
   if (issues.length > 0) throw new Error(`legal pages:\n- ${issues.join('\n- ')}`);
 }

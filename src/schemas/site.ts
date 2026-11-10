@@ -19,5 +19,7 @@ export const SiteSchema = z.strictObject({
     // Quoted in YAML so it stays a string (a 19-digit id is not a safe JavaScript number).
     guildId: z.string().regex(/^\d{17,20}$/),
   }),
+  // Cloudflare Web Analytics site token (public, printed in the HTML). Read only by `AnalyticsBeacon.astro` (routing-locale section 5).
+  analytics: z.strictObject({ webAnalyticsToken: z.string().regex(/^[0-9a-f]{32}$/) }),
 });
 export type Site = z.infer<typeof SiteSchema>;

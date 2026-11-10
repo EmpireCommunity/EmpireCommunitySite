@@ -8,7 +8,7 @@ import { formatRulesDate, inviteUrl } from '../src/lib/community-rules.ts';
 import { CommunityRulesSchema } from '../src/schemas/community-rules.ts';
 import { TeamMemberSchema } from '../src/schemas/team.ts';
 import {
-  discordLinks, discordPage, gateCss, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, mainContent, membersFallback, paymentGuard, paymentWords, personData, supportPage, donationsBlockElsewhere,
+  analyticsBeacon, discordLinks, discordPage, gateCss, hasEffectiveDate, legalMarkdownHtml, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, mainContent, membersFallback, paymentGuard, paymentWords, personData, supportPage, donationsBlockElsewhere,
   whatsappAbsent, whatsappInviteLink,
   type Finding,
 } from './lib/dist-checks.ts';
@@ -41,9 +41,16 @@ if (!existsSync(distDir)) {
   process.exit(1);
 }
 
-const site = parse(read('src/data', 'site.yaml')) as { contact?: Record<string, string>; discord?: { inviteCode?: string } };
+const site = parse(read('src/data', 'site.yaml')) as { contact?: Record<string, string>; discord?: { inviteCode?: string }; analytics?: { webAnalyticsToken?: string } };
 const allowedEmails = new Set(Object.values(site.contact ?? {}).map((email) => email.toLowerCase()));
 const inviteCode = site.discord?.inviteCode;
+const webAnalyticsToken = site.analytics?.webAnalyticsToken;
+if (webAnalyticsToken === undefined || webAnalyticsToken === '') {
+  console.log('::error file=src/data/site.yaml::analytics.webAnalyticsToken is not set in src/data/site.yaml: the Web Analytics beacon cannot be checked (D-52)');
+  process.exitCode = 1;
+}
+// Only `analyticsBeacon` gets the empty fallback; the error above already fails the run.
+const beaconToken = webAnalyticsToken ?? '';
 
 const files = listFiles(distDir);
 const htmlFiles = files.filter((file) => file.endsWith('.html'));
@@ -152,6 +159,12 @@ if (files.includes(invitePage) && inviteCode !== undefined) {
   else add(...gateCss(stylesheets.map((href) => read(distDir, href)).join('\n'), stylesheets.join(', ')));
 }
 
+// D-52: the Web Analytics beacon on every locale page except Apoiar, and on no other page (root chooser, 404, /discord).
+for (const file of htmlFiles) {
+  const expected = localePages.includes(file) && !/^(pt-br|en-us)\/support\//.test(file);
+  add(...analyticsBeacon(read(distDir, file), file, expected, beaconToken));
+}
+
 // D-28: support pages carry the donations-not-open block; the payment guard runs on dist/ and on the content sources.
 const supportFiles = new Set<string>();
 for (const locale of ['pt-br', 'en-us']) {
@@ -175,15 +188,22 @@ for (const dir of ['src/data', 'src/content', 'src/i18n/messages']) {
   for (const file of listFiles(dir)) add(...paymentGuard(read(dir, file), `${dir}/${file}`, allowedEmails));
 }
 
-// Legal pages (site-data section 11): the four pages need a built page and their Markdown text. Until the owner's texts
-// land the routes build as title-only placeholders, so the missing text counts as missing; this keeps the release guard shut.
-const legalSources = new Set(listFiles('src/content/legal'));
+// Legal pages (site-data section 11): the four pages need a built page, their Markdown text and, from the launch PR on, an
+// `effectiveDate` (D-51: the launch date, the same in all four files). While `PENDING.legalPages` is true each gap only warns,
+// which keeps the release guard shut; once it is false the same gaps are errors. The Markdown carries no raw HTML.
 for (const locale of ['pt-br', 'en-us'] as const) {
   for (const key of ['terms', 'privacy'] as const) {
     const page = `${routePath(locale, key).slice(1)}index.html`;
     const source = `${locale}/${slugOf(key)}.md`;
+    const sourcePath = `src/content/legal/${source}`;
     if (!files.includes(page)) add(pending(PENDING.legalPages, page, 'the legal page is not built'));
-    else if (!legalSources.has(source)) add(pending(PENDING.legalPages, `src/content/legal/${source}`, 'the legal text is missing, the page is a placeholder'));
+    if (!existsSync(sourcePath)) {
+      add(pending(PENDING.legalPages, sourcePath, 'the legal text is missing, the page is a placeholder'));
+      continue;
+    }
+    const markdown = read('src/content/legal', source);
+    add(...legalMarkdownHtml(markdown, sourcePath));
+    if (!hasEffectiveDate(markdown)) add(pending(PENDING.legalPages, sourcePath, 'effectiveDate is not set (the launch PR sets the launch date in all four files)'));
   }
 }
 

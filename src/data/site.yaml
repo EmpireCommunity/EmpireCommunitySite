@@ -11,3 +11,7 @@ links:
 discord:
   inviteCode: 7Pxg3gyr8n
   guildId: "1010657521775681556"
+# Cloudflare Web Analytics (D-52): the manual snippet, on the locale pages except Apoiar. The token is public (it is printed
+# in the HTML), so it lives here and not in an environment variable.
+analytics:
+  webAnalyticsToken: cb5b8896c4a74076a14900c181cb4458

@@ -122,6 +122,9 @@ describe('legal front matter', () => {
     assert.equal(LegalSchema.safeParse({ ...front, effectiveDate: new Date(Date.UTC(2026, 11, 1)) }).success, true);
     assert.equal(LegalSchema.safeParse({ ...front, effectiveDate: '2026-12-01' }).success, true);
   });
+  test('no effective date is allowed (set by the launch PR, D-51)', () => {
+    assert.equal(LegalSchema.safeParse(front).success, true);
+  });
   test('an invalid date is still rejected', () => {
     assert.equal(LegalSchema.safeParse({ ...front, effectiveDate: new Date(Number.NaN) }).success, false);
     assert.equal(LegalSchema.safeParse({ ...front, effectiveDate: '2026-02-30' }).success, false);
@@ -136,6 +139,7 @@ describe('site and community data (site-data sections 4 and 5)', () => {
     contact: { general: 'contact@empirecommunity.org', legal: 'legal@empirecommunity.org' },
     links: { discord: 'https://empirecommunity.org/discord', github: 'https://github.com/EmpireCommunity', contributing: 'https://github.com/EmpireCommunity/.github/blob/main/CONTRIBUTING.md' },
     discord: { inviteCode: 'abc-123', guildId: '1010657521775681556' },
+    analytics: { webAnalyticsToken: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' },
   };
 
   test('accepts a valid invite code and guild id', () => {
@@ -148,6 +152,8 @@ describe('site and community data (site-data sections 4 and 5)', () => {
     ['a guild id given as a number (it would lose precision)', { ...site, discord: { ...site.discord, guildId: 1010657521775 } }],
     ['a guild id that is too short', { ...site, discord: { ...site.discord, guildId: '12345' } }],
     ['no discord block', { ...site, discord: undefined }],
+    ['an analytics token that is not 32 hex characters', { ...site, analytics: { webAnalyticsToken: 'not-a-token' } }],
+    ['an unknown analytics key', { ...site, analytics: { ...site.analytics, extra: 'x' } }],
   ];
   for (const [label, input] of rejected) {
     test(`site rejects ${label}`, () => {

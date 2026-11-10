@@ -69,6 +69,13 @@ describe('legal pages (site-data section 11)', () => {
     ['a slug that disagrees with the file name', (docs) => docs.map((d) => (d.filePath.includes('en-us/terms') ? { ...d, slug: 'privacy-policy' } : d)), /must equal the file name/],
     ['a heading without an id', (docs) => docs.map((d) => (d.filePath.includes('pt-br/terms') ? { ...d, body: '## Sem id\n' } : d)), /explicit id/],
   ];
+  test('an effective date is optional until the launch, then required in every file', () => {
+    const undated = complete().map((d) => ({ ...d, effectiveDate: undefined }));
+    assert.deepEqual(legalIssues(undated), []);
+    assert.equal(legalIssues(undated, { effectiveDateRequired: true }).length, 4);
+    assert.deepEqual(legalIssues(complete(), { effectiveDateRequired: true }), []);
+  });
+
   for (const [name, mutate, message] of broken) {
     test(`flags ${name}`, () => assert.match(legalIssues(mutate(complete())).join('\n'), message));
   }

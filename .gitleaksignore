@@ -1,0 +1,5 @@
+# gitleaks ignore list (fingerprints: commit:file:rule:line). Each entry is a FAKE value, never a real secret.
+# b400916 put the sequential fake token 0123456789abcdef0123456789abcdef in two test fixtures; its entropy (4.0) tripped
+# generic-api-key. The next commit replaced it with a zero-entropy fake, but the history cannot be rewritten.
+b400916ee9e473a8e6482a2ddf9c71db969e2dae:tests/dist-checks.test.ts:generic-api-key:337
+b400916ee9e473a8e6482a2ddf9c71db969e2dae:tests/schemas.test.ts:generic-api-key:142
