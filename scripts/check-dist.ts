@@ -13,6 +13,7 @@ import {
   type Finding,
 } from './lib/dist-checks.ts';
 import { PENDING } from './lib/pending.ts';
+import { routePath, slugOf } from '../src/lib/routes.ts';
 
 const distDir = process.argv[2] ?? 'dist';
 const ORIGIN = 'https://empirecommunity.org';
@@ -168,6 +169,18 @@ for (const file of files.filter((f) => TEXT_EXTENSIONS.test(f))) {
 }
 for (const dir of ['src/data', 'src/content', 'src/i18n/messages']) {
   for (const file of listFiles(dir)) add(...paymentGuard(read(dir, file), `${dir}/${file}`, allowedEmails));
+}
+
+// Legal pages (site-data section 11): the four pages need a built page and their Markdown text. Until the owner's texts
+// land the routes build as title-only placeholders, so the missing text counts as missing; this keeps the release guard shut.
+const legalSources = new Set(listFiles('src/content/legal'));
+for (const locale of ['pt-br', 'en-us'] as const) {
+  for (const key of ['terms', 'privacy'] as const) {
+    const page = `${routePath(locale, key).slice(1)}index.html`;
+    const source = `${locale}/${slugOf(key)}.md`;
+    if (!files.includes(page)) add(pending(PENDING.legalPages, page, 'the legal page is not built'));
+    else if (!legalSources.has(source)) add(pending(PENDING.legalPages, `src/content/legal/${source}`, 'the legal text is missing, the page is a placeholder'));
+  }
 }
 
 // Origin fallback of the member count (members-json section 4).
