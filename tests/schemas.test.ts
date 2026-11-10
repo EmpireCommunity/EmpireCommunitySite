@@ -139,7 +139,7 @@ describe('site and community data (site-data sections 4 and 5)', () => {
     contact: { general: 'contact@empirecommunity.org', legal: 'legal@empirecommunity.org' },
     links: { discord: 'https://empirecommunity.org/discord', github: 'https://github.com/EmpireCommunity', contributing: 'https://github.com/EmpireCommunity/.github/blob/main/CONTRIBUTING.md' },
     discord: { inviteCode: 'abc-123', guildId: '1010657521775681556' },
-    analytics: { webAnalyticsToken: 'cb5b8896c4a74076a14900c181cb4458' },
+    analytics: { webAnalyticsToken: '0123456789abcdef0123456789abcdef' },
   };
 
   test('accepts a valid invite code and guild id', () => {
