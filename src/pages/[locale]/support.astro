@@ -1,0 +1,119 @@
+---
+// Apoiar (information-architecture section 7.5): goal, donations not open, server parts, donate parts, other ways to
+// help, transparency. At launch the site receives no money and shows no way to send any (D-28), so there is one
+// `data-donations="not-open"` block and no payment instruction, account data or provider link anywhere. The page reads
+// only `getSupport()`. The parts table (P-02) and the progress bar (P-03) exist only when there is real data: with no
+// secured value there is no bar and no "R$ 0" (D-39: this is the only page that shows it). Reaching the goal switches
+// the progress text and hides nothing (D-22).
+import type { GetStaticPaths } from 'astro';
+import ArrowLink from '../../components/ArrowLink.astro';
+import Index from '../../components/Index.astro';
+import IndexSection from '../../components/IndexSection.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { t } from '../../i18n/index.ts';
+import type { MessageKey } from '../../i18n/index.ts';
+import { LOCALES, isLocale } from '../../lib/routes.ts';
+import { getSite } from '../../lib/site-data.ts';
+import { getSupport } from '../../lib/support.ts';
+import { formatBrl } from '../../lib/support-rules.ts';
+
+export const getStaticPaths = (() => LOCALES.map((locale) => ({ params: { locale } }))) satisfies GetStaticPaths;
+
+const { locale } = Astro.params;
+if (!isLocale(locale)) throw new Error(`unexpected locale: ${locale}`);
+
+const [site, support] = await Promise.all([getSite(), getSupport(locale)]);
+const { goal, parts, partDonations } = support;
+const target = formatBrl(goal.targetCents, locale);
+const hasProgress = goal.securedCents > 0;
+const reached = goal.remainingCents === 0;
+---
+
+<BaseLayout locale={locale} routeKey="support">
+  <div class="frame pt-64 lg:pt-96">
+    <h1 class="font-display text-display text-papel">{t(locale, 'support.title')}</h1>
+    <p class="mt-24 max-w-[56ch] text-lead text-papel-suave">{t(locale, 'support.lead')}</p>
+    <div class="pb-48 lg:pb-64"></div>
+
+    <Index closed>
+      <IndexSection title={goal.title}>
+        <p class="font-display text-figure text-papel">{target}</p>
+        <p class="mt-16 max-w-[68ch] text-body text-papel-suave">{goal.description}</p>
+        {
+          hasProgress && (
+            <div class="mt-24">
+              <progress class="goal-bar" value={goal.securedCents} max={goal.targetCents} aria-label={t(locale, 'support.goal.progress', { secured: formatBrl(goal.securedCents, locale), target })}></progress>
+              <p class="mt-12 text-ledger text-livro-entrada">
+                {reached ? t(locale, 'support.goal.reached') : t(locale, 'support.goal.progress', { secured: formatBrl(goal.securedCents, locale), target })}
+              </p>
+              <p class="mt-8 max-w-[68ch] text-body-sm text-papel-suave">{t(locale, 'support.progress.criterion')}</p>
+            </div>
+          )
+        }
+      </IndexSection>
+
+      <IndexSection title={t(locale, 'support.donations.title')}>
+        <p data-donations="not-open" class="max-w-[68ch] text-body text-papel">{t(locale, 'support.donations.notOpen')}</p>
+      </IndexSection>
+
+      {
+        parts.length > 0 && (
+          <IndexSection title={t(locale, 'support.parts.title')} rows>
+            <table class="w-full text-left">
+              <thead class="max-md:sr-only">
+                <tr class="text-label text-papel-suave">
+                  <th scope="col" class="py-16 pr-16 font-normal">{t(locale, 'support.parts.col.part')}</th>
+                  <th scope="col" class="py-16 pr-16 font-normal">{t(locale, 'support.parts.col.value')}</th>
+                  <th scope="col" class="py-16 font-normal">{t(locale, 'support.parts.col.status')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {parts.map((part) => (
+                  <tr class="border-t border-pauta max-md:grid max-md:gap-y-8 max-md:py-24">
+                    <th scope="row" class="py-12 pr-16 align-middle text-body-sm font-normal text-papel max-md:py-0">
+                      {part.quantity > 1 ? `${part.quantity} × ${part.name}` : part.name}
+                    </th>
+                    <td class="py-12 pr-16 align-middle text-body-sm text-papel-suave max-md:py-0">
+                      <span class="text-label md:sr-only">{t(locale, 'support.parts.col.value')}: </span>
+                      {formatBrl(part.totalCents, locale)}
+                    </td>
+                    <td class="py-12 align-middle text-body-sm text-papel-suave max-md:py-0">
+                      <span class="text-label md:sr-only">{t(locale, 'support.parts.col.status')}: </span>
+                      {t(locale, `support.parts.status.${part.status}` as MessageKey)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </IndexSection>
+        )
+      }
+
+      {
+        partDonations?.accepted === true && (
+          <IndexSection title={t(locale, 'support.partDonations.title')}>
+            <p class="max-w-[68ch] text-body text-papel-suave">{partDonations.how}</p>
+            <div class="mt-16 flex flex-wrap gap-x-24">
+              <ArrowLink href={site.links.discord} label={t(locale, 'cta.join', { channel: 'Discord' })} />
+              <a href={`mailto:${site.contact.general}`} class="link-text inline-flex min-h-[44px] items-center text-body">{site.contact.general}</a>
+            </div>
+          </IndexSection>
+        )
+      }
+
+      <IndexSection title={t(locale, 'support.other.title')}>
+        <p class="max-w-[68ch] text-body text-papel-suave">{t(locale, 'support.other.body')}</p>
+        <div class="mt-16">
+          <ArrowLink href={site.links.github} label={t(locale, 'footer.github')} />
+        </div>
+      </IndexSection>
+
+      <IndexSection title={t(locale, 'support.transparency.title')}>
+        <div class="flex max-w-[68ch] flex-col gap-16 text-body text-papel-suave">
+          <p>{t(locale, 'support.transparency.sold')}</p>
+          <p>{t(locale, 'support.transparency.data')}</p>
+        </div>
+      </IndexSection>
+    </Index>
+  </div>
+</BaseLayout>

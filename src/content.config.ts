@@ -15,6 +15,7 @@ import { JoinChannelSchema } from './schemas/join-channels.ts';
 import { LegalSchema } from './schemas/legal.ts';
 import { ProjectSchema } from './schemas/projects.ts';
 import { SiteSchema } from './schemas/site.ts';
+import { SupportSchema } from './schemas/support.ts';
 import { TeamMemberSchema } from './schemas/team.ts';
 
 const site = defineCollection({
@@ -49,6 +50,15 @@ const joinChannels = defineCollection({
   schema: JoinChannelSchema,
 });
 
+// The support page data: one document, validated strictly (no payment field can exist in it).
+const support = defineCollection({
+  loader: yamlLoader({
+    path: 'src/data/support.yaml',
+    parse: (text, source) => parseSingleDocument(text, source, 'support'),
+  }),
+  schema: SupportSchema.extend({ id: z.literal('support') }),
+});
+
 const team = defineCollection({
   loader: yamlLoader({ path: 'src/data/team.yaml', parse: parseEntryList, validate: assertSingleFounder }),
   schema: TeamMemberSchema,
@@ -81,4 +91,4 @@ function legalLoader(): Loader {
 
 const legal = defineCollection({ loader: legalLoader(), schema: LegalSchema });
 
-export const collections = { site, community, projects, gameServers, joinChannels, team, legal };
+export const collections = { site, community, projects, gameServers, joinChannels, support, team, legal };

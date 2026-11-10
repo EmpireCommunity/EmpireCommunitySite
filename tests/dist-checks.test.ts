@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import {
-  discordLinks, hreflangReciprocity, htmlLang, mainContent, inlineExecutable, languageSelector, membersFallback, paymentGuard, personData, whatsappAbsent, whatsappInviteLink,
+  discordLinks, hreflangReciprocity, htmlLang, mainContent, inlineExecutable, languageSelector, membersFallback, paymentGuard, personData, supportPage, donationsBlockElsewhere, whatsappAbsent, whatsappInviteLink,
 } from '../scripts/lib/dist-checks.ts';
 import { checkWorkflow } from '../scripts/lib/workflow-rules.ts';
 
@@ -249,4 +249,21 @@ test('team data: a marker without an entry fails, and a name outside its person 
   assert.equal(personData(`${block}<footer>Ana Souza</footer>`, 'x.html', people).length, 1, 'name outside the block');
   assert.equal(personData('<p>Aninhas</p>', 'x.html', people).length, 0, 'whole words only');
   assert.equal(personData('<main>no team</main>', 'x.html', []).length, 0);
+});
+
+test('support page: one plain-text not-open block, no beacon, and the block nowhere else (D-28)', () => {
+  const message = 'Money donations are not open yet.';
+  const page = (block: string, extra = '') => `<main>${block}${extra}</main>`;
+  const ok = '<p data-donations="not-open" class="x">Money donations are not open yet.</p>';
+  assert.equal(supportPage(page(ok), 'p', message).length, 0);
+  const bad: [string, string][] = [
+    ['no block', page('')],
+    ['two blocks', page(ok, ok)],
+    ['a link inside the block', page('<p data-donations="not-open">Money donations are not open yet. <a href="https://x.test">Send</a></p>')],
+    ['another message', page('<p data-donations="not-open">Donate now</p>')],
+    ['an analytics beacon', page(ok, '<script defer src="https://static.cloudflareinsights.com/beacon.min.js"></script>')],
+  ];
+  for (const [label, html] of bad) assert.equal(errors(supportPage(html, 'p', message)), 1, label);
+  assert.equal(errors(donationsBlockElsewhere('<p data-donations="not-open">x</p>', 'q')), 1);
+  assert.equal(donationsBlockElsewhere('<p>x</p>', 'q').length, 0);
 });
