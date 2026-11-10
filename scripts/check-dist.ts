@@ -3,6 +3,8 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { parse } from 'yaml';
+import { parseEntryList } from '../src/lib/yaml-entries.ts';
+import { TeamMemberSchema } from '../src/schemas/team.ts';
 import {
   discordLinks, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, mainContent, membersFallback, paymentGuard, paymentWords, personData,
   whatsappAbsent, whatsappInviteLink,
@@ -97,7 +99,13 @@ for (const file of files.filter((f) => TEXT_EXTENSIONS.test(f) || f.endsWith('.c
 }
 
 // C-4: personal data of team.yaml appears only inside validated person blocks.
-const team = (parse(read('src/data', 'team.yaml')) ?? []) as { id: string; name?: string; nickname?: string }[];
+// Same list parser and schema as the `team` collection, so a non-list or a bad entry fails naming the file.
+const TEAM_FILE = 'src/data/team.yaml';
+const team = parseEntryList(read('src/data', 'team.yaml'), TEAM_FILE).map((entry) => {
+  const result = TeamMemberSchema.safeParse(entry);
+  if (!result.success) throw new Error(`${TEAM_FILE}: entry "${entry.id}" is invalid: ${result.error.message}`);
+  return result.data;
+});
 const people = team.map((person) => ({
   id: person.id,
   names: [person.name, person.nickname].filter((name): name is string => typeof name === 'string' && name !== ''),
