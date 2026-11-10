@@ -5,7 +5,7 @@
 **Website oficial e portal da comunidade Empire Community.**
 
 [![Website](https://img.shields.io/badge/Website-empirehub.com.br-00C7B7?style=for-the-badge&logo=safari&logoColor=white)](https://empirehub.com.br)
-[![Discord](https://img.shields.io/badge/Discord-EmpireHub-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/KgtyNg9U6H)
+[![Discord](https://img.shields.io/badge/Discord-EmpireCommunity-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://empirecommunity.org/discord)
 [![CI](https://github.com/Empire-Community/EmpireCommunitySite/actions/workflows/ci.yml/badge.svg)](https://github.com/Empire-Community/EmpireCommunitySite/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
