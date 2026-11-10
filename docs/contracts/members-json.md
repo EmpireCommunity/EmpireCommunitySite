@@ -173,14 +173,23 @@ days means the Cron is failing, and `lastError` says why (see open questions).
   section 8): it reads the public file `wrangler.jsonc` on `main` of the Worker repository and compares both values
   with `src/data/site.yaml` on `main` of the site. A different guild id is always a failure. A different code is a
   failure too, which during the rotation below is expected between its steps 2 and 3 and clears on the next run.
+  **Until that workflow exists** (it is not written yet, deploy section 8), the rotation below uses a **manual
+  comparison** instead: the person rotating reads the two public values in `wrangler.jsonc` on `main` of the Worker
+  repository and in `src/data/site.yaml` on `main` of the site, and confirms the guild ids are equal and the codes are
+  equal. The rotation never depends on a check that does not exist.
 - **Rotating the invite, in this order.** (1) Create the new invite in Discord and keep the old one valid. (2) A pull
   request in the **Worker repository** changes the two variables; merge needs the owner's explicit OK (ADR-0004
   item 3a) and deploys through Workers Builds: the Worker now counts through the new code (it still checks the guild
-  id). (3) A pull request in the **site repository** changes `site.yaml`; merge, then release and deploy the site
-  ([deploy](deploy.md)). Steps 2 and 3 may be swapped, because both invites are valid until step 5. (4) Open the live
-  `/discord` page and confirm it carries the new invite, that the next run of the integrity workflow passes the
-  consistency row, and that the new invite lookup returns the configured guild. (5) Only then revoke the old invite.
-  Revoking earlier leaves visitors with a dead link until the site release is live. If an invite is deleted
+  id). **A merge can land while the build fails**, so confirm in the Workers Builds history that the build and
+  deployment of that merge commit succeeded, and that the deployed Worker version is that commit's. (3) A pull request in the **site repository** changes `site.yaml`; merge, then release and deploy the site
+  ([deploy](deploy.md)). Steps 2 and 3 may be swapped, because both invites are valid until step 5. (4) Verify, all of it: the live
+  `/discord` page carries the new invite; the new invite lookup returns the configured guild; the manual comparison
+  above passes (or, once the integrity workflow exists, its consistency row passes); and the Worker works through the
+  new code, shown by `updatedAt` in the KV record advancing with `lastError` null after the Worker deployment of step 2
+  (run the Cron once or wait for the next one). (5) Only when **a successful production deployment of the Worker
+  commit that carries the new invite** (step 2) **and the live site release** (step 3) are both confirmed, revoke the
+  old invite. Revoking earlier leaves visitors with a dead link until the site release is live, and freezes the count if
+  the Worker deployment never happened. If an invite is deleted
   unexpectedly, the count freezes at the last value (row `invite_not_found`) until both repositories hold a valid code
   and both deploys are done.
 - Rejected: reading `site.yaml` at deploy time (not possible across repositories without a token or a fetch at build
