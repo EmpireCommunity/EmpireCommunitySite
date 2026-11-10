@@ -1,0 +1,23 @@
+# Support page data (docs/contracts/site-data.md section 10). The site receives no money and shows no way to send any
+# (D-28): the schema is strict, so a payment field fails the build.
+# The server parts, their values and photos (P-02) and so the value already secured (P-03) are owner content that does
+# not exist yet: `parts` stays empty, which hides the parts table and the progress bar. Never add placeholder values.
+schemaVersion: 1
+verified: { on: 2026-11-10, by: owner }
+donations:
+  status: not-open
+goal:
+  id: xeon-server
+  title:
+    pt-br: Meta atual
+    en-us: Current goal
+  description:
+    pt-br: "A meta é montar um servidor local, com Xeon e 128 GB de RAM, para hospedar mais servidores de jogos. Ele está em montagem e ainda não está em uso. Esse é o primeiro marco: depois dele, continuam os custos da comunidade, como energia dos servidores, melhorias, hospedagem e domínios."
+    en-us: "The goal is to build a local server, with a Xeon and 128 GB of RAM, to host more game servers. It is being built and is not in use yet. This is the first milestone: after it, community costs continue, such as server power, upgrades, hosting and domains."
+  targetCents: 300000
+parts: []
+partDonations:
+  accepted: true
+  how:
+    pt-br: "Também aceitamos peças doadas para o servidor. Antes de enviar, fale com a equipe pelo Discord ou por contact@empirecommunity.org."
+    en-us: "We also accept donated parts for the server. Before sending anything, talk to the team on Discord or at contact@empirecommunity.org."

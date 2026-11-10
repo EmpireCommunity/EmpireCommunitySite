@@ -6,7 +6,7 @@ import { parse } from 'yaml';
 import { parseEntryList } from '../src/lib/yaml-entries.ts';
 import { TeamMemberSchema } from '../src/schemas/team.ts';
 import {
-  discordLinks, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, mainContent, membersFallback, paymentGuard, paymentWords, personData,
+  discordLinks, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, mainContent, membersFallback, paymentGuard, paymentWords, personData, supportPage, donationsBlockElsewhere,
   whatsappAbsent, whatsappInviteLink,
   type Finding,
 } from './lib/dist-checks.ts';
@@ -126,13 +126,19 @@ for (const file of htmlFiles) {
 }
 
 // D-28: support pages carry the donations-not-open block; the payment guard runs on dist/ and on the content sources.
+const supportFiles = new Set<string>();
 for (const locale of ['pt-br', 'en-us']) {
   const file = `${locale}/support/index.html`;
-  if (!files.includes(file)) add(pending(PENDING.supportBlock, file, 'the support page is not built'));
-  else if (!read(distDir, file).includes('data-donations="not-open"')) {
-    add(pending(PENDING.supportBlock, file, 'missing the data-donations="not-open" block'));
+  supportFiles.add(file);
+  if (!files.includes(file)) {
+    add({ level: 'error', file, message: 'the support page is not built' });
+    continue;
   }
+  const messages = JSON.parse(read('src/i18n/messages', `${locale}.json`)) as Record<string, string>;
+  const notOpen = messages['support.donations.notOpen'] ?? '';
+  add(...supportPage(read(distDir, file), file, notOpen));
 }
+for (const file of htmlFiles.filter((f) => !supportFiles.has(f))) add(...donationsBlockElsewhere(read(distDir, file), file));
 for (const file of files.filter((f) => TEXT_EXTENSIONS.test(f))) {
   const text = read(distDir, file);
   add(...paymentGuard(text, file, allowedEmails));

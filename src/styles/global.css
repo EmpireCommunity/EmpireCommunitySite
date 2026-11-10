@@ -220,3 +220,25 @@
     animation: none;
   }
 }
+
+/* Goal progress (Apoiar): a native <progress>, square, 8 px high; the fill is a money value, so it uses livro-entrada. */
+@utility goal-bar {
+  appearance: none;
+  display: block;
+  width: 100%;
+  max-width: 68ch;
+  height: var(--spacing-8);
+  border: 0;
+  background-color: var(--color-pauta);
+  color: var(--color-livro-entrada);
+
+  &::-webkit-progress-bar {
+    background-color: var(--color-pauta);
+  }
+  &::-webkit-progress-value {
+    background-color: var(--color-livro-entrada);
+  }
+  &::-moz-progress-bar {
+    background-color: var(--color-livro-entrada);
+  }
+}
