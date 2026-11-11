@@ -377,13 +377,13 @@ or Workers versions in the dashboard, or remove the route (the origin file then 
 - That Discord does not answer 429 or 403 to Cloudflare Workers egress addresses for the invite endpoint. A live
   call from an ordinary network returned 200; none was made from a Worker. If it fails, the contract still holds (last value and
   built-in file) but the count would freeze; the fallback plan is a different producer behind the same contract.
-- The minimal set of permissions of the Workers Builds token, and that a token without Workers Routes (edit) and R2
-  (edit) deploys (Cloudflare documents only the default set); the default of Enable Preview Builds; behavior for pull
-  requests from forks; that `wrangler deploy` with `workers_dev` and `preview_urls` false and no routes succeeds and
-  leaves the hand-made route untouched (the documentation says routes stay with the dashboard when the keys are
-  absent, but this combination is not exercised); that dependency install scripts and the package manager behave as
-  assumed in Workers Builds. See [ADR-0004](../adr/0004-members-worker-workers-builds.md). Confirm in the first real
-  build and record the result in the Ops Runbook.
+- Resolved by the first production build (2026-11-11, per the Ops Runbook): the dedicated token with Workers Scripts
+  (edit) and Account Settings (read) was enough, with no permission added, and `wrangler deploy` with `workers_dev` and
+  `preview_urls` false and no routes succeeded. Still open: that a later deploy leaves the hand-made route untouched
+  (the route was created after the first build, so only the next Worker deploy shows it); the default of Enable Preview
+  Builds and behavior for pull requests from forks; that dependency install scripts and the package manager behave as
+  assumed in Workers Builds. See [ADR-0004](../adr/0004-members-worker-workers-builds.md). Record the results in the
+  Ops Runbook.
 
 ## 10. Open questions
 

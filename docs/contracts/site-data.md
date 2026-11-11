@@ -2,11 +2,12 @@
 
 - Version: 1. Owner: Alicerce. Consumers: Vitral (pages and components), Forja (loaders, build checks, CI), Ensaio
   (C-1 to C-4), Sentinela (money and personal data surfaces), Regente (content intake from the owner).
-- Decisions: D-2, D-3, D-5, D-6, D-7, D-14, D-21, D-22, D-23, D-28, D-29, D-41 (D-16 is superseded by D-21; D-41 amends D-29). Stack: [ADR-0001](../adr/0001-stack.md). Routes and locales:
+- Decisions: D-2, D-3, D-5, D-6, D-7, D-14, D-21, D-22, D-23, D-28, D-29, D-33, D-41, D-44, D-50, D-51, D-62, D-65 (D-16 is superseded by D-21; D-41 amends D-29; D-50 raises `support.yaml` to High; D-65 sets the legal `effectiveDate` in the launch PR). Stack: [ADR-0001](../adr/0001-stack.md). Routes and locales:
   [routing-locale](routing-locale.md). Member count endpoint: [members-json](members-json.md).
-- Risk: **High** for `team.yaml` (personal data). `support.yaml` is **Medium at launch**: public goal figures and a
-  "donations not open" state, no payment instruction (D-28). The change that opens donations is High and has its own
-  contract. The other files are Low or Medium.
+- Risk: **High** for `team.yaml` (personal data) and for `support.yaml` and the support module (D-50: the project risk
+  map in `AGENTS.md` puts any support, donation or payment code and data at High, which overrides the Medium this
+  contract first gave it). At launch the page carries public goal figures and a "donations not open" state, no payment
+  instruction (D-28). The change that opens donations has its own contract. The other files are Low or Medium.
 - Examples below are **illustrative placeholders**, not facts. Real values come from the owner; nothing is invented
   and a section with no real data is not rendered (C-4).
 
@@ -282,7 +283,7 @@ Target: live removal within 72 hours of a valid request, and purge of published 
    explicit OK and is never a force-push to `main` without that OK.
 8. Close the request in the private register with the completion dates and answer the requester.
 
-## 10. `support.yaml` and the support module (Medium at launch; D-6, D-21, D-22, D-28)
+## 10. `support.yaml` and the support module (High per D-50; D-6, D-21, D-22, D-28)
 
 **At launch the site receives no money and shows no way to send any (D-28).** The Support page shows the community
 goal, the server parts and a plain "donations are not open yet" state. Opening donations, the payment gateway, the
@@ -293,16 +294,22 @@ payment instruction.
 The Support page reads **only** `getSupport()` from `src/lib/support.ts`, never the YAML. The module loads
 `support.yaml`, validates it and derives the totals. It holds no payment, account or donor data of any kind.
 
+`getSupport(locale)` returns strings already resolved for the locale, not `Localized` objects:
+
 ```ts
 type SupportSnapshot = {
   donations: { status: 'not-open' };
-  goal: { id: string; title: Localized; description: Localized; targetCents: number;
+  goal: { id: string; title: string; description: string; targetCents: number;
           securedCents: number; remainingCents: number; progress: number /* 0..1 */ };
-  specs: { label: Localized; value: string }[];                  // optional highlights, e.g. RAM
-  parts: Part[];
-  partDonations: { accepted: boolean; how: Localized } | null;
+  parts: { id: string; name: string; quantity: number; totalCents: number /* quantity x unit price */;
+           status: 'needed' | 'purchased' | 'donated' }[];
+  partDonations: { accepted: boolean; how: string } | null;
 };
 ```
+
+`specs` (optional highlights, below) is validated by the schema but not part of the snapshot yet; T-17 finding m-2
+decides whether it is rendered or removed. A part with a `photo` fails the build for now ("rendering a photo is not
+built yet"), so no photo can be published before the image pipeline exists.
 
 `support.yaml`:
 
@@ -344,7 +351,10 @@ Rules:
   Support page renders one block marked `data-donations="not-open"` with the message `support.donations.notOpen`
   (required in both locales). The message says that donations are not open yet; it gives **no payment instruction, no
   account data and no link to a payment provider**. No other page, `llms.txt` or structured data states or suggests
-  that a donation can be made now; that part is a human review of the copy in the PR.
+  that a donation can be made now; that part is a human review of the copy in the PR. The owner-approved descriptive
+  phrase that the community "runs on voluntary donations" (D-33, D-44) is allowed on Home, Join, Organization and
+  Support, because it describes how the community is funded and not a way to give; `home.funding.body` states in the
+  same text that money donations are not open yet.
 - **Goal is a milestone, not an end (D-22).** Reaching it (`remainingCents` is 0) switches the progress text to the
   required message `support.goal.reached`; nothing is hidden, closed or marked as complete. Ongoing community costs
   (power, upgrades, hosting, domains) are part of the same later donation contract.
@@ -385,10 +395,14 @@ title: ...
 slug: terms-of-service          # must equal the file name
 locale: pt-br                   # must equal the folder
 version: "1.0"                  # identical in both locales
-effectiveDate: 2026-12-01       # identical in both locales
+effectiveDate: <launch day>     # YYYY-MM-DD, identical in both locales; absent until the launch PR (D-51, D-65)
 ---
 ```
 
+- **`effectiveDate` has no placeholder.** There is no launch date (D-65): the launch PR sets the launch day in all four
+  files and flips `PENDING.legalPages` to `false` in the same change. The schema keeps the field optional; while the
+  flag is `true` an absent date renders nothing and `check-dist` only warns, and once the flag is `false` the build
+  fails on a file without it (and on any difference between the two locales).
 - Both locales exist for both slugs (C-3). **Headings carry explicit ids** (`## Controller {#controller}`); the build
   fails unless both locales have the same heading ids in the same order, the same `version` and the same
   `effectiveDate`. Semantic equality of the text ("identical content in both languages") is a human review in the PR
