@@ -51,7 +51,7 @@ interface Address {
 const addresses: Address[] = [
   { purpose: 'organization.addresses.main', host: new URL(site.origin).hostname, status: 'live' },
   ...(muse?.url === undefined ? [] : [{ purpose: 'organization.addresses.muse' as const, host: new URL(muse.url).hostname, status: muse.status, url: muse.url }]),
-  { purpose: 'organization.addresses.cloud', host: 'empirecommunity.cloud', status: 'coming-soon' },
+  { purpose: 'organization.addresses.cloud', host: new URL(site.links.cloud).hostname, status: 'coming-soon' },
   { purpose: 'organization.addresses.github', host: new URL(site.links.github).host + new URL(site.links.github).pathname, status: 'live', url: site.links.github },
 ];
 ---

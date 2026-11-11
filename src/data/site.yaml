@@ -8,6 +8,8 @@ links:
   discord: https://empirecommunity.org/discord
   github: https://github.com/EmpireCommunity
   contributing: https://github.com/EmpireCommunity/.github/blob/main/CONTRIBUTING.md
+  # The game-server status site. It is not up yet (answers 404), so the Organization page lists its address without a link.
+  cloud: https://empirecommunity.cloud
 discord:
   inviteCode: 7Pxg3gyr8n
   guildId: "1010657521775681556"

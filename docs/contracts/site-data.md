@@ -110,6 +110,7 @@ links:
   discord: https://empirecommunity.org/discord      # literal; the only Discord link allowed on the site
   github: https://github.com/EmpireCommunity
   contributing: https://github.com/EmpireCommunity/.github/blob/main/CONTRIBUTING.md   # the organization's contribution guide, linked from Projects
+  cloud: https://empirecommunity.cloud              # game-server status site; not up yet, so Organization shows its host without a link
 discord:                                            # the one place the invite is defined (D-29)
   inviteCode: <approved invite code>                # 2 to 32 characters, letters, digits and hyphen
   guildId: "<server id>"                            # 17 to 20 digits, quoted so it stays a string
@@ -210,8 +211,8 @@ whatsapp:                                 # pt-BR only; optional
   sources and may show it; in `dist/` it appears only on `/discord` (section 12). That is its one source. The Discord invite has one source too (`site.yaml`, section 4). Whether the
   pt-BR join page shows one button or one per channel is a layout choice (Bússola); either way every `href` is
   `links.discord`.
-- Equal weight in pt-BR (D-3): the two channels share the same component, size, and prominence, ordered by the order
-  in this file. Visual treatment is Vitral's.
+- Equal weight in pt-BR (D-3): the two channels share the same component, size, and prominence, Discord first, then the
+  others by id. Visual treatment is Vitral's.
 - WhatsApp never appears in en-US output, including head tags, JSON-LD, sitemap and `llms.txt` (post-build scan). On
   `/discord`, a neutral page, it appears only inside the `lang="pt-BR"` container (section 12).
 

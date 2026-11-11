@@ -12,7 +12,7 @@ export const SiteSchema = z.strictObject({
   organization: z.literal('EmpireCommunity'),
   currency: z.literal('BRL'),
   contact: z.strictObject({ general: Email, legal: Email }),
-  links: z.strictObject({ discord: z.literal(DISCORD_URL), github: HttpsUrl, contributing: HttpsUrl }),
+  links: z.strictObject({ discord: z.literal(DISCORD_URL), github: HttpsUrl, contributing: HttpsUrl, cloud: HttpsUrl }),
   // The one place the approved invite is defined (D-29): read by the /discord page, the Worker and the integrity check.
   discord: z.strictObject({
     inviteCode: z.string().regex(/^[A-Za-z0-9-]{2,32}$/),

@@ -9,8 +9,18 @@ release happens and which version it gets. The release PR (`chore/release-X.Y.Z`
 
 ## [Unreleased]
 
+### Fixed
+
+- Findings of the final code review (T-17a). `getSupport()` now fails the build when `support.yaml` carries `specs` (valid in the schema and the contract, rendered by no page yet) instead of dropping owner data silently, like the part photo path. `check-dist` requires the WhatsApp community link exactly once in the pt-BR container of `/discord`, and warns (never fails) when `whatsapp.asOf` is over 180 days old, `verified.on` over 90 days, or a team `consent.reviewOn` is in the past. The i18n test checks the value allowlist: only the pt-br `meta.join.description` names WhatsApp. `llms.txt` lists the Terms and Privacy pages once `PENDING.legalPages` is false. `getJoinChannels` sorts explicitly, Discord first. Money uses `Intl.NumberFormat` with `style: 'currency'` (site-data section 2): pt-BR still reads `R$ 5.384,99` (now with a no-break space), en-US reads `R$5,384.99` (no space after the symbol).
+- The Cloudflare Web Analytics script stays `type="module"`: it is how Cloudflare's docs print the manual snippet, and `beacon.min.js` falls back to `script[data-cf-beacon]` when `document.currentScript` is null, so no change was needed (comment in `AnalyticsBeacon.astro`).
+
+### Changed
+
+- The game-server status address lives in `site.yaml` (`links.cloud`) and the member-count path in `routes.ts` (`MEMBERS_JSON_PATH`), not in a page and a script.
+
 ### Removed
 
+- `src/lib/team.ts` (an unused second reader of team data; `getTeam` in `site-data.ts` is the only one, site-data section 9) and `src/pages/[locale]/[route].astro` (it built no page, and a new route key could have shipped as a stub).
 - Leftovers of the old in-repo Worker deploy (T-14e, D-55): the `worker-production` environment and `worker-deploy.yml` workflow-lint rules (and the literal-environment-name rule that existed only to protect that environment; no workflow uses `environment`) with their tests, the `/worker/` line in `CODEOWNERS`, the `worker/` note in `dependabot.yml` and `worker/` in the `AGENTS.md` High list, which now says the Worker lives in its own repository.
 
 ### Added

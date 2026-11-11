@@ -176,8 +176,12 @@ export function discordPage(html: string, file: string, expected: DiscordPageExp
     for (const link of inner.matchAll(/<a\b[^>]*\bhref=["'](https:\/\/(?:discord\.com|chat\.whatsapp\.com)\/[^"']*)["'][^>]*>/gi)) {
       if (!/\brel=["'][^"']*noopener[^"']*noreferrer|\brel=["'][^"']*noreferrer[^"']*noopener/i.test(link[0])) fail(`${where}: external link ${link[1]} needs rel="noopener noreferrer"`);
     }
-    const whatsapp = hasLink(inner, expected.whatsappUrl);
-    if (lang === 'pt-BR' && !whatsapp) fail(`${where} has no WhatsApp join link`);
+    if (lang === 'pt-BR') {
+      // The community link is rendered exactly once, in this container (site-data section 12).
+      const whatsappCount = expected.whatsappUrl === '' ? 0 : inner.split(expected.whatsappUrl).length - 1;
+      if (!hasLink(inner, expected.whatsappUrl)) fail(`${where} has no WhatsApp join link`);
+      else if (whatsappCount !== 1) fail(`${where}: the WhatsApp community link must appear exactly once, found ${whatsappCount}`);
+    }
   }
   // WhatsApp (the word or the community URL) only inside the pt-BR container, never in the head or the en-US container.
   const outsidePt = html.replace(containers[0]?.[0] ?? '', '');
@@ -446,4 +450,36 @@ export function membersFallback(text: string, file: string): Finding[] {
     typeof discord?.updatedAt === 'string' && DATE_TIME.test(discord.updatedAt) && !Number.isNaN(Date.parse(discord.updatedAt)) &&
     discord.source === 'built-in';
   return valid ? [] : [err(file, 'does not match members.json v1 (schema 1, integer members 1..1000000, RFC 3339 date-time updatedAt, source built-in)')];
+}
+
+export const WHATSAPP_COUNT_MAX_AGE_DAYS = 180;
+export const SUPPORT_VERIFIED_MAX_AGE_DAYS = 90;
+
+export interface ReviewDates {
+  /** `whatsapp.asOf` of community.yaml. */
+  whatsappAsOf: string | undefined;
+  /** `verified.on` of support.yaml. */
+  supportVerifiedOn: string | undefined;
+  /** `consent.reviewOn` of each team entry (opaque ids only). */
+  reviewOns: readonly { id: string; on: string }[];
+}
+
+const MS_PER_DAY = 86_400_000;
+const daysBetween = (isoDate: string, today: Date) => Math.floor((today.getTime() - Date.parse(`${isoDate}T00:00:00Z`)) / MS_PER_DAY);
+
+/** Stale dates (site-data section 12): warnings only, so an old date asks for a review without blocking a release. `today` is injected. */
+export function staleDates(dates: ReviewDates, today: Date): Finding[] {
+  const findings: Finding[] = [];
+  if (dates.whatsappAsOf !== undefined) {
+    const age = daysBetween(dates.whatsappAsOf, today);
+    if (age > WHATSAPP_COUNT_MAX_AGE_DAYS) findings.push(warn('src/data/community.yaml', `whatsapp.asOf is ${age} days old (over ${WHATSAPP_COUNT_MAX_AGE_DAYS}): refresh the member count`));
+  }
+  if (dates.supportVerifiedOn !== undefined) {
+    const age = daysBetween(dates.supportVerifiedOn, today);
+    if (age > SUPPORT_VERIFIED_MAX_AGE_DAYS) findings.push(warn('src/data/support.yaml', `verified.on is ${age} days old (over ${SUPPORT_VERIFIED_MAX_AGE_DAYS}): the owner re-verifies the support data`));
+  }
+  for (const { id, on } of dates.reviewOns) {
+    if (daysBetween(on, today) > 0) findings.push(warn('src/data/team.yaml', `entry ${id}: consent.reviewOn (${on}) is in the past: the yearly consent review is due`));
+  }
+  return findings;
 }

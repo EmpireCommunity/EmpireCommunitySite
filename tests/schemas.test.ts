@@ -137,7 +137,7 @@ describe('site and community data (site-data sections 4 and 5)', () => {
     organization: 'EmpireCommunity',
     currency: 'BRL',
     contact: { general: 'contact@empirecommunity.org', legal: 'legal@empirecommunity.org' },
-    links: { discord: 'https://empirecommunity.org/discord', github: 'https://github.com/EmpireCommunity', contributing: 'https://github.com/EmpireCommunity/.github/blob/main/CONTRIBUTING.md' },
+    links: { discord: 'https://empirecommunity.org/discord', github: 'https://github.com/EmpireCommunity', contributing: 'https://github.com/EmpireCommunity/.github/blob/main/CONTRIBUTING.md', cloud: 'https://empirecommunity.cloud' },
     discord: { inviteCode: 'abc-123', guildId: '1010657521775681556' },
     analytics: { webAnalyticsToken: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' },
   };

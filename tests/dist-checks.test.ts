@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import {
-  analyticsBeacon, discordLinks, discordPage, gateCss, hasEffectiveDate, legalMarkdownHtml, hreflangReciprocity, htmlLang, mainContent, inlineExecutable, languageSelector, membersFallback, paymentGuard, personData, supportPage, donationsBlockElsewhere, whatsappAbsent, whatsappInviteLink,
+  analyticsBeacon, staleDates, discordLinks, discordPage, gateCss, hasEffectiveDate, legalMarkdownHtml, hreflangReciprocity, htmlLang, mainContent, inlineExecutable, languageSelector, membersFallback, paymentGuard, personData, supportPage, donationsBlockElsewhere, whatsappAbsent, whatsappInviteLink,
 } from '../scripts/lib/dist-checks.ts';
 import { checkWorkflow } from '../scripts/lib/workflow-rules.ts';
 
@@ -290,6 +290,7 @@ test('/discord structure passes when it follows the contract and fails on each v
     ['a checkbox without a label', discordHtml(container('pt-BR', 'pt-br', { input: '<input type="checkbox" id="a" autocomplete="off">' }))],
     ['links before the checkbox', discordHtml(container('pt-BR', 'pt-br', { text: `<a href="${INVITE}" rel="noopener noreferrer">x</a>` }))],
     ['an external link without rel', discordHtml(container('pt-BR', 'pt-br', { links: `<a href="${INVITE}">Discord</a><a href="${WHATSAPP_URL}" rel="noopener noreferrer">W</a>` }))],
+    ['the WhatsApp link twice in pt-BR', discordHtml(container('pt-BR', 'pt-br', { links: `<a href="${INVITE}" rel="noopener noreferrer">Discord</a><a href="${WHATSAPP_URL}" rel="noopener noreferrer">W</a><a href="${WHATSAPP_URL}" rel="noopener noreferrer">W</a>` }))],
     ['no WhatsApp link in pt-BR', discordHtml(container('pt-BR', 'pt-br', { links: `<a href="${INVITE}" rel="noopener noreferrer">Discord</a>` }))],
     ['WhatsApp in the en-US container', discordHtml(undefined, container('en-US', 'en-us', { text: '<p>WhatsApp</p>' }))],
     ['WhatsApp in the head', discordHtml(undefined, undefined, `${head}<title>WhatsApp</title>`)],
@@ -341,4 +342,18 @@ test('analytics beacon: exactly one, only that src and token, and none where it 
   for (const html of [beacon(), '<script data-cf-beacon="{}"></script>', '<link href="https://static.cloudflareinsights.com/">']) {
     assert.equal(errors(analyticsBeacon(html, 'p', false, token)), 1, html);
   }
+});
+
+test('stale dates warn, never fail (site-data section 12)', () => {
+  const today = new Date('2026-11-11T12:00:00Z');
+  const fresh = { whatsappAsOf: '2026-11-09', supportVerifiedOn: '2026-11-11', reviewOns: [{ id: 'p-000000000001', on: '2027-11-10' }] };
+  assert.deepEqual(staleDates(fresh, today), []);
+  const stale = staleDates(
+    { whatsappAsOf: '2026-05-01', supportVerifiedOn: '2026-07-01', reviewOns: [{ id: 'p-000000000001', on: '2026-11-10' }, { id: 'p-000000000002', on: '2026-11-11' }] },
+    today,
+  );
+  assert.deepEqual(stale.map((finding) => finding.file), ['src/data/community.yaml', 'src/data/support.yaml', 'src/data/team.yaml']);
+  assert.ok(stale.every((finding) => finding.level === 'warning'));
+  // Exactly at the limit is not stale: 180 and 90 days.
+  assert.deepEqual(staleDates({ whatsappAsOf: '2026-05-15', supportVerifiedOn: '2026-08-13', reviewOns: [] }, today), []);
 });
