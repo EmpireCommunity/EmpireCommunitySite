@@ -37,7 +37,7 @@ const reached = goal.remainingCents === 0;
 
     <Index closed>
       <IndexSection title={goal.title}>
-        <p class="font-display text-figure text-papel">{target}</p>
+        <p class="font-display text-figure tabular-nums text-papel">{target}</p>
         <p class="mt-16 max-w-[68ch] text-body text-papel-suave">{goal.description}</p>
         {
           hasProgress && (
@@ -73,7 +73,7 @@ const reached = goal.remainingCents === 0;
                     <th scope="row" class="py-12 pr-16 align-middle text-body-sm font-normal text-papel max-md:py-0">
                       {part.quantity > 1 ? `${part.quantity} × ${part.name}` : part.name}
                     </th>
-                    <td class="py-12 pr-16 align-middle text-body-sm text-papel-suave max-md:py-0">
+                    <td class="py-12 pr-16 align-middle text-body-sm tabular-nums text-papel-suave max-md:py-0">
                       <span class="text-label md:sr-only">{t(locale, 'support.parts.col.value')}: </span>
                       {formatBrl(part.totalCents, locale)}
                     </td>

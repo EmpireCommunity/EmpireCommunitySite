@@ -88,7 +88,7 @@ const purpose = community.purpose?.[locale];
             <ArrowLink slot="aside" href={routePath(locale, 'projects')} label={t(locale, 'link.all')} />
             <RegisterList>
               {projects.map((project) => (
-                <RegisterRow name={project.name} description={project.summary[locale]}>
+                <RegisterRow name={project.name} description={project.summary[locale]} wide>
                   <Status slot="status" locale={locale} status={project.status} />
                 </RegisterRow>
               ))}

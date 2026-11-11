@@ -110,6 +110,7 @@
   "footer.terms": "Terms of Use",
   "footer.privacy": "Privacy Policy",
   "footer.line": "EmpireCommunity. A community based in Brazil.",
+  "notFound.meta.title": "Page not found",
   "notFound.title": "Page not found",
   "notFound.body": "This address does not exist or has moved.",
   "notFound.home": "Go to the home page",
@@ -162,8 +163,6 @@
   "organization.contact.discord": "Discord is the fastest way.",
   "organization.contact.general": "General matters",
   "organization.contact.legal": "Legal matters and personal data",
-  "organization.addresses.col.address": "Address",
-  "organization.addresses.col.purpose": "Purpose",
-  "organization.addresses.col.status": "Status",
+  "projects.open.github": "View on GitHub",
   "projects.open.guides": "Contribution guides"
 }

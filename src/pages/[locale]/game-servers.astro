@@ -58,7 +58,7 @@ const servers = sortGameServers((await getCollection('gameServers')).map((entry)
       </IndexSection>
 
       <IndexSection title={t(locale, 'servers.own.title')}>
-        <p class="text-label text-status-em-breve">{t(locale, 'servers.own.status')}</p>
+        <Status locale={locale} status="coming-soon" label="servers.own.status" />
         <p class="mt-8 max-w-[68ch] text-body text-papel-suave">{t(locale, 'servers.own.body')}</p>
         <div class="mt-16">
           <ArrowLink href={routePath(locale, 'support')} label={t(locale, 'servers.own.link')} />

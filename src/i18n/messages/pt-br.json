@@ -110,6 +110,7 @@
   "footer.terms": "Termos de Uso",
   "footer.privacy": "Política de Privacidade",
   "footer.line": "EmpireCommunity. Comunidade sediada no Brasil.",
+  "notFound.meta.title": "Page not found",
   "notFound.title": "Página não encontrada",
   "notFound.body": "Este endereço não existe ou mudou de lugar.",
   "notFound.home": "Ir para o início",
@@ -162,8 +163,6 @@
   "organization.contact.discord": "O caminho mais rápido é o Discord.",
   "organization.contact.general": "Assuntos gerais",
   "organization.contact.legal": "Assuntos legais e dados pessoais",
-  "organization.addresses.col.address": "Endereço",
-  "organization.addresses.col.purpose": "Função",
-  "organization.addresses.col.status": "Situação",
+  "projects.open.github": "Ver no GitHub",
   "projects.open.guides": "Guias de colaboração"
 }

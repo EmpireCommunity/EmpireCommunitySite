@@ -16,7 +16,7 @@ const { locale } = Astro.props;
 const [{ contact, links }, channels] = await Promise.all([getSite(), getJoinChannels(locale)]);
 
 const linkClass =
-  'link-text inline-flex min-h-[44px] items-center text-body-sm [overflow-wrap:anywhere] text-papel-suave hover:text-papel motion-safe:transition-colors';
+  'link-text inline-flex min-h-[44px] min-w-[44px] items-center text-body-sm [overflow-wrap:anywhere] text-papel-suave hover:text-papel motion-safe:transition-colors';
 const headingClass = 'text-body-sm font-medium text-papel';
 ---
 
