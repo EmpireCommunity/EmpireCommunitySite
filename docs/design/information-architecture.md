@@ -353,9 +353,9 @@ Seções: Título e lead · Meta atual · Doações ainda não abertas · Peças
 ┌──────────────────────┬─────────────────────────────────────────────────┐
 │  Apoiar              │  Lead                                           │
 ├──────────────────────┼─────────────────────────────────────────────────┤
-│  Meta atual          │  R$ 3.000                                       │
+│  Meta atual          │  R$ 5.384,99                                    │
 │                      │  Texto sobre o servidor próprio                 │
-│                      │  ▓▓▓▓░░░░  R$ X de R$ 3.000  [P-03]             │
+│                      │  ▓▓▓▓░░░░  R$ X de R$ 5.384,99  [P-03]          │
 ├──────────────────────┼─────────────────────────────────────────────────┤
 │  Doações             │  Ainda não abertas: support.donations.notOpen   │
 ├──────────────────────┼─────────────────────────────────────────────────┤
@@ -516,8 +516,8 @@ Não usar o widget do Discord: ele expõe nomes de membros online (R-3 do Risks 
 
 | Id | O que falta | Recomendação |
 |---|---|---|
-| P-02 | Peças do Xeon: nome, valor, situação, fotos | Fotos sem etiquetas com números de série |
-| P-03 | Valor já arrecadado | Calculado a partir das peças de P-02 (`site-data` §10). Só em Apoiar (D-39). Sem esse número, a barra de progresso não aparece |
+| P-02 | Peças do Xeon: nome, valor, situação, fotos | Nome, valor e situação enviados pelo dono em 2026-11-11 (`support.yaml`); faltam as fotos, sem etiquetas com números de série |
+| P-03 | Valor já arrecadado | Calculado a partir das peças de P-02 (`site-data` §10): R$ 620 em 2026-11-11. Só em Apoiar (D-39). Sem esse número, a barra de progresso não aparece |
 | P-04 | Equipe: nomes ou apelidos, funções, consentimento | Consentimento por escrito, guardado fora do repositório público |
 | P-05 | Fundador: apelido, bio curta, foto, registro de consentimento | O próprio dono registra o consentimento |
 | P-06 | Fechada por D-37 | Fundação em 20 de agosto de 2022 |

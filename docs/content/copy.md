@@ -9,7 +9,7 @@ Estrutura e regras em [`docs/design/information-architecture.md`](../design/info
   enquanto estiver vazio.
 - `{{nome}}`: valor vindo de dado.
 - Membros: `{{n}}` segue a regra de `members-json` (`880+`). Outros números: `1.234` em pt-BR, `1,234` em en-US.
-- Reais: `R$ 3.000` em pt-BR, `R$ 3,000` em en-US.
+- Reais: `R$ 3.000` em pt-BR, `R$ 3,000` em en-US; os centavos aparecem só quando o valor os tem (`R$ 284,99`, `R$ 284.99`).
 - Datas: `8 de novembro de 2026` em pt-BR, `November 8, 2026` em en-US.
 - `—` numa célula significa que o elemento não existe naquele idioma.
 - A marca se escreve **EmpireCommunity**, sem espaço. **EmpireHub** é o produto de jogos de mesa, não a comunidade.
@@ -92,7 +92,7 @@ Estrutura e regras em [`docs/design/information-architecture.md`](../design/info
 | servers.title | Servidores de jogos | Game servers |
 | servers.request | Pedir um jogo | Request a game |
 | funding.title | Como nos mantemos | How we are funded |
-| funding.body | A EmpireCommunity vive de doações voluntárias. O primeiro marco é de R$ 3.000, para montar um servidor próprio, com Xeon e 128 GB de RAM, que vai hospedar mais servidores de jogos. Depois dele, continuam os custos da comunidade: energia dos servidores, melhorias, hospedagem e domínios. As doações em dinheiro ainda não estão abertas. | EmpireCommunity runs on voluntary donations. The first milestone is R$ 3,000, to build our own server, with a Xeon and 128 GB of RAM, to host more game servers. After that, community costs continue: server power, upgrades, hosting and domains. Money donations are not open yet. |
+| funding.body | A EmpireCommunity vive de doações voluntárias. O primeiro marco é de R$ 5.384,99, para montar um servidor próprio, com Xeon e 128 GB de RAM, que vai hospedar mais servidores de jogos. Depois dele, continuam os custos da comunidade: energia dos servidores, melhorias, hospedagem e domínios. As doações em dinheiro ainda não estão abertas. | EmpireCommunity runs on voluntary donations. The first milestone is R$ 5,384.99, to build our own server, with a Xeon and 128 GB of RAM, to host more game servers. After that, community costs continue: server power, upgrades, hosting and domains. Money donations are not open yet. |
 | funding.link | Apoiar | Support us |
 | join.title | Faça parte. | Join us. |
 | join.body | A entrada é gratuita. | Joining is free. |
@@ -183,13 +183,13 @@ Estrutura e regras em [`docs/design/information-architecture.md`](../design/info
 | Id | pt-BR | en-US |
 |---|---|---|
 | meta.title | Apoiar: EmpireCommunity | Support us: EmpireCommunity |
-| meta.description | O primeiro marco da EmpireCommunity é de R$ 3.000 para montar um servidor próprio. Veja as peças e o que já foi feito. | EmpireCommunity's first milestone is R$ 3,000 to build its own server. See the parts and what has been done so far. |
+| meta.description | O primeiro marco da EmpireCommunity é de R$ 5.384,99 para montar um servidor próprio. Veja as peças e o que já foi feito. | EmpireCommunity's first milestone is R$ 5,384.99 to build its own server. See the parts and what has been done so far. |
 | title | Apoiar | Support us |
 | lead | A EmpireCommunity é gratuita e vive de doações voluntárias. Doar nunca é obrigatório. | EmpireCommunity is free and runs on voluntary donations. Donating is never required. |
 | goal.title | Meta atual | Current goal |
-| goal.value | R$ 3.000 | R$ 3,000 |
+| goal.value | R$ 5.384,99 | R$ 5,384.99 |
 | goal.body | A meta é montar um servidor local, com Xeon e 128 GB de RAM, para hospedar mais servidores de jogos. Ele está em montagem e ainda não está em uso. Esse é o primeiro marco: depois dele, continuam os custos da comunidade, como energia dos servidores, melhorias, hospedagem e domínios. | The goal is to build a local server, with a Xeon and 128 GB of RAM, to host more game servers. It is being built and is not in use yet. This is the first milestone: after it, community costs continue, such as server power, upgrades, hosting and domains. |
-| goal.progress | {{secured}} de R$ 3.000 `[PENDING P-03]` | {{secured}} of R$ 3,000 `[PENDING P-03]` |
+| goal.progress | {{secured}} de R$ 5.384,99 | {{secured}} of R$ 5,384.99 |
 | support.goal.reached | Este marco foi alcançado. Os custos da comunidade continuam: energia dos servidores, melhorias, hospedagem e domínios. | This milestone has been reached. Community costs continue: server power, upgrades, hosting and domains. |
 | support.progress.criterion | O progresso conta o valor das peças já compradas ou doadas, não dinheiro recebido. | Progress counts the value of parts already bought or donated, not money received. |
 | support.donations.notOpen | As doações em dinheiro ainda não estão abertas. O site não recebe dinheiro e não indica nenhuma forma de enviar. | Money donations are not open yet. This website does not receive money and does not give any way to send it. |
@@ -200,7 +200,7 @@ Estrutura e regras em [`docs/design/information-architecture.md`](../design/info
 | parts.status.bought | Comprada | Bought |
 | parts.status.donated | Doada | Donated |
 | parts.status.missing | Falta | Needed |
-| parts.items | `[PENDING P-02]` | `[PENDING P-02]` |
+| parts.items | Vêm de `support.yaml` (nome nos dois idiomas, quantidade, valor unitário, situação). Sem fotos por enquanto. | Come from `support.yaml` (name in both languages, quantity, unit price, status). No photos for now. |
 | donate.parts.title | Doar peças | Donate parts |
 | donate.parts.body | Também aceitamos peças doadas para o servidor. Antes de enviar, fale com a equipe pelo Discord ou por contact@empirecommunity.org. | We also accept donated parts for the server. Before sending anything, talk to the team on Discord or at contact@empirecommunity.org. |
 | other.title | Outras formas de ajudar | Other ways to help |
