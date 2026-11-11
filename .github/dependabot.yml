@@ -8,6 +8,12 @@ updates:
       interval: weekly
     cooldown:
       default-days: 3
+    # TypeScript 7 and @types/node 26 break the build; lift these when the toolchain supports them.
+    ignore:
+      - dependency-name: typescript
+        versions: ['>=7.0.0']
+      - dependency-name: '@types/node'
+        versions: ['>=26.0.0']
     groups:
       npm:
         patterns: ['*']
