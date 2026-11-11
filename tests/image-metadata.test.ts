@@ -46,3 +46,14 @@ test('an ICO scans its embedded PNG entries; an unknown format and a wrong signa
   assert.deepEqual(imageMetadata('a.ico', Buffer.concat([dir, embedded])), ['ICO entry 0: PNG chunk tEXt']);
   assert.equal(imageMetadata('a.png', Buffer.from('not a png')).length, 1);
 });
+
+test('SVG namespace values hidden by XML references are still found (fail closed)', () => {
+  const svg = (attrs: string, head = '') => Buffer.from(`${head}<svg xmlns="http://www.w3.org/2000/svg"${attrs}></svg>`);
+  const cases: Array<[string, Buffer, string[]]> = [
+    ['decimal reference', svg(' xmlns:d="http://purl.org/d&#99;/elements/1.1/"'), ['SVG metadata namespace http://purl.org/dc/']],
+    ['hex reference', svg(' xmlns:d="http://purl.org/d&#x63;/elements/1.1/"'), ['SVG metadata namespace http://purl.org/dc/']],
+    ['undecodable value', svg(' xmlns:d="http://purl.org/&unknown;/"'), ['SVG namespace value cannot be decoded']],
+    ['DOCTYPE with entity', svg(' xmlns:d="&dc;"', '<!DOCTYPE svg [<!ENTITY dc "http://purl.org/dc/">]>'), ['SVG DOCTYPE or ENTITY declaration', 'SVG namespace value cannot be decoded']],
+  ];
+  for (const [name, data, expected] of cases) assert.deepEqual(imageMetadata('a.svg', data), expected, name);
+});

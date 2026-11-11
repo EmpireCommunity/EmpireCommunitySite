@@ -48,11 +48,30 @@ const SVG_METADATA_NAMESPACES = [
   'http://www.inkscape.org/namespaces/inkscape', 'http://sodipodi.sourceforge.net/DTD/sodipodi', 'http://ns.adobe.com/', 'http://ns.serif.com/',
 ];
 
+const XML_ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
+
+// Decodes numeric character references and the five predefined entities. Anything left with `&` is undecodable.
+function decodeXmlReferences(value: string): string {
+  const codePoint = (digits: string, radix: number): string => {
+    const point = Number.parseInt(digits, radix);
+    return Number.isInteger(point) && point >= 0 && point <= 0x10ffff ? String.fromCodePoint(point) : '&';
+  };
+  // One pass, so `&amp;#99;` decodes to the text `&#99;` and not to `c`.
+  return value.replace(/&(?:#x([0-9a-f]+)|#([0-9]+)|(amp|lt|gt|quot|apos));/gi, (_all, hex?: string, dec?: string, name?: string) => {
+    if (hex !== undefined) return codePoint(hex, 16);
+    if (dec !== undefined) return codePoint(dec, 10);
+    return XML_ENTITIES[(name ?? '').toLowerCase()] ?? '&';
+  });
+}
+
 function svgMetadata(data: Buffer): MetadataFinding[] {
   const text = data.toString('utf8');
   const found: MetadataFinding[] = [];
   if (SVG_METADATA_ELEMENT.test(text)) found.push('SVG metadata element');
-  const declared = [...text.matchAll(/\bxmlns(?::[\w.-]+)?\s*=\s*(["'])(.*?)\1/gis)].map((match) => (match[2] ?? '').trim());
+  // Custom entities can hide a URI from any textual comparison: fail closed.
+  if (/<!(?:DOCTYPE|ENTITY)/i.test(text)) found.push('SVG DOCTYPE or ENTITY declaration');
+  const declared = [...text.matchAll(/\bxmlns(?::[\w.-]+)?\s*=\s*(["'])(.*?)\1/gis)].map((match) => decodeXmlReferences((match[2] ?? '').trim()));
+  if (declared.some((uri) => uri.includes('&'))) found.push('SVG namespace value cannot be decoded');
   for (const namespace of SVG_METADATA_NAMESPACES) {
     if (declared.some((uri) => uri.toLowerCase().startsWith(namespace.toLowerCase()))) found.push(`SVG metadata namespace ${namespace}`);
   }
