@@ -156,8 +156,8 @@ plan allows 10; this uses 2, and `/discord` needs none, D-29). Status code **302
 ## 5. Discovery files
 
 - **Sitemap:** `@astrojs/sitemap` with its `i18n` option (`defaultLocale: 'pt-br'`,
-  `locales: { 'pt-br': 'pt-BR', 'en-us': 'en-US' }`), plus a `filter` that removes `/` and `/404.html`. All locale
-  URLs are listed. `x-default` is carried by the HTML tags (Google accepts HTML or sitemap, one method is enough; they
+  `locales: { 'pt-br': 'pt-BR', 'en-us': 'en-US' }`), plus a `filter` that keeps only the URLs under a locale home (`/pt-br/`, `/en-us/`), so `/`, `/404.html` and
+  `/discord/` never appear. All locale URLs are listed. `x-default` is carried by the HTML tags (Google accepts HTML or sitemap, one method is enough; they
   must agree).
 - **robots.txt:** `User-agent: *`, `Allow: /`, `Sitemap: https://empirecommunity.org/sitemap-index.xml`. `/data/` is
   not disallowed.
@@ -254,8 +254,10 @@ add_header Cross-Origin-Opener-Policy "same-origin" always;
 | Paths | Content-Security-Policy |
 |---|---|
 | default | `default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com; img-src 'self'; style-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'` |
-| `^/(pt-br\|en-us)/support/` | `default-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'` |
+| `^/(pt-br\|en-us)/support(/\|$)` | `default-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'` |
 
+- The support pattern also matches `/pt-br/support` and `/en-us/support` without the slash, so the 301 to the slash form
+  already carries the support policy (the HTTP test asserts it).
 - The support pages have **no Cloudflare analytics hosts** in their CSP and carry no beacon. `data:` is **not** allowed
   in `img-src` anywhere; an inline `<svg>` element is markup, not an image request, and is not affected. The
   support-page policy is the baseline for the later donation contract; any loosening belongs to that contract.

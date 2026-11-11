@@ -130,13 +130,14 @@ Facts from the Cloudflare documentation, read on 2026-11-10 (all under `https://
 
 ## Not verified
 
-- Minimum permissions of the Workers Builds token (Cloudflare lists only the default set), and whether a token without
-  Workers Routes (edit) and R2 (edit) deploys successfully. Confirmed only by the first real build.
+- ~~Minimum permissions of the Workers Builds token~~ Resolved on 2026-11-11 (Ops Runbook): the first production build
+  succeeded with the dedicated token, Workers Scripts (edit) and Account Settings (read), no permission added, so a
+  token without Workers Routes (edit) and R2 (edit) deploys.
 - Default state of Enable Preview Builds; any config-file equivalent (only the Builds API `previews_enabled` is
   documented).
 - Behavior for pull requests from forks, and what the Cloudflare GitHub app is permitted to do.
-- That `wrangler deploy` with `workers_dev` false, `preview_urls` false and no routes succeeds and leaves a hand-made
-  route untouched: the documentation says routes are left to the dashboard when the keys are absent, but this exact
+- That `wrangler deploy` with `workers_dev` false, `preview_urls` false and no routes leaves a hand-made route untouched
+  (the deploy itself succeeded on 2026-11-11, before the route existed, so only the next deploy shows it): the documentation says routes are left to the dashboard when the keys are absent, but this exact
   combination is not exercised. Whether a deploy keeps or removes a cron created in the dashboard is not documented;
   the cron is declared in `wrangler.jsonc`, so it does not matter here.
 - Whether Workers Builds runs dependency lifecycle scripts and detects the package manager from the lockfile
