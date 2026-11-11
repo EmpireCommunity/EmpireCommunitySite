@@ -3,16 +3,18 @@ export type LinkTarget = { where: string; url: string };
 export type RepoTarget = { where: string; repo: string };
 
 type ProjectEntry = { id?: unknown; url?: unknown; repo?: unknown };
-type SiteData = { origin?: unknown; links?: Record<string, unknown> };
+type SiteData = { origin?: unknown; links?: Record<string, unknown>; linksNotLive?: unknown };
 
 const isText = (value: unknown): value is string => typeof value === 'string' && value !== '';
 
-/** External URLs to probe: every project `url` and every `site.yaml` link that is not a page of this site. */
+/** External URLs to probe: every project `url` and every `site.yaml` link that is not a page of this site and not marked not live. */
 export function linkTargets(projects: readonly ProjectEntry[], site: SiteData): LinkTarget[] {
   const origin = isText(site.origin) ? site.origin.replace(/\/$/, '') : '';
+  const notLive = new Set(Array.isArray(site.linksNotLive) ? site.linksNotLive : []);
   const targets: LinkTarget[] = [];
   for (const project of projects) if (isText(project.url)) targets.push({ where: `projects.yaml ${String(project.id)}`, url: project.url });
   for (const [name, url] of Object.entries(site.links ?? {})) {
+    if (notLive.has(name)) continue;
     if (isText(url) && !(origin !== '' && (url === origin || url.startsWith(`${origin}/`)))) targets.push({ where: `site.yaml links.${name}`, url });
   }
   return targets;

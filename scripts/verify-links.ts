@@ -8,7 +8,7 @@ import { answers, inviteMatches, isPublicRepo, linkTargets, repoTargets } from '
 
 const read = (path: string): unknown => parse(readFileSync(path, 'utf-8'));
 const projects = read('src/data/projects.yaml') as { id?: unknown; url?: unknown; repo?: unknown }[];
-const site = read('src/data/site.yaml') as { origin?: string; links?: Record<string, string>; discord: { inviteCode: string; guildId: string } };
+const site = read('src/data/site.yaml') as { origin?: string; links?: Record<string, string>; linksNotLive?: string[]; discord: { inviteCode: string; guildId: string } };
 
 const TIMEOUT_MS = 15_000;
 const ATTEMPTS = 3;

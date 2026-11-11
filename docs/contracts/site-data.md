@@ -111,13 +111,18 @@ links:
   discord: https://empirecommunity.org/discord      # literal; the only Discord link allowed on the site
   github: https://github.com/EmpireCommunity
   contributing: https://github.com/EmpireCommunity/.github/blob/main/CONTRIBUTING.md   # the organization's contribution guide, linked from Projects
-  cloud: https://empirecommunity.cloud              # game-server status site; not up yet, so Organization shows its host without a link
+  cloud: https://empirecommunity.cloud              # game-server status site
+linksNotLive: [cloud]                               # optional; names of links that do not answer yet (see below)
 discord:                                            # the one place the invite is defined (D-29)
   inviteCode: <approved invite code>                # 2 to 32 characters, letters, digits and hyphen
   guildId: "<server id>"                            # 17 to 20 digits, quoted so it stays a string
 analytics:                                          # Cloudflare Web Analytics, manual snippet (D-52, routing-locale section 5)
   webAnalyticsToken: <32 hex characters>            # public: it is printed in the HTML, so it lives here and not in an environment variable
 ```
+
+`linksNotLive` lists the `links` names that are not live yet (`github`, `contributing`, `cloud`; default empty). A link on
+that list is not probed by `verify-links` (section 6, C-2), and Organization shows `cloud`'s host without a
+link and as coming soon. The address stays in `links` only, so going live is one edit: delete the name from the list.
 
 `links.discord` is a literal in the schema. `discord.inviteCode` and `discord.guildId` are the **only** place the
 approved invite is defined **in this repository**: the `/discord` page ([routing-locale](routing-locale.md)) and the integrity
