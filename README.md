@@ -42,6 +42,8 @@ com worktrees e o mapa de risco, em [`AGENTS.md`](AGENTS.md).
 
 - `ci.yml` roda em PR e em push na `main`: qualidade (check, lint, testes), build com varreduras do `dist/`, imagem com
   teste de cabeçalhos HTTP, lint dos workflows e varredura de segredos.
+- `integrity.yml` verifica invariantes públicas a cada seis horas e manualmente (`node scripts/integrity.ts`).
+  As flags de lançamento em `scripts/lib/integrity-pending.ts` mantêm site e raiz em aviso até o lançamento; o Worker já é verificado sem adiamento.
 - A imagem (`Dockerfile`, `nginx/`) serve só o `dist/` em nginx-unprivileged, porta 8080, sem log de acesso.
 - Release por tag `vX.Y.Z` na `main`, decidida pelo dono: [`docs/runbook/release.md`](docs/runbook/release.md).
   O template de deploy está em `deploy/compose.yml`.
