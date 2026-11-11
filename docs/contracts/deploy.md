@@ -26,8 +26,8 @@
 
 | File | Trigger | Does | Permissions | Secrets |
 |---|---|---|---|---|
-| `ci.yml` | `pull_request`, push to `main` | lint, typecheck, tests, build, content and `dist` checks (section 4), image build and image checks, HTTP header test, workflow lint, secret scan | `contents: read` | none |
-| `release.yml` | push of a tag `vX.Y.Z` (or `vX.Y.Z-rc.N`, a rehearsal) | **guards** (section 5), then build the image, push `X.Y.Z` (`X.Y.Z-rc.N` for a rehearsal) to Docker Hub with SBOM and provenance, create the attestation, create the GitHub Release with the changelog notes and `image-digest.txt`, print the digest in the run summary | `permissions: {}` at top; guards job `contents: read` and `actions: read` (it lists the CI runs of the commit); publish job adds `id-token: write`, `attestations: write` (no `packages`, nothing is published to GHCR); release job `contents: write` | `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (org secrets), read only by the login step of the publish job |
+| `ci.yml` | `pull_request`, push to `main` | lint, typecheck, tests, image-metadata check, build, content and `dist` checks (section 4), image build and image checks, HTTP header test (including `/discord`), workflow lint, secret scan, `verify-links` (network: project URLs answer, linked repositories are public, the invite resolves; not a required check, section 9; only the step that runs the script receives the automatic read-only `github.token`, to raise the API rate limit, and no secret is used) | `contents: read` | none |
+| `release.yml` | push of a tag `vX.Y.Z` (or `vX.Y.Z-rc.N`, a rehearsal) | **guards** (section 5), then build the image, push `X.Y.Z` (`X.Y.Z-rc.N` for a rehearsal) to Docker Hub with SBOM and provenance, create the attestation, create the GitHub Release with the changelog notes and `image-digest.txt`, print the digest in the run summary | `permissions: {}` at top; guards job `contents: read` and `actions: read` (it lists the CI runs of the commit); publish job adds `id-token: write`, `attestations: write` (no `packages`, nothing is published to GHCR); release job `contents: write` | `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`, stored in the `release` environment (section 11) and read only by the login step of the publish job, which declares `environment: release` |
 | `integrity.yml` | schedule, manual | checks the live site for invariants the release guards cannot see (section 8); not written yet | `contents: read` | none |
 
 `release.yml` MUST NOT be reachable from a pull request or a fork. This repository has no Cloudflare credential and no workflow that deploys the Worker (section 12). If a job needs write
@@ -35,7 +35,7 @@ permission, it is a separate job with its own `permissions` block.
 
 ## 3. Workflow hygiene (all workflows)
 
-- Every `uses:` pinned to a full commit SHA, with the version in a trailing comment. Dependabot keeps them current,
+- Every `uses:` pinned to a full commit SHA, with the version in a trailing comment; this covers step actions and job-level reusable workflows (`check-workflows` enforces both). Dependabot keeps them current,
   with **no auto-merge**, and also covers Docker and npm.
 - Top-level `permissions: {}` (or `contents: read`) and explicit grants per job.
 - **No `pull_request_target`**, and no workflow that runs untrusted code with secrets or a write token. No
@@ -93,7 +93,7 @@ occupy the `X.Y.Z` tag of the final release, and they are never deployed.
 **Guards** (job 1 of `release.yml`; any failure publishes nothing): tag matches `vX.Y.Z` (or `-rc.N`); the tag is
 annotated; its commit **is the tip of `origin/main`**; the push `CI` run on that commit succeeded; for a final release,
 the changelog has a dated, non-empty `[X.Y.Z]` section and the compose template names `X.Y.Z` (a rehearsal reads
-neither); no pending-check flag is `true`; **no image exists yet for the complete image tag** (`X.Y.Z` or
+neither); no pending-check flag is `true` (a rehearsal tag ignores `legalPages` and no other flag, so a release candidate can be cut before the launch PR that adds the legal texts; a final tag ignores none, `scripts/lib/pending-guard.ts`); **no image exists yet for the complete image tag** (`X.Y.Z` or
 `X.Y.Z-rc.N`), so a version is published once and is immutable. Why the tip and not just "contained in `main`":
 releases are cut only from the newest commit, so every release contains every removal merged before it, with no
 register of affected commits (which would itself need the removed data to be identified) and no extra step for the
@@ -199,7 +199,7 @@ Applied to `main` by the owner; the list states the control, not the current set
 
 ## 11. Depends on the owner
 
-Strong authentication on the GitHub, Cloudflare and host provider accounts; applying and keeping the repository
+Strong authentication on the GitHub, Cloudflare and host provider accounts; the `release` environment of this repository, limited to deployment tags `v[0-9]*`, holding `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (the org-level copies are deleted once it works), steps in `docs/runbook/release.md`; applying and keeping the repository
 settings of sections 3 and 9; the rule that only the owner creates `v*` tags and that they cannot be moved or deleted (section 5); the Workers Builds setup of ADR-0004 (connection, preview builds off, dedicated trimmed token) and its runbook checklist; keeping failed-run
 notifications on; confirming the approved invite code in the pull request that sets it; the Cloudflare dashboard items copied into
 the runbook (the two root redirect rules, the `/data/` rules, the Worker route, features off); an explicit OK for each merge to the Worker repository's `main` (section 12). `/discord` needs no

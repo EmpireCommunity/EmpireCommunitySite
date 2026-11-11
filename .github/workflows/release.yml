@@ -83,10 +83,17 @@ jobs:
           echo "CI succeeded for $GITHUB_SHA ($count run(s))."
 
       - name: No pending-check flag is true (a release never goes out missing /discord, the support block or discovery files)
+        env:
+          PRERELEASE: ${{ steps.tag.outputs.prerelease }}
         run: |
           # The script imports the PENDING object and fails on any value that is not exactly false. A missing or
           # unreadable scripts/lib/pending.ts fails the import, so deleting the file cannot bypass the guard.
-          node scripts/check-pending.ts
+          # A release candidate ignores legalPages only (the legal texts land in the launch PR); a final tag ignores nothing.
+          if [ "$PRERELEASE" = "true" ]; then
+            node scripts/check-pending.ts --prerelease
+          else
+            node scripts/check-pending.ts
+          fi
 
       - name: CHANGELOG has a dated, non-empty section (final releases) and the compose template names the version
         env:
@@ -109,6 +116,8 @@ jobs:
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # The Docker Hub secrets live in this environment only, restricted to v* tags (docs/contracts/deploy.md section 11).
+    environment: release
     permissions:
       contents: read
       id-token: write

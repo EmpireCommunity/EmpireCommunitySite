@@ -14,20 +14,33 @@ Account and platform settings that exist today live in the private runbook, not 
    commit or ship the next patch version):
    `git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z`. `-rc.N` tags are for a rehearsal only.
 4. `release.yml` runs the guards (tag format, annotated, commit is the tip of `origin/main`, push `CI` run succeeded on that commit,
-   CHANGELOG section dated and non-empty, compose names the version, no flag in `scripts/lib/pending.ts` is true, image for the version does not exist), then
+   CHANGELOG section dated and non-empty, compose names the version, no flag in `scripts/lib/pending.ts` is true (an `-rc.N` tag ignores `legalPages` only), image for the version does not exist), then
    builds, pushes `docker.io/empirecommunity/empirecommunity-site-org:X.Y.Z` (SBOM and provenance attached), attests the
    digest and creates the GitHub Release with the CHANGELOG notes and `image-digest.txt`. The digest is also in the
    run summary.
 5. A failed guard publishes nothing: fix the cause and push a new tag name only if the old tag never produced an image.
    If the image was published but a later step failed, **do not re-run**: ship the next patch version.
 
+## `release` environment (owner action, once, before the first tag)
+
+The publish job declares `environment: release`, so the Docker Hub credentials are released only to runs on a `v*` tag.
+The owner creates it (the workflow and the repository do not):
+
+1. Repository Settings, Environments, New environment: `release`.
+2. Deployment branches and tags: selected, add a **tag** rule `v[0-9]*` (no branch rule).
+3. Environment secrets: create `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` here with the same values as the org
+   secrets (the values never go through chat, a file or a log).
+4. Do not add required reviewers (one account, D-17); the tag rule and the owner-only `v*` tags are the control.
+5. After a rehearsal `-rc.N` publishes with the environment secrets, delete the org-level `DOCKERHUB_USERNAME` and
+   `DOCKERHUB_TOKEN` (or restrict them to no repository) so no other workflow can read them.
+
 ## First publication (owner action, once)
 
 The image goes to Docker Hub, where a public repository is anonymous-pull by default (owner rule: public projects on
-Docker Hub, private ones on GHCR). `release.yml` logs in with the org secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`
+Docker Hub, private ones on GHCR). `release.yml` logs in with the `release` environment secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (above)
 (names only; the values never appear in the repository, a log or a report) and does not change repository settings.
 
-1. Before the first tag, confirm that the org secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` have **write access** to
+1. Before the first tag, confirm that the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` secrets of the `release` environment (not the org secrets, which are deleted after the first rehearsal) have **write access** to
    the organization repository `empirecommunity/empirecommunity-site-org` (a member with write permission and a read-write
    token, or an organization access token with the Image Push scope, per Docker's access token docs). The repository
    already exists and is **public**. The workflow cannot check any of this.
@@ -64,7 +77,7 @@ may change the setting nor whether existing tags become mutable again: check a t
 ## Checks (names are the required status checks)
 
 `Quality (check, lint, tests)`, `Build and dist checks`, `Image checks and HTTP header test`, `Workflow lint`,
-`Secret scan`. The Worker has its own repository and checks (deploy section 12).
+`Secret scan`. `Verify external links` (`verify-links`) is **not** required: it depends on third-party sites, so a failure is read and fixed but never blocks a merge. The Worker has its own repository and checks (deploy section 12).
 
 Scans of `dist/` that wait for their page are listed in `scripts/lib/pending.ts`: they warn until the page exists.
 The PR that adds the page flips its flag so the check becomes blocking.
