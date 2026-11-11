@@ -308,14 +308,14 @@ type SupportSnapshot = {
 
 ```yaml
 schemaVersion: 1
-verified: { on: 2026-11-10, by: owner }       # REQUIRED; review trail, not displayed
+verified: { on: 2026-11-11, by: owner }       # REQUIRED; review trail, not displayed
 donations:
   status: not-open                             # the only value schema version 1 accepts (D-28)
 goal:
   id: xeon-server
   title: { pt-br: ..., en-us: ... }
   description: { pt-br: ..., en-us: ... }
-  targetCents: 300000                          # R$ 3,000.00, the first milestone (D-6, D-22)
+  targetCents: 538499                          # R$ 5,384.99, the first milestone (D-6, D-22, D-62)
 specs:                                         # optional
   - { label: { pt-br: Memória RAM, en-us: RAM }, value: 128 GB }
 parts:

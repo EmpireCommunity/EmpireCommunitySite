@@ -59,7 +59,7 @@ const reached = goal.remainingCents === 0;
       {
         parts.length > 0 && (
           <IndexSection title={t(locale, 'support.parts.title')} rows>
-            <table class="w-full text-left">
+            <table class="w-full text-left max-lg:mt-24">
               <thead class="max-md:sr-only">
                 <tr class="text-label text-papel-suave">
                   <th scope="col" class="py-16 pr-16 font-normal">{t(locale, 'support.parts.col.part')}</th>
@@ -73,11 +73,11 @@ const reached = goal.remainingCents === 0;
                     <th scope="row" class="py-12 pr-16 align-middle text-body-sm font-normal text-papel max-md:py-0">
                       {part.quantity > 1 ? `${part.quantity} × ${part.name}` : part.name}
                     </th>
-                    <td class="py-12 pr-16 align-middle text-body-sm tabular-nums text-papel-suave max-md:py-0">
+                    <td class="whitespace-nowrap py-12 pr-16 align-middle text-body-sm tabular-nums text-papel-suave max-md:py-0">
                       <span class="text-label md:sr-only">{t(locale, 'support.parts.col.value')}: </span>
                       {formatBrl(part.totalCents, locale)}
                     </td>
-                    <td class="py-12 align-middle text-body-sm text-papel-suave max-md:py-0">
+                    <td class="whitespace-nowrap py-12 align-middle text-body-sm text-papel-suave max-md:py-0">
                       <span class="text-label md:sr-only">{t(locale, 'support.parts.col.status')}: </span>
                       {t(locale, `support.parts.status.${part.status}` as MessageKey)}
                     </td>

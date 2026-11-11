@@ -1,9 +1,10 @@
 # Support page data (docs/contracts/site-data.md section 10). The site receives no money and shows no way to send any
 # (D-28): the schema is strict, so a payment field fails the build.
-# The server parts, their values and photos (P-02) and so the value already secured (P-03) are owner content that does
-# not exist yet: `parts` stays empty, which hides the parts table and the progress bar. Never add placeholder values.
+# The server parts and their values (P-02) are owner content, verified on the date below; the value already secured (P-03)
+# is derived from them at load: the sum of quantity x unit price over the purchased and donated parts, never money
+# received. No part has a photo yet (none was supplied). Never add placeholder values.
 schemaVersion: 1
-verified: { on: 2026-11-10, by: owner }
+verified: { on: 2026-11-11, by: owner }
 donations:
   status: not-open
 goal:
@@ -14,8 +15,76 @@ goal:
   description:
     pt-br: "A meta é montar um servidor local, com Xeon e 128 GB de RAM, para hospedar mais servidores de jogos. Ele está em montagem e ainda não está em uso. Esse é o primeiro marco: depois dele, continuam os custos da comunidade, como energia dos servidores, melhorias, hospedagem e domínios."
     en-us: "The goal is to build a local server, with a Xeon and 128 GB of RAM, to host more game servers. It is being built and is not in use yet. This is the first milestone: after it, community costs continue, such as server power, upgrades, hosting and domains."
-  targetCents: 300000
-parts: []
+  targetCents: 538499
+parts:
+  - id: motherboard-machinist-e5-mr9a
+    name:
+      pt-br: Placa-mãe Machinist E5-MR9A PRO MAX
+      en-us: Machinist E5-MR9A PRO MAX motherboard
+    category: motherboard
+    quantity: 1
+    unitPriceCents: 35000
+    status: purchased
+    acquiredOn: 2026-11-01
+  - id: cpu-xeon-2667-v4
+    name:
+      pt-br: Processador Xeon 2667 V4
+      en-us: Xeon 2667 V4 processor
+    category: cpu
+    quantity: 1
+    unitPriceCents: 10000
+    status: purchased
+    acquiredOn: 2026-11-01
+  - id: ram-ecc-32gb-ddr4
+    name:
+      pt-br: Memória RAM ECC 32 GB DDR4
+      en-us: ECC 32 GB DDR4 RAM
+    category: memory
+    quantity: 4
+    unitPriceCents: 80000
+    status: needed
+  - id: air-cooler-rise-mode-temp-8
+    name:
+      pt-br: Air Cooler Gamer Rise Mode Temp 8 Black
+      en-us: Rise Mode Temp 8 Black gaming air cooler
+    category: cooling
+    quantity: 1
+    unitPriceCents: 18000
+    status: needed
+  - id: fan-bracket-lga-2011-3
+    name:
+      pt-br: Suporte para ventoinha Intel Socket LGA 2011-3
+      en-us: Fan bracket for Intel LGA 2011-3 socket
+    category: cooling
+    quantity: 1
+    unitPriceCents: 2000
+    status: purchased
+    acquiredOn: 2026-11-01
+  - id: ssd-kingston-kc3000-512gb
+    name:
+      pt-br: SSD NVMe Kingston KC3000, 512 GB, NAND 3D TLC, DRAM
+      en-us: Kingston KC3000 NVMe SSD, 512 GB, 3D TLC NAND, DRAM
+    category: storage
+    quantity: 1
+    unitPriceCents: 110000
+    status: needed
+  - id: psu-gigabyte-p650g-pg5
+    name:
+      pt-br: Fonte Gigabyte P650G PG5 650 W 80 PLUS Gold PFC Ativo
+      en-us: Gigabyte P650G PG5 650 W 80 PLUS Gold power supply with active PFC
+    category: psu
+    quantity: 1
+    unitPriceCents: 28499
+    status: needed
+  - id: chassis-atx-server-3-bay
+    name:
+      pt-br: Gabinete ATX fechado para servidor com Caddy HD 3 baias e sistema de ventilação
+      en-us: Closed ATX server case with 3-bay HDD caddy and ventilation system
+    category: chassis
+    quantity: 1
+    unitPriceCents: 15000
+    status: purchased
+    acquiredOn: 2026-11-01
 partDonations:
   accepted: true
   how:
