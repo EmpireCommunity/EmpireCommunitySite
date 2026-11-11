@@ -48,6 +48,9 @@ jobs:
       - name: Tests
         run: pnpm test
 
+      - name: Committed images carry no metadata (EXIF, XMP, IPTC, PNG text chunks)
+        run: node scripts/check-image-metadata.ts
+
   build:
     name: Build and dist checks
     runs-on: ubuntu-latest
@@ -174,6 +177,34 @@ jobs:
           echo "$ACTIONLINT_SHA256  $RUNNER_TEMP/$archive" | sha256sum -c -
           tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" actionlint
           "$RUNNER_TEMP/actionlint" -color
+
+  verify-links:
+    name: Verify external links
+    # Network job (site-data sections 6 and 12): project URLs answer, linked repositories are public, the Discord invite
+    # resolves to the configured server. No secret: the automatic token only raises the GitHub API rate limit (contents: read).
+    # It depends on third-party sites, so it is not a required status check (docs/runbook/release.md).
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Enable pnpm and install dependencies (the script uses the yaml package)
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Links answer, repositories are public, the invite resolves
+        run: node scripts/verify-links.ts
 
   secrets:
     name: Secret scan

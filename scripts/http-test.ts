@@ -91,17 +91,24 @@ const slashed = await fetch(`${base}/pt-br/projects/`, { redirect: 'manual' });
 await slashed.arrayBuffer();
 if (slashed.status !== 200) fail('GET /pt-br/projects/', `status ${slashed.status}, expected 200`);
 
-// /discord answers 200 with no Location header, with or without a query string (D-29).
-for (const path of ['/discord', '/discord/?utm_source=ci']) {
-  const response = await fetch(`${base}${path}`, { redirect: 'manual' });
-  await response.arrayBuffer();
-  if (response.status === 404 && PENDING.discordPage) {
-    console.log(`::warning::GET ${path} is 404 (pending in the scaffold, see scripts/lib/pending.ts)`);
-    continue;
+// /discord answers 200 with no Location header, with or without a query string (D-29), under the default headers
+// (CSP, Permissions-Policy, COOP, no-cache, no Set-Cookie: checkPath) and with the same link targets whatever the query.
+const discordProbe = await fetch(`${base}/discord`, { redirect: 'manual' });
+await discordProbe.arrayBuffer();
+if (discordProbe.status === 404 && PENDING.discordPage) {
+  console.log('::warning::GET /discord is 404 (pending in the scaffold, see scripts/lib/pending.ts)');
+} else {
+  const hrefs = (html: string) => [...html.matchAll(/\bhref="([^"]*)"/g)].map((match) => match[1] ?? '').sort();
+  const bodies: string[] = [];
+  for (const path of ['/discord', '/discord?utm_source=ci', '/discord/?utm_source=ci']) {
+    const response = await checkPath({ path, status: [200], csp: DEFAULT_CSP, cache: NO_CACHE });
+    if (response.headers.get('location') !== null) fail(`GET ${path}`, 'Location header present');
+    bodies.push(await response.text());
   }
-  if (response.status !== 200) fail(`GET ${path}`, `status ${response.status}, expected 200`);
-  if (response.headers.get('location') !== null) fail(`GET ${path}`, 'Location header present');
-  if (response.headers.get('content-security-policy') !== DEFAULT_CSP) fail(`GET ${path}`, 'Content-Security-Policy differs from the contract');
+  const [plain, ...withQuery] = bodies.map(hrefs);
+  withQuery.forEach((links, index) => {
+    if (JSON.stringify(links) !== JSON.stringify(plain)) fail(`GET /discord (query form ${index + 1})`, 'link targets differ from the page without a query string');
+  });
 }
 
 if (problems.length > 0) {
