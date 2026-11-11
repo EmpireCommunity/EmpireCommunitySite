@@ -146,6 +146,12 @@ describe('site and community data (site-data sections 4 and 5)', () => {
     assert.equal(SiteSchema.safeParse(site).success, true);
   });
 
+  test('linksNotLive: a missing key, null and [] are an empty list; only cloud is allowed', () => {
+    for (const value of [undefined, null, []]) assert.deepEqual(SiteSchema.parse({ ...site, linksNotLive: value }).linksNotLive, []);
+    assert.deepEqual(SiteSchema.parse({ ...site, linksNotLive: ['cloud'] }).linksNotLive, ['cloud']);
+    assert.equal(SiteSchema.safeParse({ ...site, linksNotLive: ['github'] }).success, false);
+  });
+
   const rejected: [string, unknown][] = [
     ['an invite code with a slash', { ...site, discord: { ...site.discord, inviteCode: 'a/b' } }],
     ['an invite code of one character', { ...site, discord: { ...site.discord, inviteCode: 'a' } }],

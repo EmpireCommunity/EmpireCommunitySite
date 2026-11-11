@@ -10,7 +10,8 @@ links:
   contributing: https://github.com/EmpireCommunity/.github/blob/main/CONTRIBUTING.md
   cloud: https://empirecommunity.cloud
 # Links that are not live yet. The Organization page lists their address without a link and as coming soon, and verify-links
-# does not probe them. The game-server status site (cloud) answers 404 until it exists: delete its line here when it is up.
+# does not probe them. The game-server status site (cloud) answers 404 until it exists: delete its line here when it is up, or
+# the whole `linksNotLive` key when it is the last one.
 linksNotLive:
   - cloud
 discord:

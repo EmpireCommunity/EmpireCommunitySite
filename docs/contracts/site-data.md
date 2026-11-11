@@ -120,9 +120,11 @@ analytics:                                          # Cloudflare Web Analytics, 
   webAnalyticsToken: <32 hex characters>            # public: it is printed in the HTML, so it lives here and not in an environment variable
 ```
 
-`linksNotLive` lists the `links` names that are not live yet (`github`, `contributing`, `cloud`; default empty). A link on
-that list is not probed by `verify-links` (section 6, C-2), and Organization shows `cloud`'s host without a
-link and as coming soon. The address stays in `links` only, so going live is one edit: delete the name from the list.
+`linksNotLive` lists the `links` names that are not live yet. Only `cloud` is allowed, because it is the one link with a
+not-live rendering (`github` and `contributing` are plain links on several pages; allowing them needs that rendering
+first). A missing key, an emptied one (`linksNotLive:` is null in YAML) and `[]` all mean no link is pending. A link on the
+list is not probed by `verify-links` (section 6, C-2), and Organization shows `cloud`'s host without a link and as coming
+soon. The address stays in `links` only, so going live is one edit: delete the item, or the whole key when it is the last one.
 
 `links.discord` is a literal in the schema. `discord.inviteCode` and `discord.guildId` are the **only** place the
 approved invite is defined **in this repository**: the `/discord` page ([routing-locale](routing-locale.md)) and the integrity

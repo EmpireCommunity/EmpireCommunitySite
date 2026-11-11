@@ -13,8 +13,10 @@ export const SiteSchema = z.strictObject({
   currency: z.literal('BRL'),
   contact: z.strictObject({ general: Email, legal: Email }),
   links: z.strictObject({ discord: z.literal(DISCORD_URL), github: HttpsUrl, contributing: HttpsUrl, cloud: HttpsUrl }),
-  // Names of `links` that do not answer yet: shown without a link, skipped by verify-links (site-data section 4).
-  linksNotLive: z.array(z.enum(['github', 'contributing', 'cloud'])).default([]),
+  // Names of `links` that do not answer yet: shown without a link, skipped by verify-links (site-data section 4). Only `cloud`
+  // is allowed: it is the one link with a not-live rendering (github and contributing are plain links on five pages).
+  // A missing key or an emptied one (YAML `linksNotLive:` is null) is an empty list.
+  linksNotLive: z.array(z.enum(['cloud'])).nullish().transform((names) => names ?? []),
   // The one place the approved invite is defined (D-29): read by the /discord page, the Worker and the integrity check.
   discord: z.strictObject({
     inviteCode: z.string().regex(/^[A-Za-z0-9-]{2,32}$/),
