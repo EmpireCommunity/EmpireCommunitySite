@@ -75,7 +75,7 @@ to the origin file (section 4).
 
 | Item | Value |
 |---|---|
-| `name` | `empirecommunity-members`. It must equal the Worker name in the Cloudflare dashboard or the build fails (ADR-0004). |
+| `name` | `empirecommunitysite-worker` (D-61). It must equal the Worker name in the Cloudflare dashboard or the build fails (ADR-0004). The KV namespace title is a separate name and stays `empirecommunity-members`; the Worker reaches it only through the binding `MEMBERS_KV`. |
 | `main`, `compatibility_date` | the entry file and a fixed date, both required by Wrangler |
 | Route | `empirecommunity.org/data/members.json`, exact pattern, **no trailing `*`**, **fail open**. **Not declared in `wrangler.jsonc`** (no `routes`, `route` or `triggers.routes` key, no `env` block): created once by hand in the Cloudflare dashboard (see 2.9). |
 | `workers_dev`, `preview_urls` | both `false` (no `workers.dev` address, no preview URLs) |
@@ -121,8 +121,8 @@ per day. The one exception: when there is no previous record and the run fails, 
 
 1. Read `members:v1` (may not exist yet).
 2. `GET https://discord.com/api/v10/invites/{DISCORD_INVITE_CODE}?with_counts=true`, no `Authorization`, header
-   `User-Agent: EmpireCommunitySite-members/1 (+https://empirecommunity.org)`, timeout 8 s, response read with a
-   64 KB cap. (Endpoint and fields checked against the official docs on 2026-11-08: `approximate_member_count`
+   `User-Agent: EmpireCommunitySite-members/1 (+https://empirecommunity.org)`, `redirect: 'manual'` (a redirect is
+   never followed; workerd rejects `redirect: 'error'`), timeout 8 s, response read with a 64 KB cap. (Endpoint and fields checked against the official docs on 2026-11-08: `approximate_member_count`
    is returned when `with_counts=true`; a live call returned HTTP 200 for the current invite without a token.)
 3. Validate the response with the **pure function** `parseInvite` (2.5). Decide with the **pure function** `decide`
    (2.5). Write the KV record accordingly.
@@ -137,6 +137,7 @@ per day. The one exception: when there is no previous record and the run fails, 
 | Network error, timeout or HTTP 5xx | up to 2 retries (2 s, then 6 s) inside the same run; then keep value, `consecutiveFailures + 1` | `upstream_unavailable` | last good |
 | HTTP 429 | honor `Retry-After` if 10 s or less (one retry), otherwise stop; keep value, count a failure | `rate_limited` | last good |
 | HTTP 404 (invite deleted or code wrong) | no retry; keep value, count a failure | `invite_not_found` | last good |
+| Any other status below 500 and not 200, 404 or 429 (a 3xx included, never followed) | one attempt, no retry; keep value, count a failure | `invalid_response` | last good |
 | 200 but wrong shape, wrong `code`, wrong `guild.id`, count out of bounds | keep value, count a failure | `invalid_response` | last good |
 | In bounds but a jump (`new < last * 0.5` or `new > last * 2`, only when `last >= 50`) | keep value, count a failure, `outOfBandStreak + 1`; at 3 consecutive such runs (36 h) accept the new value and reset. Any run that is not such a jump (in band, or any failure) resets `outOfBandStreak` to 0, so the three runs are really consecutive | `out_of_band` | last good, then new |
 | No previous value and the first run fails | nothing to serve; `decide` returns `keep` with no record and nothing is written to KV | not stored | origin built-in file |
