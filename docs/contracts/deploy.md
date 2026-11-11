@@ -26,7 +26,7 @@
 
 | File | Trigger | Does | Permissions | Secrets |
 |---|---|---|---|---|
-| `ci.yml` | `pull_request`, push to `main` | lint, typecheck, tests, image-metadata check, build, content and `dist` checks (section 4), image build and image checks, HTTP header test (including `/discord`), workflow lint, secret scan, `verify-links` (network: project URLs answer, linked repositories are public, the invite resolves; not a required check, section 9) | `contents: read` | none |
+| `ci.yml` | `pull_request`, push to `main` | lint, typecheck, tests, image-metadata check, build, content and `dist` checks (section 4), image build and image checks, HTTP header test (including `/discord`), workflow lint, secret scan, `verify-links` (network: project URLs answer, linked repositories are public, the invite resolves; not a required check, section 9; only the step that runs the script receives the automatic read-only `github.token`, to raise the API rate limit, and no secret is used) | `contents: read` | none |
 | `release.yml` | push of a tag `vX.Y.Z` (or `vX.Y.Z-rc.N`, a rehearsal) | **guards** (section 5), then build the image, push `X.Y.Z` (`X.Y.Z-rc.N` for a rehearsal) to Docker Hub with SBOM and provenance, create the attestation, create the GitHub Release with the changelog notes and `image-digest.txt`, print the digest in the run summary | `permissions: {}` at top; guards job `contents: read` and `actions: read` (it lists the CI runs of the commit); publish job adds `id-token: write`, `attestations: write` (no `packages`, nothing is published to GHCR); release job `contents: write` | `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`, stored in the `release` environment (section 11) and read only by the login step of the publish job, which declares `environment: release` |
 | `integrity.yml` | schedule, manual | checks the live site for invariants the release guards cannot see (section 8); not written yet | `contents: read` | none |
 
@@ -199,7 +199,7 @@ Applied to `main` by the owner; the list states the control, not the current set
 
 ## 11. Depends on the owner
 
-Strong authentication on the GitHub, Cloudflare and host provider accounts; the `release` environment of this repository, limited to deployment tags `v*`, holding `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (the org-level copies are deleted once it works), steps in `docs/runbook/release.md`; applying and keeping the repository
+Strong authentication on the GitHub, Cloudflare and host provider accounts; the `release` environment of this repository, limited to deployment tags `v[0-9]*`, holding `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (the org-level copies are deleted once it works), steps in `docs/runbook/release.md`; applying and keeping the repository
 settings of sections 3 and 9; the rule that only the owner creates `v*` tags and that they cannot be moved or deleted (section 5); the Workers Builds setup of ADR-0004 (connection, preview builds off, dedicated trimmed token) and its runbook checklist; keeping failed-run
 notifications on; confirming the approved invite code in the pull request that sets it; the Cloudflare dashboard items copied into
 the runbook (the two root redirect rules, the `/data/` rules, the Worker route, features off); an explicit OK for each merge to the Worker repository's `main` (section 12). `/discord` needs no

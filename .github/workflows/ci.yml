@@ -185,8 +185,6 @@ jobs:
     # It depends on third-party sites, so it is not a required status check (docs/runbook/release.md).
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -204,6 +202,8 @@ jobs:
           pnpm install --frozen-lockfile
 
       - name: Links answer, repositories are public, the invite resolves
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/verify-links.ts
 
   secrets:

@@ -15,17 +15,31 @@ const ATTEMPTS = 3;
 const problems: string[] = [];
 const token = process.env.GITHUB_TOKEN ?? '';
 
+// Workflow command values: % CR and LF would end or forge an annotation, so they are escaped (GitHub's own encoding).
+const annotation = (text: string): string => text.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+
+const MAX_RETRY_AFTER_S = 10;
+
+/** Seconds to wait before the next attempt: Retry-After (integer, capped) on a 429, otherwise a linear backoff. */
+function pause(attempt: number, response: Response | null): number {
+  const retryAfter = Number(response?.status === 429 ? response.headers.get('retry-after') : NaN);
+  return Number.isInteger(retryAfter) && retryAfter >= 0 ? Math.min(retryAfter, MAX_RETRY_AFTER_S) : attempt * 2;
+}
+
 async function request(url: string, init: RequestInit = {}): Promise<Response> {
   let last: unknown;
   for (let attempt = 1; attempt <= ATTEMPTS; attempt += 1) {
+    let response: Response | null = null;
     try {
-      const response = await fetch(url, { redirect: 'manual', signal: AbortSignal.timeout(TIMEOUT_MS), ...init });
+      response = await fetch(url, { redirect: 'manual', signal: AbortSignal.timeout(TIMEOUT_MS), ...init });
       if (response.status < 500 && response.status !== 429) return response;
       last = new Error(`status ${response.status}`);
+      await response.body?.cancel();
     } catch (error) {
       last = error;
     }
-    await new Promise((resolve) => setTimeout(resolve, attempt * 2000));
+    // No wait after the last attempt: the failure is reported at once.
+    if (attempt < ATTEMPTS) await new Promise((resolve) => setTimeout(resolve, pause(attempt, response) * 1000));
   }
   throw last;
 }
@@ -61,6 +75,6 @@ try {
   problems.push(`site.yaml discord: the invite could not be checked (${String(error)})`);
 }
 
-for (const problem of problems) console.log(`::error::${problem}`);
+for (const problem of problems) console.log(`::error::${annotation(problem)}`);
 console.log(`verify-links: ${problems.length} problem(s).`);
 process.exit(problems.length > 0 ? 1 : 0);

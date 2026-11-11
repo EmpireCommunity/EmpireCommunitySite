@@ -28,17 +28,25 @@ function pngMetadata(data: Buffer): MetadataFinding[] {
 function jpegMetadata(data: Buffer): MetadataFinding[] {
   const found: MetadataFinding[] = [];
   if (data[0] !== 0xff || data[1] !== 0xd8) return ['not a valid JPEG signature'];
+  // After the scan data the file must end at the last EOI (FFD9): a missing EOI is a truncated file and bytes after it
+  // are appended data (a trailer can hide anything), so both fail closed.
+  const endChecks = (): MetadataFinding[] => {
+    const end = data.lastIndexOf(Buffer.from([0xff, 0xd9]));
+    if (end === -1) return ['JPEG truncated: no end-of-image marker'];
+    return end + 2 < data.length ? ['JPEG has bytes after the end-of-image marker'] : [];
+  };
   let offset = 2;
   while (offset + 4 <= data.length) {
     if (data[offset] !== 0xff) return [...found, 'malformed JPEG marker'];
     const marker = data[offset + 1] ?? 0;
     if (marker === 0xff) { offset += 1; continue; }
-    if (marker === 0xda || marker === 0xd9) return found; // start of scan: no metadata segments after it
+    if (marker === 0xd9) return [...found, ...endChecks()];
+    if (marker === 0xda) return [...found, ...endChecks()]; // start of scan: no metadata segments after it
     if (marker === 0xfe) found.push('JPEG comment (COM)');
     else if (marker >= 0xe0 && marker <= 0xef && !JPEG_ALLOWED_APP.has(marker)) found.push(`JPEG APP${marker - 0xe0} segment (EXIF, XMP or IPTC)`);
     offset += 2 + data.readUInt16BE(offset + 2);
   }
-  return found;
+  return [...found, 'JPEG truncated: no start-of-scan marker'];
 }
 
 function webpMetadata(data: Buffer): MetadataFinding[] {

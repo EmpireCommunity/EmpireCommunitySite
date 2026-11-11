@@ -27,7 +27,7 @@ The publish job declares `environment: release`, so the Docker Hub credentials a
 The owner creates it (the workflow and the repository do not):
 
 1. Repository Settings, Environments, New environment: `release`.
-2. Deployment branches and tags: selected, add a **tag** rule `v*` (no branch rule).
+2. Deployment branches and tags: selected, add a **tag** rule `v[0-9]*` (no branch rule).
 3. Environment secrets: create `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` here with the same values as the org
    secrets (the values never go through chat, a file or a log).
 4. Do not add required reviewers (one account, D-17); the tag rule and the owner-only `v*` tags are the control.
@@ -40,7 +40,7 @@ The image goes to Docker Hub, where a public repository is anonymous-pull by def
 Docker Hub, private ones on GHCR). `release.yml` logs in with the `release` environment secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (above)
 (names only; the values never appear in the repository, a log or a report) and does not change repository settings.
 
-1. Before the first tag, confirm that the org secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` have **write access** to
+1. Before the first tag, confirm that the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` secrets of the `release` environment (not the org secrets, which are deleted after the first rehearsal) have **write access** to
    the organization repository `empirecommunity/empirecommunity-site-org` (a member with write permission and a read-write
    token, or an organization access token with the Image Push scope, per Docker's access token docs). The repository
    already exists and is **public**. The workflow cannot check any of this.

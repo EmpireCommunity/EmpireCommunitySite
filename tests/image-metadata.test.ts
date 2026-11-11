@@ -20,11 +20,16 @@ test('a PNG with only rendering chunks is clean; text, EXIF and time chunks are 
 
 test('JPEG: EXIF, XMP, IPTC and comments are metadata; JFIF and ICC are not', () => {
   const segment = (marker: number) => Buffer.from([0xff, marker, 0x00, 0x04, 0x00, 0x00]);
-  const jpeg = (...markers: number[]) => Buffer.concat([Buffer.from([0xff, 0xd8]), ...markers.map(segment), Buffer.from([0xff, 0xda, 0x00, 0x02])]);
+  const jpeg = (...markers: number[]) => Buffer.concat([Buffer.from([0xff, 0xd8]), ...markers.map(segment), Buffer.from([0xff, 0xda, 0x00, 0x02, 0x11, 0xff, 0xd9])]);
   assert.deepEqual(imageMetadata('a.jpg', jpeg(0xe0, 0xe2)), []);
   assert.equal(imageMetadata('a.jpg', jpeg(0xe0, 0xe1)).length, 1);
   assert.equal(imageMetadata('a.jpeg', jpeg(0xed)).length, 1);
   assert.equal(imageMetadata('a.jpg', jpeg(0xfe)).length, 1);
+  // Fail closed: no start-of-scan, no end-of-image, or bytes after the last end-of-image.
+  const whole = jpeg(0xe0);
+  assert.deepEqual(imageMetadata('a.jpg', Buffer.concat([Buffer.from([0xff, 0xd8]), segment(0xe0)])), ['JPEG truncated: no start-of-scan marker']);
+  assert.deepEqual(imageMetadata('a.jpg', whole.subarray(0, whole.length - 2)), ['JPEG truncated: no end-of-image marker']);
+  assert.deepEqual(imageMetadata('a.jpg', Buffer.concat([whole, Buffer.from('Exif trailer')])), ['JPEG has bytes after the end-of-image marker']);
 });
 
 test('WebP EXIF and XMP chunks, and SVG editor metadata, are found', () => {
