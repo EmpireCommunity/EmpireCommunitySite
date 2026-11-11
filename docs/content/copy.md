@@ -249,7 +249,7 @@ Estrutura e regras em [`docs/design/information-architecture.md`](../design/info
 
 ## Páginas especiais
 
-Uma única versão, com os dois idiomas na mesma página (`routing-locale`).
+Uma única versão, com os dois idiomas na mesma página (`routing-locale`). O `<title>` da 404 fica só em inglês, o idioma da página (`html lang="en-US"`): um `<title>` não marca troca de idioma. O português fica na seção própria com `lang="pt-BR"`.
 
 | Id | Texto |
 |---|---|
@@ -257,7 +257,7 @@ Uma única versão, com os dois idiomas na mesma página (`routing-locale`).
 | chooser.title | EmpireCommunity |
 | chooser.link.pt | Português (Brasil) |
 | chooser.link.en | English |
-| 404.meta.title | Página não encontrada · Page not found |
+| 404.meta.title | Page not found |
 | 404.title.pt | Página não encontrada |
 | 404.body.pt | Este endereço não existe ou mudou de lugar. |
 | 404.link.pt | Ir para o início |

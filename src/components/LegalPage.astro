@@ -1,7 +1,7 @@
 ---
 // Legal reading page (information-architecture sections 7.7 and 7.8): title, version, the effective date only when the
 // file has one (no placeholder date, D-51), the table of contents with anchors and the text in one column of up to 68
-// characters, with A Margem (1 px, `margem`) at the start of the text column from 1024 px. On desktop the title and the contents sit in the left four columns and stay in view; below 1024 px the
+// characters, with A Margem (1 px, `margem`) at the start of the text column from 1024 px. On desktop the title and the contents sit in the left four columns and stay in view (the contents scrolls inside the viewport height, so no link is out of reach); below 1024 px the
 // contents is a list above the text. The text is the rendered Markdown (no raw HTML, explicit heading ids).
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { t } from '../i18n/index.ts';
@@ -23,7 +23,7 @@ const legal = await getLegal(locale, routeKey);
   <div class="frame pt-64 pb-64 lg:pt-96 lg:pb-96">
     <div class="grid gap-x-24 gap-y-32 lg:grid-cols-12">
       <div class="lg:col-span-4">
-        <div class="lg:sticky lg:top-96">
+        <div class="lg:sticky lg:top-96 lg:-m-4 lg:max-h-[calc(100dvh-var(--spacing-96)-var(--spacing-24))] lg:overflow-y-auto lg:p-4">
           <h1 class="font-display text-headline text-papel">{legal.title}</h1>
           <p class="mt-16 text-body-sm text-papel-suave">{t(locale, 'legal.version', { version: legal.version })}</p>
           {
