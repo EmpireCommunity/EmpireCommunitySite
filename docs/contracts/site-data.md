@@ -308,9 +308,10 @@ type SupportSnapshot = {
 };
 ```
 
-`specs` (optional highlights, below) is validated by the schema but not part of the snapshot yet; T-17 finding m-2
-decides whether it is rendered or removed. A part with a `photo` fails the build for now ("rendering a photo is not
-built yet"), so no photo can be published before the image pipeline exists.
+`specs` (optional highlights, below) is validated by the schema but not part of the snapshot yet, and no page renders it.
+A `support.yaml` with `specs` fails the build for now ("rendering specs is not built yet"), like a part with a `photo`
+("rendering a photo is not built yet"), so owner data never vanishes silently and no photo can be published before the
+image pipeline exists.
 
 `support.yaml`:
 
