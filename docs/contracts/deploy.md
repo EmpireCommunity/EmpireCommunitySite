@@ -27,7 +27,7 @@
 | File | Trigger | Does | Permissions | Secrets |
 |---|---|---|---|---|
 | `ci.yml` | `pull_request`, push to `main` | lint, typecheck, tests, build, content and `dist` checks (section 4), image build and image checks, HTTP header test, workflow lint, secret scan | `contents: read` | none |
-| `release.yml` | push of a tag `vX.Y.Z` (or `vX.Y.Z-rc.N`, a rehearsal) | **guards** (section 5), then build the image, push `X.Y.Z` (`X.Y.Z-rc.N` for a rehearsal) to Docker Hub with SBOM and provenance, create the attestation, create the GitHub Release with the changelog notes and `image-digest.txt`, print the digest in the run summary | `permissions: {}` at top; guards job `contents: read`; publish job adds `id-token: write`, `attestations: write` (no `packages`, nothing is published to GHCR); release job `contents: write` | `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (org secrets), read only by the login step of the publish job |
+| `release.yml` | push of a tag `vX.Y.Z` (or `vX.Y.Z-rc.N`, a rehearsal) | **guards** (section 5), then build the image, push `X.Y.Z` (`X.Y.Z-rc.N` for a rehearsal) to Docker Hub with SBOM and provenance, create the attestation, create the GitHub Release with the changelog notes and `image-digest.txt`, print the digest in the run summary | `permissions: {}` at top; guards job `contents: read` and `actions: read` (it lists the CI runs of the commit); publish job adds `id-token: write`, `attestations: write` (no `packages`, nothing is published to GHCR); release job `contents: write` | `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (org secrets), read only by the login step of the publish job |
 | `integrity.yml` | schedule, manual | checks the live site for invariants the release guards cannot see (section 8) | `contents: read` | none |
 
 `release.yml` MUST NOT be reachable from a pull request or a fork. This repository has no Cloudflare credential and no workflow that deploys the Worker (section 12). If a job needs write
@@ -65,8 +65,8 @@ permission, it is a separate job with its own `permissions` block.
   `traefik.docker.network`, one router rule that is exactly ``Host(`empirecommunity.org`)`` (the host name in backticks, as Traefik's rule
   syntax requires), and one service port (8080).
 - **Checks for pages that do not exist yet only warn.** A scan whose target page or file is not in the scaffold yet
-  (today: the `/discord` page, the `data-donations` block on the support pages, the discovery files) is listed in
-  `scripts/lib/pending.ts` with a flag set to `true`: the check **warns** and does not fail. **The pull request that
+  (flags today: `discordPage`, `discoveryFiles`, `legalPages`, `membersFallback`; only `legalPages` is `true`, until the
+  launch PR) is listed in `scripts/lib/pending.ts` with a flag set to `true`: the check **warns** and does not fail. **The pull request that
   adds the page sets its flag to `false` in the same change**, which makes the check blocking from then on. A reviewer
   rejects a page-adding PR that leaves its flag `true`, and the flag list is empty before the first release
   (`release.yml` MUST fail if any flag is still `true`).
@@ -174,8 +174,9 @@ Applied to `main` by the owner; the list states the control, not the current set
 
 - Changes reach `main` **only by pull request**; no direct push, no force push, no deletion of `main`; the rules apply
   to administrators as well.
-- **Required status checks** must pass: quality (lint, typecheck, tests); build with content and `dist` checks; image
-  checks and HTTP header test; workflow lint and secret scan. The check names are fixed in `ci.yml` and listed in `docs/runbook/release.md`.
+- **Required status checks** must pass, by their fixed names in `ci.yml` (also in `docs/runbook/release.md`):
+  `Quality (check, lint, tests)`, `Build and dist checks`, `Image checks and HTTP header test`, `Workflow lint` and
+  `Secret scan`.
 - A `CODEOWNERS` file is kept in the repository (owner for the whole tree) for future use. **No required approval
   count is specified**, because the actor and the approver may be the same account (D-17); the compensating controls
   are this document's controls: required checks, PR-only merges, the release guards and the owner-only immutable
