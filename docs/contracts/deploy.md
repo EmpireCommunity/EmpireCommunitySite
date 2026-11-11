@@ -152,14 +152,14 @@ Runs on a schedule (every 6 hours) and on demand and reads **public URLs only**.
 (a merge is not a deploy), it **does not compare the live site with `main`**: every row is an invariant of the
 contract that holds for any released version. The one value taken from `main` is the Discord server id, which does not
 change per release. A failing check fails the run, and GitHub's failed-run notification reaches the owner. No webhook,
-token or other secret is used. Rows whose site or root target is not live yet warn only, through the same flag mechanism as section 4.
-Operational flags `site` and `root` in `scripts/lib/integrity-pending.ts` downgrade pending targets to warnings until the launch PR flips them to false (D-65); the live Worker rows have no deferral flag.
+token or other secret is used. Rows whose site or root target is not live yet warn only, using separate operational flags `site` and `root` in `scripts/lib/integrity-pending.ts`. The launch PR flips them to false (D-65); `check-pending` blocks a final tag while any of these values is not exactly false, without affecting prerelease tags. The live Worker rows have no deferral flag.
 
 | Check | Rule |
 |---|---|
 | No payment instruction (D-28) | `/pt-br/support/` and `/en-us/support/` carry the `data-donations="not-open"` block and none of the payment-guard markers of site-data section 10 (`data-pix`, payment-provider host or short link, BR Code marker, key-shaped strings, e-mail outside the allowlist). The home page of both locales has the same payment-marker checks, without requiring a donations block (site-data section 10). |
 | Rewriting features | The delivered support page has no Cloudflare e-mail obfuscation or script-rewriting markers, so a re-enabled feature is detected. |
-| Discord entry (D-29, D-41) | `/discord` answers 200 with no `Location` header (the page shows the rules and never redirects); every Discord invite URL on it, one per language container, is the same `https://discord.com/invite/<code>` URL, with or without a query string on the request; the plain-text `https://discord.com/terms` of rule 5 is allowed as text, not in an attribute (site-data section 12, Terms URL exception) and is not an invite; the page has no script, no `<meta http-equiv="refresh">` and no other invite URL; the public invite lookup for that code returns the server id configured in `src/data/site.yaml` on `main`. The monitor does not tick the checkbox and does not check the WhatsApp link. |
+| Discord entry (D-29, D-41) | `/discord` answers 200 with no `Location` header (the page shows the rules and never redirects); every Discord invite URL on it, one per language container, is the same `https://discord.com/invite/<code>` URL, with or without a query string on the request; the plain-text `https://discord.com/terms` of rule 5 is allowed as text, not in an attribute (site-data section 12, Terms URL exception) and is not an invite; the page has no script, no `<meta http-equiv="refresh">` and no other invite URL; the public invite lookup for that code returns the server id configured in `src/data/site.yaml` on `main`. The monitor does not tick the checkbox and does not check the WhatsApp link. A 429 after the permitted retry is a warning, not a failure. |
+| Site-wide Discord links (D-41) | Crawl the public sitemap, up to 100 pages; every Discord invite link points through `/discord`, whose invite is checked above. |
 | Root | `/?utm_source=ci` answers `302` to `/en-us/?utm_source=ci` from the (non-Brazilian) runner. The Brazilian case is checked by hand (C-8). |
 | Member count | `/data/members.json` validates against the schema, `source` is not `built-in`, and `updatedAt` is not older than 3 days. |
 | Invite copies agree (members-json 2.6) | The public `wrangler.jsonc` on `main` of the Worker repository carries the same `DISCORD_GUILD_ID` as `src/data/site.yaml` on `main`; a different `DISCORD_INVITE_CODE` fails too, which is expected only between steps 2 and 3 of the rotation and clears on the next run. Reads public raw files only. The Worker is already live, so this row is blocking. |
@@ -181,7 +181,7 @@ Applied to `main` by the owner; the list states the control, not the current set
   count is specified**, because the actor and the approver may be the same account (D-17); the compensating controls
   are this document's controls: required checks, PR-only merges, the release guards and the owner-only immutable
   `v*` tags (section 5), attestation verification before deploy, the payment guard of site-data section 10, the
-  integrity monitor (section 8) once written, and the owner's approval of each deploy.
+  integrity monitor (section 8), and the owner's approval of each deploy.
 
 ## 10. Negative tests (Ensaio)
 

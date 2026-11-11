@@ -1,5 +1,6 @@
 // Pure decisions for deploy section 8. Inputs are public, untrusted responses; time is supplied by the caller.
 import ts from 'typescript';
+import { DEFAULT_CSP, SUPPORT_CSP, PERMISSIONS_POLICY } from './security-headers.ts';
 import { membersFromPayload } from '../../src/lib/members.ts';
 import { discordLinks, paymentGuard } from './dist-checks.ts';
 
@@ -124,10 +125,9 @@ export function liveMembers(text: string, now: number): string[] {
 
 export function publicHeaders(response: PublicResponse, support: boolean): string[] {
   const problems: string[] = [];
-  const script = support ? "script-src 'self'; connect-src 'self'" : "script-src 'self' https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com";
   const expected: Record<string, string> = {
-    'content-security-policy': `default-src 'self'; ${script}; img-src 'self'; style-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
-    'permissions-policy': 'camera=(), microphone=(), geolocation=(), payment=(), interest-cohort=()',
+    'content-security-policy': support ? SUPPORT_CSP : DEFAULT_CSP,
+    'permissions-policy': PERMISSIONS_POLICY,
     'cross-origin-opener-policy': 'same-origin',
     'cache-control': 'no-cache',
     'x-content-type-options': 'nosniff',
@@ -157,4 +157,16 @@ export function discordRetryDelay(status: number, retryAfter: string | null, now
   if (retryAfter === null) return status === 429 ? undefined : 1000;
   const delay = /^\d+$/.test(retryAfter) ? Number(retryAfter) * 1000 : Date.parse(retryAfter) - now;
   return Number.isFinite(delay) && delay >= 0 && delay <= 60_000 ? delay : undefined;
+}
+
+// A final rate-limited response is inconclusive, rather than evidence of a broken invite.
+export function inviteLookup(response: PublicResponse, code: string, guild: string): { problems: string[]; level: Level } {
+  if (response.status === 429) return { problems: ['Discord invite lookup rate limited'], level: 'warning' };
+  return {
+    problems: [
+      ...(response.status === 200 && !response.headers.has('location') ? [] : ['Expected 200 without Location']),
+      ...inviteGuild(response.text, code, guild),
+    ],
+    level: 'error',
+  };
 }

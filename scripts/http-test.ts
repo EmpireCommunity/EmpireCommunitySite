@@ -1,6 +1,7 @@
 // HTTP header test (docs/contracts/routing-locale.md section 6). Runs against the built image in CI and against the
 // public URL after a deploy.
 // Usage: BASE_URL=http://127.0.0.1:18080 node scripts/http-test.ts      (add PUBLIC=1 for the proxy-layer headers)
+import { DEFAULT_CSP, SUPPORT_CSP, PERMISSIONS_POLICY } from './lib/security-headers.ts';
 import { PENDING } from './lib/pending.ts';
 
 const base = (process.env.BASE_URL ?? '').replace(/\/$/, '');
@@ -10,11 +11,8 @@ if (base === '') {
   process.exit(2);
 }
 
-const DEFAULT_CSP = "default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com; img-src 'self'; style-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
-const SUPPORT_CSP = "default-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 const NO_CACHE = 'no-cache';
 // Values of the routing contract section 6 (snippets/security-headers.conf).
-const PERMISSIONS_POLICY = 'camera=(), microphone=(), geolocation=(), payment=(), interest-cohort=()';
 const COOP = 'same-origin';
 
 const problems: string[] = [];

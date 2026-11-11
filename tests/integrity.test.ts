@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  SITE_ORIGIN, WORKER_CONFIG_URL, discordEntry, discordRetryDelay, findingLevel, inviteGuild, inviteLinks,
+  SITE_ORIGIN, WORKER_CONFIG_URL, discordEntry, discordRetryDelay, findingLevel, inviteLookup, inviteGuild, inviteLinks,
   liveMembers, noPayment, publicDestination, publicHeaders, rewriting, rootRedirect, sitemapUrls, siteUrl,
   workerCopies, type PublicResponse,
 } from '../scripts/lib/integrity-rules.ts';
@@ -119,4 +119,14 @@ test('Discord retry decision respects Retry-After and never retries permanent fa
     [429, '61', undefined], [404, '1', undefined], [302, null, undefined],
   ];
   for (const [status, header, expected] of cases) assert.equal(discordRetryDelay(status, header, now), expected);
+});
+
+
+test('Discord rate limiting after the allowed retry warns; other invalid responses fail', () => {
+  for (const status of [429, 404, 500, 200]) {
+    const result = inviteLookup(snapshot('', status), invite, guild);
+    assert.equal(result.level, status === 429 ? 'warning' : 'error');
+    assert.ok(result.problems.length > 0);
+  }
+  assert.deepEqual(inviteLookup(snapshot(JSON.stringify({ code: invite, guild: { id: guild } })), invite, guild).problems, []);
 });

@@ -5,8 +5,8 @@ import { parse } from 'yaml';
 import { INTEGRITY_PENDING } from './lib/integrity-pending.ts';
 import {
   SITE_ORIGIN, WORKER_CONFIG_URL, SITEMAP_LIMIT, discordEntry, discordRetryDelay, findingLevel,
-  inviteGuild, inviteLinks, liveMembers, noPayment, publicDestination, publicHeaders, rewriting, rootRedirect, sitemapUrls, siteUrl,
-  workerCopies, type PublicResponse,
+  inviteLookup, inviteLinks, liveMembers, noPayment, publicDestination, publicHeaders, rewriting, rootRedirect, sitemapUrls, siteUrl,
+  workerCopies, type PublicResponse, type Level,
 } from './lib/integrity-rules.ts';
 
 const site = parse(readFileSync('src/data/site.yaml', 'utf8')) as { discord?: { inviteCode?: string; guildId?: string } };
@@ -18,13 +18,17 @@ const now = Date.now();
 let errors = 0;
 // Untrusted public text never becomes an Actions command or log payload. Only static findings are printed.
 const escapeAnnotation = (value: string) => value.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
-function report(row: string, pending: boolean, problems: string[]): void {
+function report(row: string, pending: boolean, problems: string[], level: Level = findingLevel(pending)): void {
   if (problems.length === 0) { console.log(`integrity: ${escapeAnnotation(row)} passed`); return; }
-  if (!pending) errors += 1;
-  for (const problem of problems) console.log(`::${findingLevel(pending)}::${escapeAnnotation(`${row}: ${problem}${pending ? ' (target pending launch; integrity-pending.ts)' : ''}`)}`);
+  if (level === 'error') errors += 1;
+  for (const problem of problems) console.log(`::${level}::${escapeAnnotation(`${row}: ${problem}${pending ? ' (target pending launch; integrity-pending.ts)' : ''}`)}`);
 }
-async function check(row: string, pending: boolean, run: () => Promise<string[]>): Promise<void> {
-  try { report(row, pending, await run()); }
+async function check(row: string, pending: boolean, run: () => Promise<string[] | { problems: string[]; level: Level }>): Promise<void> {
+  try {
+    const result = await run();
+    if (Array.isArray(result)) report(row, pending, result);
+    else report(row, pending, result.problems, pending ? 'warning' : result.level);
+  }
   catch { report(row, pending, ['Public read or response validation failed']); }
 }
 
@@ -112,7 +116,7 @@ await check('Discord invite guild', INTEGRITY_PENDING.site, async () => {
     await new Promise((resolve) => setTimeout(resolve, delay));
     response = await attempt();
   }
-  return [...successful(response), ...inviteGuild(response.text, deployedCode, guild)];
+  return inviteLookup(response, deployedCode, guild);
 });
 
 await check('Site-wide Discord links', INTEGRITY_PENDING.site, async () => {
