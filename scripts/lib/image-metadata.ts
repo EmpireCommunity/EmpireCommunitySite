@@ -1,12 +1,11 @@
 // Metadata scan of committed images (AGENTS.md: images are stripped of metadata before their first commit). Pure: it
-// takes the bytes and returns what is embedded, so the rule is testable without files. A format this module cannot
-// read fails closed instead of passing unchecked.
+// takes the bytes and returns what is embedded, so the rule is testable without files. Only the formats the repository
+// ships are parsed (PNG, ICO, SVG). Every other image format fails closed: a parser for it must be written, with
+// fixtures, in the same PR that commits the first such file.
 import { extname } from 'node:path';
 
 // PNG chunks that describe pixels or rendering. Anything else (tEXt, zTXt, iTXt, eXIf, tIME, unknown) is metadata.
 const PNG_ALLOWED = new Set(['IHDR', 'PLTE', 'IDAT', 'IEND', 'tRNS', 'gAMA', 'cHRM', 'sRGB', 'iCCP', 'sBIT', 'bKGD', 'hIST', 'pHYs', 'sPLT', 'cICP', 'mDCv', 'cLLi', 'acTL', 'fcTL', 'fdAT']);
-// JPEG: APP0 (JFIF), APP2 (ICC profile) and APP14 (Adobe colour transform) are rendering data; APP1 (EXIF, XMP), APP13 (IPTC/Photoshop), other APPn and COM are metadata.
-const JPEG_ALLOWED_APP = new Set([0xe0, 0xe2, 0xee]);
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 export type MetadataFinding = string;
@@ -25,50 +24,6 @@ function pngMetadata(data: Buffer): MetadataFinding[] {
   return [...found, 'PNG ends without IEND'];
 }
 
-function jpegMetadata(data: Buffer): MetadataFinding[] {
-  const found: MetadataFinding[] = [];
-  if (data[0] !== 0xff || data[1] !== 0xd8) return ['not a valid JPEG signature'];
-  // After the scan data the file must end at the last EOI (FFD9): a missing EOI is a truncated file and bytes after it
-  // are appended data (a trailer can hide anything), so both fail closed.
-  const endChecks = (): MetadataFinding[] => {
-    const end = data.lastIndexOf(Buffer.from([0xff, 0xd9]));
-    if (end === -1) return ['JPEG truncated: no end-of-image marker'];
-    return end + 2 < data.length ? ['JPEG has bytes after the end-of-image marker'] : [];
-  };
-  let offset = 2;
-  while (offset + 4 <= data.length) {
-    if (data[offset] !== 0xff) return [...found, 'malformed JPEG marker'];
-    const marker = data[offset + 1] ?? 0;
-    if (marker === 0xff) { offset += 1; continue; }
-    if (marker === 0xd9) return [...found, ...endChecks()];
-    if (marker === 0xda) return [...found, ...endChecks()]; // start of scan: no metadata segments after it
-    if (marker === 0xfe) found.push('JPEG comment (COM)');
-    else if (marker >= 0xe0 && marker <= 0xef && !JPEG_ALLOWED_APP.has(marker)) found.push(`JPEG APP${marker - 0xe0} segment (EXIF, XMP or IPTC)`);
-    offset += 2 + data.readUInt16BE(offset + 2);
-  }
-  return [...found, 'JPEG truncated: no start-of-scan marker'];
-}
-
-function webpMetadata(data: Buffer): MetadataFinding[] {
-  const found: MetadataFinding[] = [];
-  if (data.toString('latin1', 0, 4) !== 'RIFF' || data.toString('latin1', 8, 12) !== 'WEBP') return ['not a valid WebP signature'];
-  let offset = 12;
-  while (offset + 8 <= data.length) {
-    const type = data.toString('latin1', offset, offset + 4);
-    if (type === 'EXIF' || type === 'XMP ') found.push(`WebP chunk ${type.trim()}`);
-    offset += 8 + data.readUInt32LE(offset + 4) + (data.readUInt32LE(offset + 4) % 2);
-  }
-  return found;
-}
-
-function gifMetadata(data: Buffer): MetadataFinding[] {
-  // Comment (0xFE) and application (0xFF) extensions carry text and XMP. Scanning the byte patterns after the header is
-  // enough for a fail-closed check: a false positive only asks for a re-export.
-  const text = data.toString('latin1');
-  if (!text.startsWith('GIF8')) return ['not a valid GIF signature'];
-  return text.includes('XMP DataXMP') ? ['GIF XMP extension'] : text.includes('\x21\xfe') ? ['GIF comment extension'] : [];
-}
-
 function icoMetadata(data: Buffer): MetadataFinding[] {
   // An ICO is a directory of images: BMP entries hold no metadata, PNG entries are scanned like a PNG file.
   if (data.length < 6 || data.readUInt16LE(0) !== 0 || data.readUInt16LE(2) !== 1) return ['not a valid ICO header'];
@@ -85,19 +40,28 @@ function icoMetadata(data: Buffer): MetadataFinding[] {
   return found;
 }
 
+// Metadata is recognised by local name and by namespace URI, never by prefix: `<m:metadata>` and
+// `xmlns:anything="http://purl.org/dc/elements/1.1/"` are found whatever the author called the prefix.
+const SVG_METADATA_ELEMENT = /<(?:[\w.-]+:)?metadata[\s>/]/i;
+const SVG_METADATA_NAMESPACES = [
+  'http://purl.org/dc/', 'http://www.w3.org/1999/02/22-rdf-syntax-ns#', 'http://creativecommons.org/ns#', 'http://web.resource.org/cc/',
+  'http://www.inkscape.org/namespaces/inkscape', 'http://sodipodi.sourceforge.net/DTD/sodipodi', 'http://ns.adobe.com/', 'http://ns.serif.com/',
+];
+
 function svgMetadata(data: Buffer): MetadataFinding[] {
   const text = data.toString('utf8');
   const found: MetadataFinding[] = [];
-  if (/<metadata[\s>]/i.test(text)) found.push('SVG <metadata> element');
-  if (/<rdf:RDF|<dc:|<cc:|xmlns:(?:inkscape|sodipodi|xmp|dc|cc|rdf)=/i.test(text)) found.push('SVG editor or RDF namespace');
+  if (SVG_METADATA_ELEMENT.test(text)) found.push('SVG metadata element');
+  const declared = [...text.matchAll(/\bxmlns(?::[\w.-]+)?\s*=\s*(["'])(.*?)\1/gis)].map((match) => (match[2] ?? '').trim());
+  for (const namespace of SVG_METADATA_NAMESPACES) {
+    if (declared.some((uri) => uri.toLowerCase().startsWith(namespace.toLowerCase()))) found.push(`SVG metadata namespace ${namespace}`);
+  }
   if (/<\?xpacket/i.test(text)) found.push('SVG XMP packet');
   return found;
 }
 
-const READERS: Record<string, (data: Buffer) => MetadataFinding[]> = {
-  '.png': pngMetadata, '.jpg': jpegMetadata, '.jpeg': jpegMetadata, '.webp': webpMetadata, '.gif': gifMetadata, '.ico': icoMetadata, '.svg': svgMetadata,
-};
-export const IMAGE_EXTENSIONS: readonly string[] = [...Object.keys(READERS), '.avif', '.bmp', '.tif', '.tiff', '.heic'];
+const READERS: Record<string, (data: Buffer) => MetadataFinding[]> = { '.png': pngMetadata, '.ico': icoMetadata, '.svg': svgMetadata };
+export const IMAGE_EXTENSIONS: readonly string[] = [...Object.keys(READERS), '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.tif', '.tiff', '.heic'];
 
 export function isImageFile(path: string): boolean {
   return IMAGE_EXTENSIONS.includes(extname(path).toLowerCase());
@@ -106,6 +70,6 @@ export function isImageFile(path: string): boolean {
 /** Metadata found in an image, or a single "unsupported format" finding when the format cannot be inspected. */
 export function imageMetadata(path: string, data: Buffer): MetadataFinding[] {
   const reader = READERS[extname(path).toLowerCase()];
-  if (reader === undefined) return [`format ${extname(path)} is not inspected by this check: convert to PNG, JPEG, WebP or SVG, or extend scripts/lib/image-metadata.ts`];
+  if (reader === undefined) return [`format ${extname(path)} has no metadata parser: add one (with fixtures) to scripts/lib/image-metadata.ts in the PR that commits the first such file, or use PNG or SVG`];
   return reader(data);
 }

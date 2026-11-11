@@ -18,29 +18,22 @@ test('a PNG with only rendering chunks is clean; text, EXIF and time chunks are 
   }
 });
 
-test('JPEG: EXIF, XMP, IPTC and comments are metadata; JFIF and ICC are not', () => {
-  const segment = (marker: number) => Buffer.from([0xff, marker, 0x00, 0x04, 0x00, 0x00]);
-  const jpeg = (...markers: number[]) => Buffer.concat([Buffer.from([0xff, 0xd8]), ...markers.map(segment), Buffer.from([0xff, 0xda, 0x00, 0x02, 0x11, 0xff, 0xd9])]);
-  assert.deepEqual(imageMetadata('a.jpg', jpeg(0xe0, 0xe2)), []);
-  assert.equal(imageMetadata('a.jpg', jpeg(0xe0, 0xe1)).length, 1);
-  assert.equal(imageMetadata('a.jpeg', jpeg(0xed)).length, 1);
-  assert.equal(imageMetadata('a.jpg', jpeg(0xfe)).length, 1);
-  // Fail closed: no start-of-scan, no end-of-image, or bytes after the last end-of-image.
-  const whole = jpeg(0xe0);
-  assert.deepEqual(imageMetadata('a.jpg', Buffer.concat([Buffer.from([0xff, 0xd8]), segment(0xe0)])), ['JPEG truncated: no start-of-scan marker']);
-  assert.deepEqual(imageMetadata('a.jpg', whole.subarray(0, whole.length - 2)), ['JPEG truncated: no end-of-image marker']);
-  assert.deepEqual(imageMetadata('a.jpg', Buffer.concat([whole, Buffer.from('Exif trailer')])), ['JPEG has bytes after the end-of-image marker']);
+test('formats without a parser (JPEG, GIF, WebP, AVIF) are rejected outright, whatever their content', () => {
+  for (const name of ['a.jpg', 'a.jpeg', 'a.gif', 'a.webp', 'a.avif']) {
+    const findings = imageMetadata(name, Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
+    assert.equal(findings.length, 1, name);
+    assert.match(findings[0] ?? '', /no metadata parser/);
+  }
 });
 
-test('WebP EXIF and XMP chunks, and SVG editor metadata, are found', () => {
-  const riff = (type: string) => {
-    const body = Buffer.concat([Buffer.from('WEBP'), Buffer.from(type, 'latin1'), Buffer.from([2, 0, 0, 0, 0, 0])]);
-    return Buffer.concat([Buffer.from('RIFF'), Buffer.from([body.length, 0, 0, 0]), body]);
-  };
-  assert.deepEqual(imageMetadata('a.webp', riff('VP8 ')), []);
-  assert.deepEqual(imageMetadata('a.webp', riff('EXIF')), ['WebP chunk EXIF']);
-  assert.deepEqual(imageMetadata('a.svg', Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0"/></svg>')), []);
-  assert.equal(imageMetadata('a.svg', Buffer.from('<svg><metadata><rdf:RDF/></metadata></svg>')).length, 2);
+test('SVG metadata is found by local name and by namespace URI, whatever the prefix', () => {
+  const svg = (body: string, attrs = '') => Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg"${attrs}>${body}</svg>`);
+  assert.deepEqual(imageMetadata('a.svg', svg('<path d="M0 0"/>')), []);
+  assert.deepEqual(imageMetadata('a.svg', svg('<metadata/>')), ['SVG metadata element']);
+  assert.deepEqual(imageMetadata('a.svg', svg('<x:metadata><x:a/></x:metadata>', ' xmlns:x="urn:other"')), ['SVG metadata element']);
+  assert.deepEqual(imageMetadata('a.svg', svg('', ' xmlns:zz="http://purl.org/dc/elements/1.1/"')), ['SVG metadata namespace http://purl.org/dc/']);
+  assert.deepEqual(imageMetadata('a.svg', svg('', " xmlns:q='http://www.inkscape.org/namespaces/inkscape'")), ['SVG metadata namespace http://www.inkscape.org/namespaces/inkscape']);
+  assert.deepEqual(imageMetadata('a.svg', svg('', ' xmlns:r="http://www.w3.org/1999/02/22-rdf-syntax-ns#"')), ['SVG metadata namespace http://www.w3.org/1999/02/22-rdf-syntax-ns#']);
 });
 
 test('an ICO scans its embedded PNG entries; an unknown format and a wrong signature fail closed', () => {
@@ -51,6 +44,5 @@ test('an ICO scans its embedded PNG entries; an unknown format and a wrong signa
   dir.writeUInt32LE(embedded.length, 14);
   dir.writeUInt32LE(22, 18);
   assert.deepEqual(imageMetadata('a.ico', Buffer.concat([dir, embedded])), ['ICO entry 0: PNG chunk tEXt']);
-  assert.equal(imageMetadata('a.avif', Buffer.alloc(4)).length, 1);
   assert.equal(imageMetadata('a.png', Buffer.from('not a png')).length, 1);
 });
