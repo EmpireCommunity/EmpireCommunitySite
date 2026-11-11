@@ -62,7 +62,7 @@ const Image = z.object({ src: z.string(), alt: Localized(140), decorative: z.boo
   cannot be rendered in en-US by mistake (C-1).
 - Plain text only. Rich text exists only in the legal Markdown files.
 - `HttpsUrl` rejects `http:`, credentials in the URL and tracking parameters (`utm_*`, `fbclid`, `gclid`, `ref`).
-- `Image.src` points to `src/assets/**`; formats webp, avif, jpg, png; at most 2 MB; `alt` required unless
+- `Image.src` points to `src/assets/**`; formats webp, avif, jpg, png (the CI metadata check parses only PNG, ICO and SVG today and rejects every other format: the PR that commits the first webp, avif or jpg adds its parser and fixtures); at most 2 MB; `alt` required unless
   `decorative`.
 - **Metadata is removed before the file is first committed, not after.** A published repository keeps every commit,
   so a check in CI alone is too late. Required: a repository script (`strip-metadata`, re-encodes without EXIF, GPS

@@ -2,7 +2,7 @@
 export type WorkflowFinding = { file: string; message: string };
 
 type Step = { uses?: string; run?: string; with?: Record<string, unknown> };
-type Job = { permissions?: unknown; steps?: Step[]; 'timeout-minutes'?: unknown; environment?: unknown };
+type Job = { uses?: string; permissions?: unknown; steps?: Step[]; 'timeout-minutes'?: unknown; environment?: unknown };
 export type Workflow = { on?: unknown; true?: unknown; permissions?: unknown; jobs?: Record<string, Job> };
 
 const SHA_PINNED = /^[^@\s]+@[0-9a-f]{40}$/;
@@ -27,7 +27,11 @@ export function checkWorkflow(file: string, workflow: Workflow): WorkflowFinding
   }
   if (workflow.permissions === undefined) fail('top-level permissions block is missing');
   for (const [name, job] of Object.entries(workflow.jobs ?? {})) {
-    if (job['timeout-minutes'] === undefined) fail(`job ${name}: timeout-minutes is missing`);
+    // A job-level `uses` calls a reusable workflow: it is pinned like a step action. Local ones (./) are this repository.
+    if (job.uses !== undefined && !job.uses.startsWith('./') && !SHA_PINNED.test(job.uses)) {
+      fail(`job ${name}: ${job.uses} is not pinned to a full commit SHA`);
+    }
+    if (job['timeout-minutes'] === undefined && job.uses === undefined) fail(`job ${name}: timeout-minutes is missing`);
     for (const step of job.steps ?? []) {
       if (step.uses !== undefined && !step.uses.startsWith('./') && !SHA_PINNED.test(step.uses)) {
         fail(`job ${name}: ${step.uses} is not pinned to a full commit SHA`);
