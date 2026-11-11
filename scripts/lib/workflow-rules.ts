@@ -25,21 +25,9 @@ export function checkWorkflow(file: string, workflow: Workflow): WorkflowFinding
   for (const forbidden of ['pull_request_target', 'workflow_run']) {
     if (triggers.includes(forbidden)) fail(`trigger ${forbidden} is not allowed`);
   }
-  // ADR-0003: environment secrets are open to any job naming the environment, so only worker-deploy.yml may name it.
-  const isWorkerDeploy = /(^|\/)worker-deploy\.ya?ml$/.test(file);
-  if (!isWorkerDeploy && /worker-production/i.test(JSON.stringify(workflow))) {
-    fail('only worker-deploy.yml may name the environment worker-production (ADR-0003)');
-  }
   if (workflow.permissions === undefined) fail('top-level permissions block is missing');
   for (const [name, job] of Object.entries(workflow.jobs ?? {})) {
     if (job['timeout-minutes'] === undefined) fail(`job ${name}: timeout-minutes is missing`);
-    // Fail closed: outside worker-deploy.yml an environment name must be a plain literal, never an expression
-    // that could build worker-production at run time.
-    const environment = job.environment;
-    const environmentName = typeof environment === 'object' && environment !== null ? (environment as { name?: unknown }).name : environment;
-    if (!isWorkerDeploy && environment !== undefined && (typeof environmentName !== 'string' || environmentName.includes('${{'))) {
-      fail(`job ${name}: dynamic environment name; only literal names are allowed outside worker-deploy.yml`);
-    }
     for (const step of job.steps ?? []) {
       if (step.uses !== undefined && !step.uses.startsWith('./') && !SHA_PINNED.test(step.uses)) {
         fail(`job ${name}: ${step.uses} is not pinned to a full commit SHA`);

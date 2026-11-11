@@ -9,6 +9,10 @@ release happens and which version it gets. The release PR (`chore/release-X.Y.Z`
 
 ## [Unreleased]
 
+### Removed
+
+- Leftovers of the old in-repo Worker deploy (T-14e, D-55): the `worker-production` environment and `worker-deploy.yml` workflow-lint rules (and the literal-environment-name rule that existed only to protect that environment; no workflow uses `environment`) with their tests, the `/worker/` line in `CODEOWNERS`, the `worker/` note in `dependabot.yml` and `worker/` in the `AGENTS.md` High list, which now says the Worker lives in its own repository.
+
 ### Added
 
 - Docs: the member-count Worker moves to its own repository `EmpireCommunitySite-Worker` and deploys through Cloudflare Workers Builds (D-55, T-14a). ADR-0004 supersedes ADR-0003; `members-json` (2.1, 2.6, 6, 8, 9) and `deploy` (no `worker-deploy.yml`, no `worker-production` environment, new section 12 and an invite-consistency row in the integrity monitor) are rewritten.
