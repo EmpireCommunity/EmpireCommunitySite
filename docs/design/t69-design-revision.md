@@ -134,15 +134,15 @@ antes de apertar as linhas e de aplicar a faixa de cabeçalho. A Retina confirma
 
 ## 4. `/discord` em um idioma por página
 
-### 4.1 Rotas (dependem de acordo com o Alicerce, §6)
+### 4.1 Rotas (acordadas com o Alicerce, D-78)
 
 - Duas páginas: **`/pt-br/discord/`** (regras em pt-BR, botões Discord e WhatsApp) e **`/en-us/discord/`** (regras em
   en-US, só Discord). Mesmo slug nos dois idiomas, então o seletor de idioma já funciona.
 - **`/discord`** continua sendo o endereço público (Discord, perfil do GitHub, D-49) e passa a escolher o idioma como `/`:
   Brasil para `/pt-br/discord/`, o resto para `/en-us/discord/`, 302, preservando a query.
 - Botões e links de entrada **dentro do site** apontam direto para `/{locale}/discord/`, sem passar por `/discord`.
-- Sem a regra (origem direta ou regra desligada), `/discord` mostra a mesma página neutra de escolha de `/`, com os dois
-  links. É a minha recomendação; o Alicerce decide o fallback.
+- Sem a regra (origem direta ou regra desligada), `/discord` mostra uma página neutra de escolha, com os dois links
+  (`routing-locale` §1).
 - As páginas continuam `noindex`, fora do sitemap e sem cookie, armazenamento ou script.
 
 ### 4.2 Layout
@@ -204,7 +204,7 @@ Captura: `~/files/bussola-t69/prototipo-discord-1536x730.png`.
 
 ## 6. Contratos que mudam com o `/discord` por idioma
 
-Proposta para o Alicerce acordar (não editei contratos):
+Acordado com o Alicerce e registrado no D-78 (contratos editados por ele no commit 2b57ab6; arquitetura por mim):
 
 - **ADR-0002, Consequences:** "These two rules are the only redirect rules the site needs" e "`/discord` is a page served
   by the site, not a rule" passam a ser quatro regras: `/` e `/discord`, cada uma com BR e o resto.
@@ -215,9 +215,9 @@ Proposta para o Alicerce acordar (não editei contratos):
 - **site-data:** 88-91 (strings `discord.*` e o `<head>` da página, que deixa de ser en-US fixo), 129-135 (o convite
   passa a existir nas duas páginas `/{locale}/discord/`), 199-200 e 211-214 (`join-channels.yaml`: `url` deixa de ser
   `links.discord` dentro do site). `links.discord` continua como o endereço público para fora do site.
-- **information-architecture:** R-2, R-5, a lista de rotas (linha 68), as linhas 162 e 492 e a §7.10 inteira; eu reescrevo
-  depois do acordo.
-- **D-41** precisa de uma emenda registrada pelo dono: "uma página por idioma" no lugar de "as duas na mesma URL".
+- **information-architecture:** R-1, R-2, R-5, o mapa de rotas, a tabela de reflow, a decisão T-38 da §7.4, a §7.9, a §7.10
+  inteira, O-2 e a §11, já reescritos.
+- **D-41** foi emendada pelo D-78: uma página por idioma no lugar das duas na mesma URL.
 - Atenção para o Alicerce: D-29 registra que uma regra do Cloudflare para `/discord` "foi relatada como não funcionando".
   Convém saber por quê antes de depender de uma regra de novo.
 
@@ -281,7 +281,7 @@ Discord, perfil, outro lugar) e, se possível, uma captura do que foi apresentad
 
 - `EmpireAssets/docs/EmpireCommunity-DESIGN.md` recebe a nova escala, a largura, `page-title`, `page-head`, o item atual
   do menu, o rodapé e o favicon em disco. O push daquele repositório é do Regente de lá (D-46).
-- `information-architecture.md` §4, §7 e §7.10 são atualizados por mim depois do acordo de §6.
+- `information-architecture.md` já foi atualizada com o acordo de §6.
 
 ## 11. Verificação (Retina)
 

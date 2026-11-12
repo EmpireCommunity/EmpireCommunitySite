@@ -36,11 +36,11 @@ Cada regra é verificável. A coluna da direita aponta o critério de aceite rel
 
 | Id | Regra | Critério |
 |---|---|---|
-| R-1 | **Canais em pt-BR:** Discord e WhatsApp usam o mesmo componente, com largura, altura, tipografia, cor e estilo idênticos. Nenhum é "primário". Ordem alfabética: Discord à esquerda (em cima no mobile), WhatsApp à direita (embaixo); em `/discord`, lado a lado em todas as larguras (D-41). Ícones monocromáticos, sem as cores das marcas. Textos de apoio com a mesma extensão. | C-1 |
-| R-2 | **Canais em en-US:** a palavra WhatsApp não aparece em nenhuma página, metadado, `llms.txt` ou texto alternativo de `/en-us/`, nem na página de escolha em `/`. Em `/discord`, página neutra, ela só aparece dentro do container `lang="pt-BR"` (D-41). | C-1 |
+| R-1 | **Canais em pt-BR:** Discord e WhatsApp usam o mesmo componente, com largura, altura, tipografia, cor e estilo idênticos. Nenhum é "primário". Ordem alfabética: Discord à esquerda (em cima no mobile), WhatsApp à direita (embaixo); na página de regras pt-BR (`/pt-br/discord/`), lado a lado em todas as larguras (D-41). Ícones monocromáticos, sem as cores das marcas. Textos de apoio com a mesma extensão. | C-1 |
+| R-2 | **Canais em en-US:** a palavra WhatsApp não aparece em nenhuma página, metadado, `llms.txt` ou texto alternativo de `/en-us/`, nem na página de escolha em `/`. A página de regras em inglês (`/en-us/discord/`) só tem o Discord, e a página de escolha de `/discord` não cita o WhatsApp (D-78). | C-1 |
 | R-3 | **Sem CTA de canal no header.** O header leva para Participar. Assim nenhum canal ganha mais peso. | C-1 |
 | R-4 | **Link só no que funciona.** O link é renderizado somente quando `status = live` e existe `url`. Em desenvolvimento e Em breve são texto, sem link, sem `href="#"`, sem botão desabilitado. | C-2 |
-| R-5 | **Toda entrada passa por `https://empirecommunity.org/discord` (D-41).** Botões e links de Discord e de WhatsApp, em qualquer página, levam a esse endereço. O convite do Discord e o link do WhatsApp só existem dentro de `/discord`. | C-2 |
+| R-5 | **Toda entrada passa pela página de regras do idioma (D-41, D-78).** Botões e links de Discord e de WhatsApp, em qualquer página, levam a `/{locale}/discord/` do próprio idioma, nunca a `/discord`. `https://empirecommunity.org/discord` é o endereço público para fora do site e redireciona pelo país. O convite do Discord e o link do WhatsApp só existem nas páginas de regras, o WhatsApp só na pt-BR. | C-2 |
 | R-6 | **Seção sem dado real não é renderizada.** Inclui título, separador, espaçamento e âncora. Nada de "em breve", traços ou zeros no lugar do dado. Ver §6. | C-4 |
 | R-7 | **Pessoa só com consentimento registrado.** Sem consentimento, a build falha. Vale para fundador e equipe. | C-4 |
 | R-8 | **Número de membros:** só o último valor, com a regra de exibição de `members-json` (888 vira `880+`), sem data, sem "atualizado em", sem animação. Aparece apenas na faixa de números da Home. | C-7 |
@@ -64,8 +64,9 @@ alvos de toque com pelo menos 44 × 44 px, contraste AA, tabelas com cabeçalho 
 │   ├── support/
 │   ├── organization/      falta no contrato routing-locale (ver §11)
 │   ├── terms-of-service/
-│   └── privacy-policy/
-/discord          regras da comunidade e links de entrada, HTTP 200 (D-29, D-41)
+│   ├── privacy-policy/
+│   └── discord/           regras da comunidade e links de entrada, um idioma por página (D-41, D-78)
+/discord          redireciona pelo país para a página de regras (D-78); página de escolha se a regra estiver desligada
 /404.html         página neutra e bilíngue
 ```
 
@@ -81,6 +82,7 @@ Slugs iguais e em inglês nos dois idiomas, conforme `routing-locale` §1. O idi
 | Organização | `organization` | `organization/` | Organização / Organization |
 | Termos | `terms` | `terms-of-service/` | rodapé |
 | Privacidade | `privacy` | `privacy-policy/` | rodapé |
+| Regras da comunidade | `discord` | `discord/` | fora do menu; botões de entrada |
 
 Em inglês o rótulo é "Support us" para não ser confundido com suporte técnico.
 
@@ -157,13 +159,13 @@ final. Marcas: `[P-xx]` some quando vazio; `(pt)` existe só em pt-BR.
 | Padrão | Desktop 1440 | Tablet 768 | Mobile 390 |
 |---|---|---|---|
 | Header | Logo, cinco itens, seletor | Logo, seletor, botão Menu | Faixa com o seletor; abaixo, logo e botão Menu |
-| Índice (título + linhas) | Título em 4 colunas, linhas em 8 | Título acima, linhas na largura total | Igual ao tablet |
+| Índice (título + linhas) | Título em 3 colunas, linhas em 9 (T-69) | Título acima, linhas na largura total | Igual ao tablet |
 | Par de canais (pt) | Dois blocos iguais lado a lado | Dois blocos iguais lado a lado | Empilhados, largura total, Discord primeiro |
-| Par de botões em `/discord` (pt) | Lado a lado | Lado a lado | Lado a lado (D-41) |
+| Par de botões em `/pt-br/discord/` | Lado a lado | Lado a lado | Lado a lado (D-41) |
 | Linha de status | Nome, descrição, status e links na mesma linha | Nome e status na 1ª linha; descrição e links abaixo | Tudo empilhado, status logo abaixo do nome |
 | Tabela de peças | Tabela | Tabela | Linhas empilhadas, cada uma com rótulo e valor |
 | Faixa de números | Até 3 itens em linha | Até 3 itens em linha | Empilhados |
-| Texto longo | Coluna de leitura de até 68 caracteres | Igual | Largura total com margem de 16 px |
+| Texto longo | Coluna de leitura de até 72 caracteres (T-69) | Igual | Largura total com margem de 16 px |
 
 ### 7.1 Home
 
@@ -338,9 +340,9 @@ en-US: um único bloco do Discord, em 8 colunas, com a nota sobre a comunidade s
 Perguntas frequentes usam `<details>` nativo: funcionam sem JavaScript.
 
 **Decisão (T-38): dois blocos de canal, cada um com o próprio botão.** Em pt-BR a página mantém os blocos Discord e
-WhatsApp, e os dois botões levam a `/discord` (`site-data` §8). Um botão único obrigaria a criar outro padrão só para esta
+WhatsApp, e os dois botões levam a `/pt-br/discord/` (`site-data` §8, D-78). Um botão único obrigaria a criar outro padrão só para esta
 página, sem combinar com a Home; os dois blocos mantêm R-1 e dizem o que é cada canal antes da escolha. Em en-US, um
-bloco do Discord, que também leva a `/discord`.
+bloco do Discord, que leva a `/en-us/discord/`.
 
 ### 7.5 Apoiar
 
@@ -426,71 +428,69 @@ Em tablet e mobile, o sumário vira lista acima do texto.
 - **Escolha de idioma em `/`:** só aparece se as regras da Cloudflare estiverem desligadas. Nome da organização e dois
   links, cada um no próprio idioma. Sem script.
 - **404:** uma única página neutra e bilíngue, com links para as duas Homes (`routing-locale` §1).
-- **`/discord`:** regras da comunidade e links de entrada, na §7.10.
+- **Escolha em `/discord`:** só aparece se as regras da Cloudflare estiverem desligadas. Mesma marcação da escolha de `/`,
+  com links para `/pt-br/discord/` e `/en-us/discord/`, sem regras, convite nem WhatsApp (`routing-locale` §1).
+- **Regras da comunidade:** páginas `/pt-br/discord/` e `/en-us/discord/`, na §7.10.
 
-### 7.10 Regras da comunidade: `/discord` (D-41)
+### 7.10 Regras da comunidade: `/pt-br/discord/` e `/en-us/discord/` (D-41, D-78)
 
-Propósito: mostrar as regras e, depois da confirmação, liberar a entrada. Comportamento em `routing-locale`, dados em
-`site-data` §14, texto em `copy.md`. Esta seção define ordem, colunas e tratamento visual. A caixa é só uma confirmação
-de interface: nada é gravado e nenhum texto pode sugerir o contrário.
+Propósito: mostrar as regras e, depois da confirmação, liberar a entrada. Comportamento em `routing-locale` §1, dados em
+`site-data` §14, texto em `copy.md`. Esta seção define ordem, colunas e tratamento visual; escala e tokens seguem a
+revisão T-69 (`docs/design/t69-design-revision.md`). A caixa é só uma confirmação de interface: nada é gravado e nenhum
+texto pode sugerir o contrário.
 
-**Os dois idiomas na mesma URL.** pt-BR vem primeiro, porque é o idioma de cerca de 99% das visitas. en-US vem depois,
-empilhado, nunca em coluna paralela: duas colunas estreitariam a leitura de quase todos para atender poucos. Quem lê
-inglês encontra `Read in English` no primeiro viewport, uma âncora para `#en-us`. Cada container é completo: regras, data,
-caixa e botões próprios. O layout é o neutro, sem navegação nem seletor.
+**Um idioma por página (D-78).** Cada página tem as regras, a data, uma caixa e os botões do próprio idioma. São páginas
+comuns de idioma: header completo com seletor (nenhum item do menu marcado), faixa de cabeçalho e rodapé. Sem A Margem.
+Objetivo medido: regras, caixa e botões visíveis juntos, sem rolar, em 1920 × 953 e 1536 × 730.
 
 ```text
-Desktop 1440
-┌──────────────────────┬─────────────────────────────────────────────────┐
-│ Regras da            │ 1 - Proibição de Spam:                          │
-│ comunidade           │ Texto da regra                                  │
-│ Atualizadas em {data}│ ...                                             │
-│ Read in English ↓    │ 6 - Conteúdo explícito +18:                     │
-│                      │ Texto da regra                                  │
-│                      │ Frase de encerramento (500)                     │
-│                      │ ─────────────────────────────────────────────── │
-│                      │ ☐ Li as regras e concordo com elas. Ao marcar...│
-│                      │ antes: Marque a caixa acima para ver os botões. │
-│                      │ depois: [ Discord ]   [ WhatsApp ]              │
-├──────────────────────┼─────────────────────────────────────────────────┤
-│ Community rules      │ 1 - No Spam: ...                                │
-│ Updated on {date}    │ ☐ I have read the rules ...                     │
-│                      │ after: [ Discord ]                              │
-└──────────────────────┴─────────────────────────────────────────────────┘
+Desktop 1536 × 730 (pt-BR)
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ ▤ EmpireCommunity  Projetos Infraestrutura Participar Apoiar Org.  Português English │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Regras da comunidade        Atualizadas em {data}                            │ faixa violeta-capa
+├──────────────────────────────────────────────────────────────────────────────┤
+│ 1 - Proibição de Spam:                 │ 4 - Sem Propagação de Ódio:         │
+│ Texto da regra                         │ Texto da regra                      │
+│ 2 - ...                                │ 5 - ...                             │
+│ 3 - ...                                │ 6 - Conteúdo explícito +18:         │
+│ Frase de encerramento (500)                                                  │
+│ ──────────────────────────────────────────────────────────────────────────── │
+│ ☐ Li as regras e concordo com elas.         antes: Marque a caixa para ver os botões. │
+│                                             depois: [ Discord ]  [ WhatsApp ] │
+└──────────────────────────────────────────────────────────────────────────────┘
+en-US: o mesmo, em inglês, com um único botão Discord.
 
 Mobile 390
 ┌──────────────────────┐
-│ Regras da comunidade │
-│ Atualizadas em {data}│
-│ Read in English ↓    │
+│ faixa: Regras da     │
+│ comunidade · {data}  │
 │ 1 - Proibição de ... │
 │ ...                  │
+│ 6 - ...              │
+│ Encerramento         │
 │ ──────────────────── │
 │ ☐ Li as regras ...   │
 │ [Discord] [WhatsApp] │
-├──────────────────────┤
-│ Community rules      │
-│ ... ☐ ... [ Discord ]│
 └──────────────────────┘
 ```
 
 | Elemento | Especificação |
 |---|---|
-| Containers | Dois irmãos em `<main>`, `lang="pt-BR"` e depois `lang="en-US"`, com `id` `pt-br` e `en-us` e `scroll-margin-top: 24px` |
-| Entre os containers | Filete `pauta` de 1 px em cima do en-US. Padding vertical de 96 px (64 px abaixo de 1024 px) |
-| Colunas | Índice: a partir de 1024 px, 4 + 8 colunas, com A Margem correndo pelos dois containers. Abaixo disso, título acima do texto |
-| Título | Headline nos dois idiomas, `h1` em pt-BR e `h2` em en-US. Sem Display, porque a página tem dois títulos equivalentes |
-| Data | Body-sm, `papel-suave`, 8 px abaixo do título |
-| `Read in English` | Só no container pt-BR, 16 px abaixo da data. `link-text` em Body-sm, `href="#en-us"`, `lang="en-US"`, seta Lucide para baixo depois do texto, alvo de 44 px |
-| Título de regra | Title, `papel`. `h2` em pt-BR e `h3` em en-US. Número e dois-pontos fazem parte do texto do dono: não usar `<ol>` |
-| Corpo de regra | Body, até 68 caracteres, `white-space: pre-line`, para manter o endereço da regra 5 em linha própria. 8 px abaixo do título; 32 px entre regras |
-| Encerramento | Body com peso 500, 32 px abaixo da última regra |
-| Bloco da caixa | Filete `pauta` em cima, 48 px depois do texto, com 32 px de padding superior |
-| Caixa | Nativa, 24 × 24 px, `accent-color: papel`, foco padrão do site. 12 px até o rótulo em Body. A linha inteira tem pelo menos 44 px de altura e clicar no rótulo marca a caixa |
-| Texto de estado | `discord.pending`, Body-sm, `papel-suave`, 16 px abaixo da caixa. Fica oculto por padrão e só aparece dentro de `@supports selector(:has(*))` com a caixa desmarcada, para o navegador sem `:has()` não pedir uma ação que não muda nada |
-| Entrada | 16 px abaixo da caixa. `discord.links.lead` em Body-sm, 12 px acima dos botões. Some junto com os botões enquanto a caixa está desmarcada, sem animação |
-| Botões, pt-BR | `button-channel` de 56 px, Discord à esquerda, WhatsApp à direita, **lado a lado em todas as larguras** (D-41). `grid-template-columns: repeat(2, minmax(0, 280px))`. Medianiz de 16 px abaixo de 640 px e de 24 px a partir daí. Abaixo de 640 px, `padding-inline: 8px`. Medido em 320 px: célula de 136 px, conteúdo de 120 px |
-| Botão, en-US | Só Discord: largura total abaixo de 640 px e 280 px a partir daí |
+| `<html lang>` | O da página. `<main>` tem um único grupo de portão (`.gate`) |
+| Cabeçalho | `page-head` da T-69. `h1` `discord.heading` em `page-title`; a data `discord.updated` em Body-sm `papel-suave` no lugar do lead, na mesma linha de base a partir de 1024 px e 8 px abaixo do título antes disso |
+| Regras (≥ 1024 px) | Duas colunas com `columns: 2; column-gap: 48px`, cada regra com `break-inside: avoid`. Ordem do DOM: 1 a 3 à esquerda, 4 a 6 à direita |
+| Regras (< 1024 px) | Uma coluna |
+| Título de regra | Title, `papel`, `h2`. Número e dois-pontos fazem parte do texto do dono: não usar `<ol>`. 4 px até o texto; 16 px entre regras |
+| Corpo de regra | Body, `papel-suave`, `white-space: pre-line`, para manter o endereço da regra 5 em linha própria. Sem `max-width` próprio: a coluna limita |
+| Encerramento | Body com peso 500, `papel`, fora do bloco de colunas, 16 px abaixo dele |
+| Barra de confirmação | Filete `pauta` em cima, 24 px depois do encerramento, 16 px de padding superior |
+| Linha da barra (≥ 640 px) | Uma linha, `align-items: center`, `justify-content: space-between`, altura mínima de 48 px para nada mudar de posição ao marcar. À esquerda, a caixa nativa de 24 × 24 px (`accent-color: papel`, foco padrão do site), 12 px e o rótulo `discord.agree` em Body `papel`; clicar no rótulo marca a caixa. À direita, o texto de estado ou os botões |
+| Linha da barra (< 640 px) | Caixa e rótulo em cima; texto de estado ou botões 16 px abaixo |
+| Texto de estado | `discord.pending`, Body-sm, `papel-suave`. Oculto por padrão e só visível dentro de `@supports selector(:has(*))` com a caixa desmarcada, para o navegador sem `:has()` não pedir uma ação que não muda nada |
+| Botões, pt-BR | `button-channel` de 48 px, Discord à esquerda, WhatsApp à direita, **lado a lado em todas as larguras** (D-41). 240 px cada a partir de 640 px, medianiz de 16 px. Abaixo de 640 px, `grid-template-columns: repeat(2, minmax(0, 1fr))` e `padding-inline: 8px` |
+| Botão, en-US | Só Discord: largura total abaixo de 640 px e 240 px a partir daí |
+| Removidos | `Read in English` (o seletor de idioma substitui) e o texto `discord.links.lead` (os botões já dizem o canal) |
 
 ## 8. Dados necessários para a implementação
 
@@ -534,7 +534,7 @@ Não usar o widget do Discord: ele expõe nomes de membros online (R-3 do Risks 
 | Id | Decisão | Recomendação |
 |---|---|---|
 | O-1 | Projeto em desenvolvimento com repositório público (hoje EmpireCraft) recebe link para o código? | Não. Segue a leitura estrita de D-7. A página tem link geral para o GitHub da organização |
-| O-2 | Fechada por D-41 | As regras da comunidade ficam em `/discord`, §7.10 |
+| O-2 | Fechada por D-41 e D-78 | As regras da comunidade ficam em `/pt-br/discord/` e `/en-us/discord/`, §7.10 |
 | O-3 | Termos e Privacidade são rascunho em linguagem simples, feito sem advogado | Publicar assim é aceitável para um site sem coleta de dados, mas vale uma revisão jurídica pontual antes de receber doações, incluindo a ausência de registros de acesso (D-20) |
 
 **Conferir na implementação**, porque a Política de Privacidade afirma: nenhum registro de acesso na origem e registros de erro em rotação curta (D-20); ausência de
@@ -551,7 +551,7 @@ aplica ao tráfego da União Europeia e do Reino Unido; só importa se esse púb
 | "Mesmo conteúdo nos dois idiomas" em textos legais × WhatsApp só em pt-BR | R-10: texto legal não cita o WhatsApp |
 | `EmpireAssets/docs/EmpireCommunity-DESIGN.md` cita Facebook; `EMPIRECOMMUNITY.md` diz que não há | Vale `EMPIRECOMMUNITY.md`. O arquivo será substituído na T-2 |
 | `README.md` deste repositório cita `empirehub.com.br`, um link do Discord fora da regra R-5 e React | Fora do escopo da T-1; registrado para o Regente |
-| `https://empirecommunity.org/discord` responde 404 hoje | `/discord` é uma página do site e entra no ar com ele (D-29) |
+| `https://empirecommunity.org/discord` responde 404 hoje | `/discord` redireciona pelo país para as páginas de regras, que entram no ar com o site (D-29, D-78) |
 
 ## 12. O que fica para a T-2
 
