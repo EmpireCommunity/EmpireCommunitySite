@@ -8,7 +8,7 @@ import { formatRulesDate, inviteUrl } from '../src/lib/community-rules.ts';
 import { CommunityRulesSchema } from '../src/schemas/community-rules.ts';
 import { TeamMemberSchema } from '../src/schemas/team.ts';
 import {
-  analyticsBeacon, discordLinks, discordPage, gateCss, hasEffectiveDate, legalMarkdownHtml, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, mainContent, membersFallback, paymentGuard, paymentWords, personData, supportPage, donationsBlockElsewhere,
+  analyticsBeacon, discordLinks, discordPage, gateCss, hasEffectiveDate, legalMarkdownHtml, headerLogoLink, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, mainContent, membersFallback, paymentGuard, paymentWords, personData, supportPage, donationsBlockElsewhere,
   staleDates, whatsappAbsent, whatsappInviteLink,
   type Finding,
 } from './lib/dist-checks.ts';
@@ -84,10 +84,13 @@ for (const file of localePages) {
   const html = read(distDir, file);
   add(...htmlLang(html, file, locale === 'pt-br' ? 'pt-BR' : 'en-US'));
   add(...languageSelector(html, file, locale === 'pt-br' ? 'pt-br' : 'en-us', rest.join('/')));
+  add(...headerLogoLink(html, file, `/${locale}/`));
 }
 if (!files.includes('404.html')) add({ level: 'error', file: '404.html', message: 'the 404 page is not built' });
 for (const file of ['index.html', '404.html', 'discord/index.html'].filter((f) => files.includes(f))) {
-  add(...htmlLang(read(distDir, file), file, 'en-US'));
+  const html = read(distDir, file);
+  add(...htmlLang(html, file, 'en-US'));
+  add(...headerLogoLink(html, file, '/'));
 }
 
 // C-1: WhatsApp absent from en-US output, llms.txt, the root page and the legal pages of both locales.

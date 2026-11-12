@@ -2,12 +2,13 @@
 // Frame of the pages that belong to no locale: the root chooser, the 404 and the /discord page
 // (docs/contracts/routing-locale.md sections 1 and 3). The page language is en-US (the x-default language, so WCAG 3.1.1
 // is met) and every element in the other language carries its own `lang`. There is no locale header, selector or
-// footer here, and no script; the skip link is in English, the page language. Extra head tags (for example the x-default alternate) go in the `head` slot.
+// footer here, and no script; the logo links to the root (the chooser, which Cloudflare redirects to a locale); the skip link is in English, the page language. Extra head tags (for example the x-default alternate) go in the `head` slot.
 import '../styles/global.css';
 import BrandHead from '../components/BrandHead.astro';
 import FontPreload from '../components/FontPreload.astro';
 import SkipLink from '../components/SkipLink.astro';
 import Wordmark from '../components/Wordmark.astro';
+import { t } from '../i18n/index.ts';
 
 interface Props {
   title: string;
@@ -36,7 +37,14 @@ const { title, description, noindex = false } = Astro.props;
     <SkipLink locale="en-us" />
     <header class="bg-violeta-ata">
       <div class="frame flex h-[56px] items-center lg:h-[72px]">
-        <Wordmark />
+        <a
+          href="/"
+          aria-label={t('en-us', 'a11y.logo')}
+          aria-current={Astro.url.pathname === '/' ? 'page' : undefined}
+          class="inline-flex min-h-[44px] items-center"
+        >
+          <Wordmark />
+        </a>
       </div>
     </header>
     <main id="content" tabindex="-1" class="flex-1">

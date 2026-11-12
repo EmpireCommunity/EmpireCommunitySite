@@ -91,7 +91,7 @@ navegador, o que sustenta a afirmação da Política de Privacidade.
 
 **Header**, igual em todas as páginas:
 
-- Esquerda: logo (`EmpireCommunity`), link para a Home do idioma.
+- Esquerda: logo (`EmpireCommunity`), link para a Home do idioma. Nas páginas sem idioma (seletor raiz, 404 e `/discord`) o logo leva a `/`, o seletor raiz, que a Cloudflare redireciona para um idioma.
 - Centro ou direita: Projetos, Infraestrutura, Participar, Apoiar, Organização.
 - Extrema direita: seletor `Português` / `English`, com o idioma atual marcado.
 - Abaixo de 1024 px: os cinco itens vão para um menu recolhido. Logo, botão Menu e seletor continuam visíveis (R-11).

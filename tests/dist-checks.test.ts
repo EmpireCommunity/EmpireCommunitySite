@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import {
-  analyticsBeacon, staleDates, discordLinks, discordPage, gateCss, hasEffectiveDate, legalMarkdownHtml, hreflangReciprocity, htmlLang, mainContent, inlineExecutable, languageSelector, membersFallback, paymentGuard, personData, supportPage, donationsBlockElsewhere, whatsappAbsent, whatsappInviteLink,
+  analyticsBeacon, staleDates, discordLinks, discordPage, gateCss, hasEffectiveDate, legalMarkdownHtml, hreflangReciprocity, headerLogoLink, htmlLang, mainContent, inlineExecutable, languageSelector, membersFallback, paymentGuard, personData, supportPage, donationsBlockElsewhere, whatsappAbsent, whatsappInviteLink,
 } from '../scripts/lib/dist-checks.ts';
 import { checkWorkflow } from '../scripts/lib/workflow-rules.ts';
 
@@ -172,6 +172,18 @@ test('html lang must match the page: a locale for locale pages, en-US for the ne
   assert.equal(htmlLang('<!doctype html><html lang="en-US"><head>', 'index.html', 'en-US').length, 0);
   assert.equal(htmlLang('<html>', 'index.html', 'en-US').length, 1);
   assert.equal(htmlLang('<html lang="pt-BR">', 'en-us/index.html', 'en-US').length, 1);
+});
+
+test('the header logo must be a link to the home page of the page (T-70: it was plain text on the neutral pages)', () => {
+  const svg = '<svg role="img" aria-label="EmpireCommunity"></svg>';
+  const header = (inner: string) => `<header class="x"><div>${inner}</div></header><main><a href="/other/"><svg></svg></a></main>`;
+  assert.equal(headerLogoLink(header(`<a href="/pt-br/" class="a">${svg}</a>`), 'p', '/pt-br/').length, 0);
+  assert.equal(headerLogoLink(header(`<a href="/" aria-label="x">${svg}</a>`), 'p', '/').length, 0);
+  assert.equal(headerLogoLink(header(svg), 'p', '/').length, 1, 'logo without a link');
+  assert.equal(headerLogoLink(header(`<a href="/en-us/">${svg}</a>`), 'p', '/pt-br/').length, 1, 'wrong target');
+  assert.equal(headerLogoLink(header(`<a href="/">Home</a>${svg}`), 'p', '/').length, 1, 'a link next to the logo is not the logo link');
+  assert.equal(headerLogoLink(header(`<!-- <a href="/">${svg}</a> -->${svg}`), 'p', '/').length, 1, 'a commented-out link is not a link');
+  assert.equal(headerLogoLink(`<!-- <header><a href="/">${svg}</a></header> -->` + header(svg), 'p', '/').length, 1, 'a commented-out header is skipped');
 });
 
 test('the language selector maps each page to its equivalent and marks only the current locale', () => {
