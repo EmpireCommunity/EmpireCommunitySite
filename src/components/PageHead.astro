@@ -7,18 +7,20 @@
 interface Props {
   title: string;
   lead?: string | undefined;
+  /** A title that does not fit in 3 columns on one line (the community rules): 5 columns for the title, 7 for the rest. */
+  wide?: boolean;
 }
 
-const { title, lead } = Astro.props;
+const { title, lead, wide = false } = Astro.props;
 const hasExtra = Astro.slots.has('default');
 ---
 
 <div class="bg-violeta-capa">
   <div class="frame grid gap-x-24 gap-y-8 py-24 lg:grid-cols-12 lg:items-baseline lg:py-32">
-    <h1 class="font-display text-page-title text-papel lg:col-span-3">{title}</h1>
+    <h1 class:list={['font-display text-page-title text-papel', wide ? 'lg:col-span-5' : 'lg:col-span-3']}>{title}</h1>
     {
       (lead !== undefined || hasExtra) && (
-        <div class="lg:col-span-9 lg:pl-24">
+        <div class:list={[wide ? 'lg:col-span-7' : 'lg:col-span-9', 'lg:pl-24']}>
           {lead !== undefined && <p class="max-w-[64ch] text-lead text-papel-suave">{lead}</p>}
           {hasExtra && (
             <div class:list={['text-body-sm text-papel-suave', lead !== undefined && 'mt-8']}>

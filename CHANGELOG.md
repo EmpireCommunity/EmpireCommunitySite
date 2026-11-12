@@ -9,6 +9,12 @@ release happens and which version it gets. The release PR (`chore/release-X.Y.Z`
 
 ## [Unreleased]
 
+### Changed
+
+- T-69 design revision, UI part (T-75, D-78, D-79). Type scale at about 80 percent (`display` 56 px and only on the Home `h1`, new `page-title` 40 px for every inner page, body 16 px, nav 15 px, buttons 16 px, label 13 px), page frame up to 1600 px with 16 / 32 / 48 px margins, Índice in 3 + 9 columns, 56 px header at every width, `section-y` 40 / 64 px, ruled lines with 16 px of padding and no fixed height, 48 px channel buttons 240 px wide. The current page in the header is `papel` at weight 500 with a 2 px bar over the header rule (a bar on the left in the collapsed menu). Every inner page, the legal pages and the 404 open with a `page-head` band in `violeta-capa`. The footer has the lockup on the left, the four groups on the right and a centered bottom bar. The favicon files are the approved disc versions (`favicon.svg`, `favicon.ico`, `icon-192.png`, `icon-512.png`; `apple-touch-icon.png` is unchanged).
+- The community rules are one page per language, `/pt-br/discord/` and `/en-us/discord/`, with the rules in two columns from 1024 px and the confirmation bar below them, so rules, checkbox and buttons fit one screen at 1536 x 730 and 1920 x 953. `/discord` is now a neutral chooser (the origin fallback of the public address). Every join button and link inside the site goes straight to the gate page of its locale.
+- Support shows a short "donations open soon" notice above the goal, with no date.
+
 ### Fixed
 
 - The header logo is a link on the pages that belong to no locale (T-70). On `/discord`, the 404 and the root chooser the wordmark was plain text, so clicking it did nothing; it now goes to `/`, the chooser that Cloudflare redirects to a locale. On locale pages it already went to the home of the locale. `check-dist` now fails when the header logo is not a link to `/pt-br/`, `/en-us/` or `/` as the page requires.
