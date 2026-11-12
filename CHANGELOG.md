@@ -16,6 +16,8 @@ release happens and which version it gets. The release PR (`chore/release-X.Y.Z`
 
 ### Changed
 
+- Relicense the project code from MIT to GPL-3.0-only (GPL v3), using the unchanged official GNU license text (T-58, D-75).
+
 - `site.yaml` has a `linksNotLive` list (T-17a): a link named there is shown without a link on Organization and skipped by `verify-links`, so `links.cloud` (answers 404 until the status site exists) no longer turns the job red. Going live is deleting one line; the address stays in `links` only. Contract: site-data section 4.
 - The game-server status address lives in `site.yaml` (`links.cloud`) and the member-count path in `routes.ts` (`MEMBERS_JSON_PATH`), not in a page and a script.
 

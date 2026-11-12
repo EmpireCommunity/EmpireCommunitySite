@@ -7,7 +7,7 @@
 [![Website](https://img.shields.io/badge/Website-empirecommunity.org-00C7B7?style=for-the-badge&logo=safari&logoColor=white)](https://empirecommunity.org)
 [![Discord](https://img.shields.io/badge/Discord-EmpireCommunity-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://empirecommunity.org/discord)
 [![CI](https://github.com/EmpireCommunity/EmpireCommunitySite/actions/workflows/ci.yml/badge.svg)](https://github.com/EmpireCommunity/EmpireCommunitySite/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](LICENSE)
 
 ---
 
@@ -67,5 +67,5 @@ aprovação explícita do dono a cada vez.
 
 ## 📜 Licença
 
-Distribuído sob a licença **MIT**. Consulte o arquivo [LICENSE](LICENSE) para mais detalhes.
+Distribuído sob a licença **GPL v3** (GPL-3.0-only). Consulte o arquivo [LICENSE](LICENSE) para mais detalhes.
 A licença cobre apenas o código: o logotipo e os demais arquivos de marca (a marca Rack, o lockup, o conjunto de ícones e a imagem de compartilhamento) são direitos reservados da EmpireCommunity, sem licença concedida, conforme [LICENSES.md](LICENSES.md#brand-logo-and-icons).

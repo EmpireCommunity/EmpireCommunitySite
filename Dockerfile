@@ -24,7 +24,7 @@ ARG REVISION=unknown
 # OCI labels only. Routing labels (traefik.*) live in deploy/compose.yml and never in an image.
 LABEL org.opencontainers.image.title="EmpireCommunitySite" \
       org.opencontainers.image.source="https://github.com/EmpireCommunity/EmpireCommunitySite" \
-      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.licenses="GPL-3.0-only" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.revision="${REVISION}"
 USER root
