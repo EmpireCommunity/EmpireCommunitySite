@@ -2,7 +2,7 @@
 
 - Version: 1. Owner: Alicerce. Consumers: Vitral (pages and components), Forja (loaders, build checks, CI), Ensaio
   (C-1 to C-4), Sentinela (money and personal data surfaces), Regente (content intake from the owner).
-- Decisions: D-2, D-3, D-5, D-6, D-7, D-14, D-21, D-22, D-23, D-28, D-29, D-33, D-41, D-44, D-50, D-51, D-62, D-65 (D-16 is superseded by D-21; D-41 amends D-29; D-50 raises `support.yaml` to High; D-65 sets the legal `effectiveDate` in the launch PR). Stack: [ADR-0001](../adr/0001-stack.md). Routes and locales:
+- Decisions: D-2, D-3, D-5, D-6, D-7, D-14, D-21, D-22, D-23, D-28, D-29, D-33, D-41, D-44, D-50, D-51, D-62, D-65, D-78 (D-16 is superseded by D-21; D-41 amends D-29; D-78 amends D-41: one gate page per language, `/discord` redirects by country; D-50 raises `support.yaml` to High; D-65 sets the legal `effectiveDate` in the launch PR). Stack: [ADR-0001](../adr/0001-stack.md). Routes and locales:
   [routing-locale](routing-locale.md). Member count endpoint: [members-json](members-json.md).
 - Risk: **High** for `team.yaml` (personal data) and for `support.yaml` and the support module (D-50: the project risk
   map in `AGENTS.md` puts any support, donation or payment code and data at High, which overrides the Medium this
@@ -24,7 +24,7 @@ src/
   data/projects.yaml           # collection
   data/game-servers.yaml       # collection
   data/join-channels.yaml      # collection
-  data/community-rules.yaml    # one document (rules text and date shown on /discord, D-41), section 14
+  data/community-rules.yaml    # one document (rules text and date shown on the two gate pages, D-41, D-78), section 14
   data/team.yaml               # collection
   data/support.yaml            # one document (goal, parts, donations state), read only through src/lib/support.ts
   content/legal/pt-br/terms-of-service.md   privacy-policy.md
@@ -86,9 +86,11 @@ compile-time assertion in `index.ts` (a missing or extra key in `en-us.json` is 
 - Required namespaces: `nav.*`, `selector.*`, `a11y.*`, `status.live`, `status.inDevelopment`, `status.comingSoon`,
   `meta.<routeKey>.title`, `meta.<routeKey>.description` (one pair per route key), `home.*`, `projects.*`,
   `servers.*`, `join.*`, `support.*`, `organization.*`, `team.*`, `legal.*`, `footer.*`, `notFound.*`, and `discord.*`
-  (the `/discord` page: headings, the agreement label, the updated-date line; its `<head>` strings use the en-US
-  values because the page is `<html lang="en-US">`). The join buttons on `/discord` take their label from
-  `join-channels.yaml`, so no `discord.*` key names WhatsApp.
+  (the gate pages `/pt-br/discord/` and `/en-us/discord/`: headings, the agreement label, the updated-date line; their
+  `<head>` strings are the page's own locale, through `meta.discord.title` and `meta.discord.description`, since `discord`
+  is a route key, D-78). The join buttons on the gate pages take their label from `join-channels.yaml`, so no
+  `discord.*` key names WhatsApp. The `/discord` chooser has no message keys: like the root chooser it prints the two
+  language names in their own language, hardcoded.
 - **No key name mentions WhatsApp**, so the two locales always have the same key set (C-1). WhatsApp content comes
   from the `whatsapp` entry of `join-channels.yaml`, which has `audience: [pt-br]`. **One exception for text, not
   for keys:** the pt-BR **value** of `meta.join.description` may name WhatsApp, because it describes the join page,
@@ -108,7 +110,7 @@ contact:
   general: contact@empirecommunity.org
   legal: legal@empirecommunity.org
 links:
-  discord: https://empirecommunity.org/discord      # literal; the only Discord link allowed on the site
+  discord: https://empirecommunity.org/discord      # literal; the public address for links outside the site (D-49) and the path of rules R3/R4; not the target of any join button on the site (D-78)
   github: https://github.com/EmpireCommunity
   contributing: https://github.com/EmpireCommunity/.github/blob/main/CONTRIBUTING.md   # the organization's contribution guide, linked from Projects
   cloud: https://empirecommunity.cloud              # game-server status site
@@ -127,12 +129,12 @@ list is not probed by `verify-links` (section 6, C-2), and Organization shows `c
 soon. The address stays in `links` only, so going live is one edit: delete the item, or the whole key when it is the last one.
 
 `links.discord` is a literal in the schema. `discord.inviteCode` and `discord.guildId` are the **only** place the
-approved invite is defined **in this repository**: the `/discord` page ([routing-locale](routing-locale.md)) and the integrity
+approved invite is defined **in this repository**: the two gate pages ([routing-locale](routing-locale.md)) and the integrity
 check read them. The Worker repository holds its own copy of the two public values, and a scheduled check compares them
 ([members-json](members-json.md) 2.6, D-55). A search over `src/` fails the build if any
 Discord invite URL (`discord.gg/...`, `discord.com/invite/...`) or any other copy of the code appears. The built
-`/discord` page is the one place an invite URL exists in `dist/`, and every join button elsewhere links to
-`links.discord` (D-41), not to the invite.
+two gate pages are the only places an invite URL exists in `dist/`, and every join button elsewhere links to the gate
+page of its locale (`routePath(locale, 'discord')`, D-41, D-78), not to the invite and not to `links.discord`.
 
 ## 5. `community.yaml`
 
@@ -197,8 +199,8 @@ whatsapp:                                 # pt-BR only; optional
 
 ```yaml
 - id: discord
-  url: https://empirecommunity.org/discord        # must equal site.yaml links.discord
-  audience: [pt-br, en-us]
+  audience: [pt-br, en-us]                          # no url (D-78): a button's href is the gate page of the page's locale
+
   label: { pt-br: Discord, en-us: Discord }
   description: { pt-br: ..., en-us: ... }          # max 200
 - id: whatsapp
@@ -208,21 +210,23 @@ whatsapp:                                 # pt-BR only; optional
   description: { pt-br: ... }
 ```
 
-- Rules: `discord` audience is both locales; `whatsapp` audience is exactly `[pt-br]` and its `url` is the community
-  link from EMPIRECOMMUNITY.md. A channel is rendered in a locale only if the locale is in its `audience`.
-- **Where each link goes (D-41).** Every join button on a locale page (home, join, game servers, footer) links to
-  `links.discord`, whichever channel it names: the destination is the `/discord` page, where the visitor reads the
-  rules and ticks the box before the real links appear. The `discord` entry's `url` is therefore the page address, as
-  before. The `whatsapp` entry's `url` (the community link, D-37) is **read only by the `/discord` page**, inside its pt-BR
-  container; no other page, component, head tag or data file renders it, and no other application source holds it
+- Rules: `discord` audience is both locales and the entry has **no `url`** (the schema rejects one: the destination is
+  derived from the route key, so nothing can drift from `routes.ts`); `whatsapp` audience is exactly `[pt-br]` and its
+  `url` is the community link from EMPIRECOMMUNITY.md. A channel is rendered in a locale only if the locale is in its `audience`.
+- **Where each link goes (D-41, D-78).** Every join button on a locale page (home, join, game servers, support,
+  organization, footer) links to the gate page of the page's own locale, `/{locale}/discord/`, whichever channel it
+  names: the visitor reads the rules and ticks the box before the real links appear. The destination comes from
+  `routePath(locale, 'discord')`, not from the data, and never from `links.discord` (the public address, kept for
+  links outside the site). The `whatsapp` entry's `url` (the community link, D-37) is **read only by the pt-BR gate
+  page**; no other page, component, head tag or data file renders it, and no other application source holds it
   (`src/` outside `join-channels.yaml`, and `scripts/`). Documentation examples, such as the one above, are not
-  sources and may show it; in `dist/` it appears only on `/discord` (section 12). That is its one source. The Discord invite has one source too (`site.yaml`, section 4). Whether the
+  sources and may show it; in `dist/` it appears only in `pt-br/discord/index.html` (section 12). That is its one source. The Discord invite has one source too (`site.yaml`, section 4). Whether the
   pt-BR join page shows one button or one per channel is a layout choice (Bússola); either way every `href` is
-  `links.discord`.
+  the gate page of the locale.
 - Equal weight in pt-BR (D-3): the two channels share the same component, size, and prominence, Discord first, then the
   others by id. Visual treatment is Vitral's.
 - WhatsApp never appears in en-US output, including head tags, JSON-LD, sitemap and `llms.txt` (post-build scan). On
-  `/discord`, a neutral page, it appears only inside the `lang="pt-BR"` container (section 12).
+  the gate pages it appears only on the pt-BR one (section 12); the en-US gate page is scanned like the rest of `en-us/`.
 
 ## 9. `team.yaml` (personal data, High)
 
@@ -458,8 +462,8 @@ effectiveDate: <launch day>     # YYYY-MM-DD, identical in both locales; absent 
 | `Localized` complete, `audience` keys exact, `pt-br`/`en-us` message type parity and placeholder parity | yes | C-3 |
 | Route keys exist in both locales | yes | C-3 |
 | Team consent rules, empty collections not rendered | yes | C-4 |
-| WhatsApp absent from en-US output, `llms.txt`, root page **and from the legal Markdown and the `<main>` element of the built legal pages in both locales** (the legal text, not the shared footer, which lists WhatsApp in pt-BR; en-US pages are scanned whole by the en-US rule; scope otherwise unchanged by D-41); only `https://empirecommunity.org/discord` as Discord link; in `dist/` the invite URL appears only in `discord/index.html` and only with the configured code (it may appear once per language container). **Terms URL exception:** the exact string `https://discord.com/terms` (rule 5, section 14) is accepted only as text content, never inside an attribute, only in `discord/index.html`, and at most once per language container; it is rejected in any attribute and on every other page, and every other Discord URL on any page still fails; the WhatsApp community URL appears in `dist/` only in `discord/index.html`, only once, only as `join-channels.yaml` defines it, and no WhatsApp reference there has a nearest ancestor `lang` other than `pt-BR` or sits in the `<head>` | yes | C-1 |
-| `/discord` page structure (D-41): `<html lang="en-US">`; exactly two language containers; one checkbox per container (no `name`, `autocomplete="off"`, a matching `<label for>`) followed by that container's join links; the en-US container has the Discord link and no WhatsApp; the pt-BR container has the Discord and the WhatsApp link; no `<script>`, `<form>`, `<noscript>`, `style=` or `http-equiv="refresh"`; `noindex`; rules text and `updatedOn` rendered from `community-rules.yaml`; absent from the sitemap. Blocking from the PR that builds the page: until then it only warns through `PENDING.discordPage` ([deploy](deploy.md)) | yes | C-1, C-5 |
+| WhatsApp absent from en-US output, `llms.txt`, root page **and from the legal Markdown and the `<main>` element of the built legal pages in both locales** (the legal text, not the shared footer, which lists WhatsApp in pt-BR; en-US pages are scanned whole by the en-US rule; scope otherwise unchanged by D-41); no join button `href` other than the gate page of its locale (`links.discord` may still be printed as text, never as a button target); in `dist/` the invite URL appears only in `pt-br/discord/index.html` and `en-us/discord/index.html`, only with the configured code, once per page. **Terms URL exception:** the exact string `https://discord.com/terms` (rule 5, section 14) is accepted only as text content, never inside an attribute, only in the two gate pages, and at most once per page; it is rejected in any attribute and on every other page, and every other Discord URL on any page still fails; the WhatsApp community URL appears in `dist/` only in `pt-br/discord/index.html`, only once, only as `join-channels.yaml` defines it, and no WhatsApp reference there sits in the `<head>`; `dist/discord/index.html` (the chooser) holds no invite, no WhatsApp reference and no rules text | yes | C-1 |
+| Gate pages and chooser structure (D-41, D-78): `pt-br/discord/index.html` has `<html lang="pt-BR">` and `en-us/discord/index.html` has `<html lang="en-US">`; each has exactly one gate group (one checkbox with no `name`, `autocomplete="off"` and a matching `<label for>`, followed by that page's join links); the en-US page has the Discord link and no WhatsApp, the pt-BR page has the Discord and the WhatsApp link; no `<script>`, `<form>`, `<noscript>`, `style=` or `http-equiv="refresh"`; `noindex`; own canonical and reciprocal `hreflang`; rules text and `updatedOn` rendered from `community-rules.yaml` in the page's language; both pages absent from the sitemap. `dist/discord/index.html` (the chooser): `<html lang="en-US">`, `noindex`, exactly two links to `/pt-br/discord/` and `/en-us/discord/` each with its own `lang`, no script and none of the contents listed in the row above. Blocking from the PR that builds the pages: until then it only warns through `PENDING.discordPage` ([deploy](deploy.md)) | yes | C-1, C-5 |
 | Legal parity (ids, version, effective date) | yes | C-3 |
 | No inline executable script or `style=` in built HTML; inline `ld+json` allowed | yes | C-5 |
 | `hreflang` reciprocity, sitemap content, canonical present | yes | C-5 |
