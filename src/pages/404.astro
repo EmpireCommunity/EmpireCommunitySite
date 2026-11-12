@@ -1,6 +1,7 @@
 ---
 // Neutral bilingual page served with status 404 for any unknown path (routing-locale section 1). The page language is
 // en-US; the Portuguese block carries its own `lang`.
+import PageHead from '../components/PageHead.astro';
 import NeutralLayout from '../layouts/NeutralLayout.astro';
 import { t } from '../i18n/index.ts';
 import { routePath } from '../lib/routes.ts';
@@ -9,14 +10,13 @@ const linkClass = 'link-text inline-flex min-h-[44px] items-center text-body';
 ---
 
 <NeutralLayout title={t('en-us', 'notFound.meta.title')} noindex>
+  <PageHead slot="band" title={t('en-us', 'notFound.title')} lead={t('en-us', 'notFound.body')} />
   <section>
-    <h1 class="font-display text-display text-papel">{t('en-us', 'notFound.title')}</h1>
-    <p class="mt-24 max-w-[64ch] text-lead text-papel-suave">{t('en-us', 'notFound.body')}</p>
-    <p class="mt-16"><a href={routePath('en-us', 'home')} class={linkClass}>{t('en-us', 'notFound.home')}</a></p>
+    <p><a href={routePath('en-us', 'home')} class={linkClass}>{t('en-us', 'notFound.home')}</a></p>
   </section>
-  <section lang="pt-BR" class="mt-64 border-t border-pauta pt-48">
+  <section lang="pt-BR" class="mt-40 border-t border-pauta pt-32">
     <h2 class="font-display text-headline text-papel">{t('pt-br', 'notFound.title')}</h2>
-    <p class="mt-24 max-w-[64ch] text-lead text-papel-suave">{t('pt-br', 'notFound.body')}</p>
+    <p class="mt-16 max-w-[64ch] text-lead text-papel-suave">{t('pt-br', 'notFound.body')}</p>
     <p class="mt-16"><a href={routePath('pt-br', 'home')} class={linkClass}>{t('pt-br', 'notFound.home')}</a></p>
   </section>
 </NeutralLayout>

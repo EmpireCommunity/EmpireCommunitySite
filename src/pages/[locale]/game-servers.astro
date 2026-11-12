@@ -6,6 +6,7 @@ import type { GetStaticPaths } from 'astro';
 import { getCollection } from 'astro:content';
 import ArrowLink from '../../components/ArrowLink.astro';
 import Index from '../../components/Index.astro';
+import PageHead from '../../components/PageHead.astro';
 import IndexSection from '../../components/IndexSection.astro';
 import RegisterList from '../../components/RegisterList.astro';
 import RegisterRow from '../../components/RegisterRow.astro';
@@ -25,9 +26,8 @@ const servers = sortGameServers((await getCollection('gameServers')).map((entry)
 ---
 
 <BaseLayout locale={locale} routeKey="game-servers">
-  <div class="frame pt-64 lg:pt-96">
-    <h1 class="font-display text-display text-papel">{t(locale, 'servers.title')}</h1>
-    <p class="mt-24 max-w-[64ch] pb-48 text-lead text-papel-suave lg:pb-64">{t(locale, 'servers.lead')}</p>
+  <PageHead title={t(locale, 'servers.title')} lead={t(locale, 'servers.lead')} />
+  <div class="frame pt-24 lg:pt-32">
 
     <Index closed>
       {

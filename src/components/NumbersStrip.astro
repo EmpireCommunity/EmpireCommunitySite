@@ -22,7 +22,7 @@ const { items } = Astro.props;
     <div class="border-y border-pauta">
       <ul class="flex flex-col sm:flex-row">
         {items.map((item) => (
-          <li class="py-24 sm:border-l sm:border-pauta sm:pr-32 sm:pl-32 sm:first:border-l-0 sm:first:pl-0">
+          <li class="py-16 sm:border-l sm:border-pauta sm:pr-24 sm:pl-24 sm:first:border-l-0 sm:first:pl-0">
             <p class="font-display text-figure tabular-nums text-papel">
               {item.live ? <span data-members-discord>{item.value}</span> : item.value}
             </p>

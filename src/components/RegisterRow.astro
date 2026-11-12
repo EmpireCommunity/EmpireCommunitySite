@@ -1,5 +1,5 @@
 ---
-// Ruled line (DESIGN.md "Linha pautada"): the signature component. Pauta rule above, 24 px of vertical padding, name
+// Ruled line (DESIGN.md "Linha pautada"): the signature component. Pauta rule above, 16 px of vertical padding, name
 // in Title, description in Body-sm, status on the right, then the links. Desktop: one line. Tablet: name and status on
 // top, the rest below. Mobile: stacked. The row is not a link; only the links inside it are (R-4). Put rows in a
 // <ul class="border-b border-pauta"> so the last one is closed by a rule.
@@ -32,11 +32,9 @@ const columns = hasStatus
     ? 'lg:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_10rem]'
     : 'lg:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]';
 const linksStart = hasStatus ? 'lg:col-start-4' : 'lg:col-start-3';
-// A 44 px link plus 24 px of padding on each side: rows with and without a link keep the same height.
-const rowHeight = linksColumn ? 'lg:min-h-[92px]' : '';
 ---
 
-<li class={`grid gap-x-24 gap-y-8 border-t border-pauta py-24 sm:grid-cols-[1fr_auto] ${columns} ${rowHeight}`}>
+<li class={`grid gap-x-24 gap-y-8 border-t border-pauta py-16 sm:grid-cols-[1fr_auto] ${columns}`}>
   <p class="font-display text-title text-papel [overflow-wrap:anywhere] sm:col-start-1 lg:row-start-1">
     {
       nameHref === undefined ? (

@@ -1,11 +1,12 @@
 ---
 // Footer of every locale page: four groups (information-architecture section 4), `violeta-noite`, the page "descends a tone".
 // Community lists the channels of the locale from join-channels.yaml (WhatsApp only in pt-BR, C-1) with the same
-// weight. Every channel link goes to the /discord page (https://empirecommunity.org/discord, R-5, D-41).
+// weight. Every channel link goes to the gate page of the locale (D-41, D-78).
 import { t } from '../i18n/index.ts';
 import { LEGAL_ITEMS, NAV_ITEMS } from '../lib/navigation.ts';
 import { routePath } from '../lib/routes.ts';
 import { getJoinChannels, getSite } from '../lib/site-data.ts';
+import Wordmark from './Wordmark.astro';
 import type { Locale } from '../lib/routes.ts';
 
 interface Props {
@@ -20,9 +21,17 @@ const linkClass =
 const headingClass = 'text-body-sm font-medium text-papel';
 ---
 
-<footer class="bg-violeta-noite pt-64 pb-48 text-papel-suave">
+<footer class="bg-violeta-noite pt-48 text-papel-suave">
   <div class="frame">
-    <div class="grid grid-cols-1 gap-x-24 gap-y-32 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="grid gap-x-24 gap-y-32 lg:grid-cols-12">
+      <a
+        href={routePath(locale, 'home')}
+        aria-label={t(locale, 'a11y.logo')}
+        class="inline-flex min-h-[44px] items-center self-start lg:col-span-4"
+      >
+        <Wordmark />
+      </a>
+      <div class="grid grid-cols-2 gap-x-24 gap-y-32 lg:col-span-8 lg:grid-cols-4">
       <section>
         <h2 class={headingClass}>{t(locale, 'footer.site')}</h2>
         <ul class="mt-8">
@@ -44,7 +53,7 @@ const headingClass = 'text-body-sm font-medium text-papel';
           {
             channels.map((channel) => (
               <li>
-                <a href={links.discord} class={linkClass}>
+                <a href={routePath(locale, 'discord')} class={linkClass}>
                   {channel.label}
                 </a>
               </li>
@@ -82,8 +91,11 @@ const headingClass = 'text-body-sm font-medium text-papel';
           }
         </ul>
       </section>
+      </div>
     </div>
 
-    <p class="mt-48 text-label text-papel-apagado [overflow-wrap:anywhere]">{t(locale, 'footer.line')}</p>
+    <p class="mt-32 flex min-h-[56px] items-center justify-center border-t border-pauta text-center text-label text-papel-apagado [overflow-wrap:anywhere]">
+      {t(locale, 'footer.line')}
+    </p>
   </div>
 </footer>

@@ -1,8 +1,9 @@
 ---
 // The channels of a locale as equal buttons: pt-BR Discord then WhatsApp (stacked below 640 px, side by side from
-// 640 px, 280 px each), en-US a single Discord button. Every button goes to the /discord page (R-5, D-41).
+// 640 px, 240 px each), en-US a single Discord button. Every button goes to the gate page of its own locale (D-41, D-78).
 import { t } from '../i18n/index.ts';
-import { getJoinChannels, getSite } from '../lib/site-data.ts';
+import { getJoinChannels } from '../lib/site-data.ts';
+import { routePath } from '../lib/routes.ts';
 import type { Locale } from '../lib/routes.ts';
 import ChannelButton from './ChannelButton.astro';
 
@@ -11,15 +12,15 @@ interface Props {
 }
 
 const { locale } = Astro.props;
-const [site, channels] = await Promise.all([getSite(), getJoinChannels(locale)]);
+const channels = await getJoinChannels(locale);
 const ICON = { discord: 'discord', whatsapp: 'whatsapp' } as const;
 ---
 
-<div class="grid w-full gap-16 sm:w-auto sm:grid-flow-col sm:auto-cols-[280px]">
+<div class="grid w-full gap-16 sm:w-auto sm:grid-flow-col sm:auto-cols-[240px]">
   {
     channels.map((channel) => (
       <ChannelButton
-        href={site.links.discord}
+        href={routePath(locale, 'discord')}
         label={t(locale, 'cta.join', { channel: channel.label })}
         icon={channel.id === 'whatsapp' ? ICON.whatsapp : ICON.discord}
       />

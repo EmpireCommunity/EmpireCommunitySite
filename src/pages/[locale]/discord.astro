@@ -1,0 +1,57 @@
+---
+// Community rules and join links, one language per page (information-architecture section 7.10, routing-locale
+// "`/discord` and the gate pages", D-41, D-78): `/pt-br/discord/` and `/en-us/discord/`. The rules in two columns from
+// 1024 px, the closing sentence across both, then one bar: the checkbox on the left, the join links on the right once it
+// is ticked. The gate is CSS only (global.css `.gate`): no script, no form, no cookie, no storage, no request. The
+// checkbox is a UX confirmation and nothing else; nothing here says or implies that agreement is recorded, verified or
+// enforced. WhatsApp appears only on the pt-BR page (C-1). The page is noindex and not in the sitemap. Every external
+// link is rel="noopener noreferrer". Scans rely on three classes: `gate`, `agree` (exactly one) and `gate-links`.
+import type { GetStaticPaths } from 'astro';
+import ChannelButton from '../../components/ChannelButton.astro';
+import PageHead from '../../components/PageHead.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { t } from '../../i18n/index.ts';
+import { getDiscordPage } from '../../lib/discord-page.ts';
+import { LOCALES, isLocale } from '../../lib/routes.ts';
+
+export const getStaticPaths = (() => LOCALES.map((locale) => ({ params: { locale } }))) satisfies GetStaticPaths;
+
+const { locale } = Astro.params;
+if (!isLocale(locale)) throw new Error(`unexpected locale: ${locale}`);
+
+const page = (await getDiscordPage())[locale];
+const pair = page.links.length > 1;
+---
+
+<BaseLayout locale={locale} routeKey="discord" noindex>
+  <PageHead title={t(locale, 'discord.heading')}>
+    <p>{t(locale, 'discord.updated', { date: page.date })}</p>
+  </PageHead>
+
+  <div class="gate frame pt-24 pb-24 lg:pt-32 lg:pb-32">
+    <div class="lg:columns-2 lg:gap-x-48">
+      {
+        page.rules.map((rule) => (
+          <div class="break-inside-avoid pb-16">
+            <h2 class="font-display text-title text-papel">{rule.title}</h2>
+            <p class="mt-4 whitespace-pre-line text-body text-papel-suave">{rule.body}</p>
+          </div>
+        ))
+      }
+    </div>
+    {page.closing !== undefined && <p class="text-body font-medium text-papel">{page.closing}</p>}
+
+    <div class="mt-24 flex flex-col gap-16 border-t border-pauta pt-16 sm:min-h-[64px] sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex min-h-[44px] items-center gap-12">
+        <input type="checkbox" id="agree" class="agree size-24 shrink-0 accent-papel" autocomplete="off" />
+        <label for="agree" class="py-8 text-body text-papel">{t(locale, 'discord.agree')}</label>
+      </div>
+      <div>
+        <p class="gate-pending text-body-sm text-papel-suave">{t(locale, 'discord.pending')}</p>
+        <div class="gate-links grid auto-cols-fr grid-flow-col gap-16 sm:auto-cols-[240px]">
+          {page.links.map((link) => <ChannelButton href={link.href} label={link.label} icon={link.id} external narrow={pair} />)}
+        </div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

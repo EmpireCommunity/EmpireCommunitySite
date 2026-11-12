@@ -7,6 +7,7 @@ import type { GetStaticPaths } from 'astro';
 import { getCollection } from 'astro:content';
 import ArrowLink from '../../components/ArrowLink.astro';
 import Index from '../../components/Index.astro';
+import PageHead from '../../components/PageHead.astro';
 import IndexSection from '../../components/IndexSection.astro';
 import Person from '../../components/Person.astro';
 import RegisterList from '../../components/RegisterList.astro';
@@ -15,7 +16,7 @@ import Status from '../../components/Status.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { t } from '../../i18n/index.ts';
 import type { MessageKey } from '../../i18n/index.ts';
-import { LOCALES, isLocale } from '../../lib/routes.ts';
+import { LOCALES, isLocale, routePath } from '../../lib/routes.ts';
 import type { DataStatus } from '../../lib/status.ts';
 import { getCommunity, getJoinChannels, getSite, getTeam } from '../../lib/site-data.ts';
 
@@ -60,15 +61,10 @@ const addresses: Address[] = [
 ---
 
 <BaseLayout locale={locale} routeKey="organization">
-  <div class="frame pt-64 lg:pt-96">
-    <h1 class="font-display text-display text-papel">{t(locale, 'organization.title')}</h1>
-    <p class="mt-24 max-w-[64ch] text-lead text-papel-suave">{t(locale, 'organization.lead')}</p>
-    {
-      community.foundedYear !== undefined && (
-        <p class="mt-16 text-label text-papel-suave">{t(locale, 'organization.since', { year: community.foundedYear })}</p>
-      )
-    }
-    <div class="pb-48 lg:pb-64"></div>
+  <PageHead title={t(locale, 'organization.title')} lead={t(locale, 'organization.lead')}>
+    {community.foundedYear !== undefined && <p class="text-label">{t(locale, 'organization.since', { year: community.foundedYear })}</p>}
+  </PageHead>
+  <div class="frame pt-24 lg:pt-32">
 
     <Index closed>
       <IndexSection title={t(locale, 'organization.origin.title')}>
@@ -133,7 +129,7 @@ const addresses: Address[] = [
       <IndexSection title={t(locale, 'organization.contact.title')}>
         <p class="max-w-[72ch] text-body text-papel-suave">{t(locale, 'organization.contact.discord')}</p>
         <div class="mt-16">
-          <ArrowLink href={site.links.discord} label={t(locale, 'cta.join', { channel: 'Discord' })} />
+          <ArrowLink href={routePath(locale, 'discord')} label={t(locale, 'cta.join', { channel: 'Discord' })} />
         </div>
         <dl class="mt-24 flex flex-col gap-16">
           <div>

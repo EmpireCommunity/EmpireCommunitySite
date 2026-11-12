@@ -1,86 +1,24 @@
 ---
-// /discord (routing-locale "The /discord page", information-architecture section 7.10, D-29, D-41): the community rules
-// in both languages on one URL, pt-BR first, each container complete with its own date, checkbox and join links. The
-// gate is CSS only (global.css `.gate`): no script, no form, no cookie, no storage, no request. The checkbox is a UX
-// confirmation and nothing else; nothing here says or implies that agreement is recorded, verified or enforced.
-// WhatsApp appears only inside the pt-BR container. The page is noindex, has no canonical and no hreflang, and is not in
-// the sitemap. Every external link is rel="noopener noreferrer".
-import ChannelButton from '../components/ChannelButton.astro';
-import Icon from '../components/Icon.astro';
-import Index from '../components/Index.astro';
+// Origin fallback of the public address /discord (docs/contracts/routing-locale.md "`/discord` and the gate pages",
+// D-78): Cloudflare answers /discord with a 302 to the gate page of the visitor's language; this static chooser is what
+// the origin serves, with HTTP 200, when the rules are off or on direct origin access, so an old link never breaks.
+// Same markup rules as the root chooser: page language en-US, each link marked with its own `lang`, no script, no
+// hreflang alternates, no canonical (it is not a page of a language pair), noindex. No invite, no WhatsApp reference
+// and no rules text here: those exist only on the gate pages.
 import NeutralLayout from '../layouts/NeutralLayout.astro';
-import { t } from '../i18n/index.ts';
-import { getDiscordPage } from '../lib/discord-page.ts';
-import { HTML_LANG, LOCALES } from '../lib/routes.ts';
+import { routePath } from '../lib/routes.ts';
 
-const containers = await getDiscordPage();
+const linkClass = 'link-text flex min-h-[44px] items-center py-16 font-display text-title';
 ---
 
-<NeutralLayout title={t('en-us', 'discord.meta.title')} description={t('en-us', 'discord.meta.description')} noindex>
-  <Index>
-    {
-      LOCALES.map((locale) => {
-        const page = containers[locale];
-        const isFirst = locale === 'pt-br';
-        const Heading = isFirst ? 'h1' : 'h2';
-        const RuleHeading = isFirst ? 'h2' : 'h3';
-        return (
-          <section
-            id={locale}
-            lang={HTML_LANG[locale]}
-            class:list={['gate grid scroll-mt-24 gap-x-24 gap-y-24 lg:grid-cols-12', isFirst ? 'pb-64 lg:pb-96' : 'border-t border-pauta pt-64 lg:pt-96']}
-          >
-            <div class="lg:col-span-4">
-              <Heading class="font-display text-headline text-papel">{t(locale, 'discord.heading')}</Heading>
-              <p class="mt-8 text-body-sm text-papel-suave">{t(locale, 'discord.updated', { date: page.date })}</p>
-              {
-                isFirst && (
-                  <p class="mt-16">
-                    <a href="#en-us" lang="en-US" class="link-text inline-flex min-h-[44px] items-center gap-8 text-body-sm">
-                      <span>{t('en-us', 'discord.jump')}</span>
-                      <Icon name="arrow-down" />
-                    </a>
-                  </p>
-                )
-              }
-            </div>
-            <div class="lg:col-span-8 lg:pl-32">
-              <div class="flex flex-col gap-32">
-                {
-                  page.rules.map((rule) => (
-                    <div>
-                      <RuleHeading class="font-display text-title text-papel">{rule.title}</RuleHeading>
-                      <p class="mt-8 max-w-[72ch] whitespace-pre-line text-body text-papel-suave">{rule.body}</p>
-                    </div>
-                  ))
-                }
-                {page.closing !== undefined && <p class="max-w-[72ch] text-body font-medium text-papel">{page.closing}</p>}
-              </div>
-
-              <div class="mt-48 border-t border-pauta pt-32">
-                <div class="flex min-h-[44px] items-start gap-12">
-                  <input type="checkbox" id={`agree-${locale}`} class="agree mt-[10px] size-24 shrink-0 accent-papel" autocomplete="off" />
-                  <label for={`agree-${locale}`} class="max-w-[72ch] py-8 text-body text-papel">{t(locale, 'discord.agree')}</label>
-                </div>
-                <p class="gate-pending mt-16 text-body-sm text-papel-suave">{t(locale, 'discord.pending')}</p>
-                <div class="gate-links mt-16">
-                  <p class="text-body-sm text-papel-suave">{t(locale, 'discord.links.lead')}</p>
-                  <div
-                    class:list={[
-                      'mt-12 grid',
-                      page.links.length > 1 ? 'grid-cols-[repeat(2,minmax(0,280px))] gap-16 sm:gap-24' : 'sm:grid-cols-[280px]',
-                    ]}
-                  >
-                    {page.links.map((link) => (
-                      <ChannelButton href={link.href} label={link.label} icon={link.id} external narrow={page.links.length > 1} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        );
-      })
-    }
-  </Index>
+<NeutralLayout title="EmpireCommunity" noindex>
+  <h1 class="font-display text-page-title text-papel">EmpireCommunity</h1>
+  <ul class="mt-32 border-b border-pauta">
+    <li class="border-t border-pauta">
+      <a href={routePath('pt-br', 'discord')} lang="pt-BR" hreflang="pt-BR" class={linkClass}>Português (Brasil)</a>
+    </li>
+    <li class="border-t border-pauta">
+      <a href={routePath('en-us', 'discord')} lang="en-US" hreflang="en-US" class={linkClass}>English</a>
+    </li>
+  </ul>
 </NeutralLayout>
