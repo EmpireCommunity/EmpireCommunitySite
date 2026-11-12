@@ -5,6 +5,8 @@ import { ROUTE_KEYS, routeKeyFromSlug, routePath, slugOf, xDefaultPath } from '.
 test('paths follow the routing contract and always end with a slash', () => {
   assert.equal(routePath('pt-br', 'home'), '/pt-br/');
   assert.equal(routePath('en-us', 'terms'), '/en-us/terms-of-service/');
+  assert.equal(routePath('pt-br', 'discord'), '/pt-br/discord/');
+  assert.equal(routePath('en-us', 'discord'), '/en-us/discord/');
   for (const key of ROUTE_KEYS) assert.match(routePath('pt-br', key), /^\/pt-br\/([a-z-]+\/)?$/);
 });
 
@@ -21,5 +23,6 @@ test('x-default is the root on home and the en-US page on inner pages', () => {
 
 test('slug lookup round-trips and rejects unknown slugs', () => {
   assert.equal(routeKeyFromSlug(slugOf('privacy')), 'privacy');
-  assert.equal(routeKeyFromSlug('discord'), undefined);
+  assert.equal(routeKeyFromSlug('discord'), 'discord');
+  assert.equal(routeKeyFromSlug('unknown'), undefined);
 });
