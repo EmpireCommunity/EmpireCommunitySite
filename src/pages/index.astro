@@ -11,7 +11,7 @@ if (site === undefined) throw new Error('`site` must be set in astro.config.ts')
 
 <NeutralLayout title="EmpireCommunity">
   <link slot="head" rel="alternate" hreflang="x-default" href={new URL('/', site).href} />
-  <h1 class="font-display text-display text-papel">EmpireCommunity</h1>
+  <h1 class="font-display text-headline text-papel sm:text-display">EmpireCommunity</h1>
   <ul class="mt-48 border-b border-pauta">
     <li class="border-t border-pauta">
       <a

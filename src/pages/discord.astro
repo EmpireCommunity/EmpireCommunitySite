@@ -28,7 +28,7 @@ const containers = await getDiscordPage();
           <section
             id={locale}
             lang={HTML_LANG[locale]}
-            class:list={['gate grid scroll-mt-24 gap-x-24 gap-y-24 py-64 lg:grid-cols-12 lg:py-96', !isFirst && 'border-t border-pauta']}
+            class:list={['gate grid scroll-mt-24 gap-x-24 gap-y-24 lg:grid-cols-12', isFirst ? 'pb-64 lg:pb-96' : 'border-t border-pauta pt-64 lg:pt-96']}
           >
             <div class="lg:col-span-4">
               <Heading class="font-display text-headline text-papel">{t(locale, 'discord.heading')}</Heading>
