@@ -7,6 +7,7 @@ import { discordLinks, paymentGuard } from './dist-checks.ts';
 export const SITE_ORIGIN = 'https://empirecommunity.org';
 export const WORKER_CONFIG_URL = 'https://raw.githubusercontent.com/EmpireCommunity/EmpireCommunitySite-Worker/main/wrangler.jsonc';
 export const SITEMAP_LIMIT = 100;
+const MEMBER_CLOCK_SKEW_MS = 5 * 60 * 1000;
 export interface PublicResponse { status: number; headers: Headers; text: string }
 export type Level = 'error' | 'warning';
 export const findingLevel = (pending: boolean): Level => pending ? 'warning' : 'error';
@@ -120,7 +121,9 @@ export function liveMembers(text: string, now: number): string[] {
   const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
   const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
   if (month < 1 || month > 12 || day < 1 || day > days[month - 1]!) return ['Invalid members timestamp'];
-  return now - Date.parse(timestamp) > 3 * 24 * 60 * 60 * 1000 ? ['Member count is older than three days'] : [];
+  const updatedAt = Date.parse(timestamp);
+  if (updatedAt > now + MEMBER_CLOCK_SKEW_MS) return ['Members timestamp is in the future'];
+  return now - updatedAt > 3 * 24 * 60 * 60 * 1000 ? ['Member count is older than three days'] : [];
 }
 
 export function publicHeaders(response: PublicResponse, support: boolean): string[] {
@@ -134,7 +137,11 @@ export function publicHeaders(response: PublicResponse, support: boolean): strin
     'referrer-policy': 'strict-origin-when-cross-origin',
   };
   for (const [name, value] of Object.entries(expected)) if (response.headers.get(name) !== value) problems.push(`Unexpected ${name}`);
-  if (!response.headers.get('strict-transport-security')) problems.push('HSTS missing');
+  // The deploy contract requires HSTS without prescribing a duration; zero disables it (RFC 6797 section 6.1.1).
+  const maxAgeDirectives = (response.headers.get('strict-transport-security') ?? '').split(';')
+    .map((directive) => directive.trim()).filter((directive) => /^max-age(?:\s*=|$)/i.test(directive));
+  const maxAge = maxAgeDirectives.length === 1 ? /^max-age\s*=\s*(?:"(\d+)"|(\d+))$/i.exec(maxAgeDirectives[0]!) : null;
+  if (maxAge === null || !(Number(maxAge[1] ?? maxAge[2]) > 0)) problems.push('HSTS requires a positive max-age');
   if (response.headers.has('set-cookie') || /\d/.test(response.headers.get('server') ?? '')) problems.push('Cookie or versioned Server header');
   return problems;
 }

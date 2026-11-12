@@ -103,6 +103,27 @@ test('public header invariants detect missing headers, CSP changes, cookies and 
   assert.ok(publicHeaders(snapshot('', 200, headers), false).length > 0);
 });
 
+test('member timestamps cannot be in the future beyond the five-minute clock-skew margin (regression)', () => {
+  for (const [updatedAt, valid] of [
+    ['2026-11-12T00:05:00Z', true], ['2026-11-12T00:05:00.001Z', false], ['2099-01-01T00:00:00Z', false],
+  ] as const) {
+    const text = JSON.stringify({ schema: 1, discord: { members: 888, source: 'discord-invite', updatedAt } });
+    assert.equal(liveMembers(text, now).length === 0, valid, updatedAt);
+  }
+});
+
+test('HSTS requires exactly one positive max-age rather than a nonempty header (regression)', () => {
+  for (const [value, valid] of [
+    ['max-age=0', false], ['max-age="0"; includeSubDomains', false], ['includeSubDomains', false],
+    ['max-age=bad', false], ['max-age=-1', false], ['max-age=1.5', false],
+    ['max-age=31536000; max-age=0', false], ['max-age=31536000; max-age=bad', false],
+    ['max-age=1', true], ['max-age=31536000; includeSubDomains', true], ['includeSubDomains; MAX-AGE = "31536000"', true],
+  ] as const) {
+    const response = snapshot('', 200, { 'strict-transport-security': value });
+    assert.equal(publicHeaders(response, true).some((problem) => problem.includes('HSTS')), !valid, value);
+  }
+});
+
 test('Worker JSONC copies and public invite identity must match their configured guild and code', () => {
   const text = `{// public configuration\n"vars":{"DISCORD_INVITE_CODE":"${invite}","DISCORD_GUILD_ID":"${guild}"}}`;
   assert.deepEqual(workerCopies(text, invite, guild), []);
