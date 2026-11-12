@@ -37,7 +37,12 @@ const { title, description, noindex = false } = Astro.props;
     <SkipLink locale="en-us" />
     <header class="bg-violeta-ata">
       <div class="frame flex h-[56px] items-center lg:h-[72px]">
-        <a href="/" aria-label={t('en-us', 'a11y.logo')} class="inline-flex min-h-[44px] items-center">
+        <a
+          href="/"
+          aria-label={t('en-us', 'a11y.logo')}
+          aria-current={Astro.url.pathname === '/' ? 'page' : undefined}
+          class="inline-flex min-h-[44px] items-center"
+        >
           <Wordmark />
         </a>
       </div>

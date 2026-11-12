@@ -3,8 +3,8 @@
 // It is inlined, so the bars and the word take the text colour (`currentColor`, papel here) and the two LEDs keep their
 // fixed colours; an <img> could not inherit the colour. There is no inline style or script: size comes from classes.
 // Height 28 px, 22 px below 376 px (`max-[376px]`: Tailwind 4 `max-*` is a strict "less than") (the lockup's minimum height), which also keeps it clear of the Menu button at 320 px.
-// The name is on the SVG (`role="img"`), so it is announced alone on the neutral pages; inside the header link the
-// link's own `aria-label` (`a11y.logo`) takes over, as before.
+// The name is on the SVG (`role="img"`), so it is announced when the mark stands alone; in every header it sits inside
+// a link, and the link's own `aria-label` (`a11y.logo`) takes over.
 import lockup from '../assets/brand/lockup-header.svg?raw';
 
 interface Props {
