@@ -31,8 +31,8 @@ const projects = (await getCollection('projects'))
 <BaseLayout locale={locale} routeKey="projects">
   <div class="frame pt-64 lg:pt-96">
     <h1 class="font-display text-display text-papel">{t(locale, 'projects.title')}</h1>
-    <p class="mt-24 max-w-[56ch] text-lead text-papel-suave">{t(locale, 'projects.lead')}</p>
-    <ul class="mt-24 flex max-w-[56ch] flex-col gap-8 pb-48 text-body-sm text-papel-suave lg:pb-48">
+    <p class="mt-24 max-w-[64ch] text-lead text-papel-suave">{t(locale, 'projects.lead')}</p>
+    <ul class="mt-24 flex max-w-[64ch] flex-col gap-8 pb-48 text-body-sm text-papel-suave lg:pb-48">
       <li>{t(locale, 'projects.legend.live')}</li>
       <li>{t(locale, 'projects.legend.development')}</li>
     </ul>
@@ -56,7 +56,7 @@ const projects = (await getCollection('projects'))
     <div class="-mt-px">
     <Index closed>
       <IndexSection title={t(locale, 'projects.open.title')}>
-        <p class="max-w-[68ch] text-body text-papel-suave">{t(locale, 'projects.open.body')}</p>
+        <p class="max-w-[72ch] text-body text-papel-suave">{t(locale, 'projects.open.body')}</p>
         <div class="mt-16 flex flex-wrap gap-x-24">
           <ArrowLink href={site.links.github} label={t(locale, 'projects.open.github')} />
           <ArrowLink href={site.links.contributing} label={t(locale, 'projects.open.guides')} />

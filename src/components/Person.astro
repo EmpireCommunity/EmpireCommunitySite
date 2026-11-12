@@ -22,7 +22,7 @@ const { locale, person, full = false } = Astro.props;
     {person.nickname !== undefined && <span class="text-papel-suave">{person.name !== undefined ? `“${person.nickname}”` : person.nickname}</span>}
   </p>
   <p class="text-body-sm text-papel-suave">{person.role}</p>
-  {full && person.bio !== undefined && <p class="max-w-[68ch] text-body text-papel-suave">{person.bio}</p>}
+  {full && person.bio !== undefined && <p class="max-w-[72ch] text-body text-papel-suave">{person.bio}</p>}
   {
     person.githubUrls.length > 0 && (
       <p class="flex flex-wrap gap-x-24">

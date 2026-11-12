@@ -53,7 +53,7 @@ const purpose = community.purpose?.[locale];
       <h1 class="max-w-[calc(100%/12*9)] font-display text-display text-papel max-lg:max-w-none">
         {t(locale, 'home.hero.title')}
       </h1>
-      <p class="mt-24 max-w-[56ch] text-lead text-papel-suave">{t(locale, 'home.hero.lead')}</p>
+      <p class="mt-24 max-w-[64ch] text-lead text-papel-suave">{t(locale, 'home.hero.lead')}</p>
       <div class="mt-48 flex flex-wrap items-center gap-x-32 gap-y-16">
         <ChannelPair locale={locale} />
         <ArrowLink href={routePath(locale, 'projects')} label={t(locale, 'home.hero.link')} />
@@ -68,7 +68,7 @@ const purpose = community.purpose?.[locale];
       {
         purpose !== undefined && (
           <IndexSection title={t(locale, 'home.purpose.title')}>
-            <p class="max-w-[68ch] text-body text-papel-suave">{purpose}</p>
+            <p class="max-w-[72ch] text-body text-papel-suave">{purpose}</p>
           </IndexSection>
         )
       }
@@ -115,7 +115,7 @@ const purpose = community.purpose?.[locale];
       }
 
       <IndexSection title={t(locale, 'home.funding.title')}>
-        <p class="max-w-[68ch] text-body text-papel-suave">{t(locale, 'home.funding.body')}</p>
+        <p class="max-w-[72ch] text-body text-papel-suave">{t(locale, 'home.funding.body')}</p>
         <div class="mt-16">
           <ArrowLink href={routePath(locale, 'support')} label={t(locale, 'home.funding.link')} />
         </div>
@@ -127,7 +127,7 @@ const purpose = community.purpose?.[locale];
       <div class="grid gap-x-24 gap-y-32 lg:grid-cols-12 lg:items-center">
         <div class="lg:col-span-6">
           <h2 class="font-display text-headline text-papel">{t(locale, 'home.join.title')}</h2>
-          <p class="mt-16 max-w-[56ch] text-body text-papel-suave">{t(locale, 'home.join.body')}</p>
+          <p class="mt-16 max-w-[64ch] text-body text-papel-suave">{t(locale, 'home.join.body')}</p>
         </div>
         <div class="lg:col-span-6 lg:justify-self-end">
           <ChannelPair locale={locale} />

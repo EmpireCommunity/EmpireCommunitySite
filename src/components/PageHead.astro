@@ -1,0 +1,32 @@
+---
+// Page head band (T-69 spec section 3.3): the identity of every inner page. A full-width band of `violeta-capa` right
+// under the header (the change of tone is the separator, no rule), the `h1` in Page title on the left, the lead on
+// the right aligned by baseline, from 1024 px; stacked below. Extra lines (the status legend, the version line) go in
+// the default slot under the lead, in Body-sm papel-suave. The Home has no band: it keeps Display and A Margem.
+// The lead column starts 24 px in, like the right column of the Índice below it.
+interface Props {
+  title: string;
+  lead?: string | undefined;
+}
+
+const { title, lead } = Astro.props;
+const hasExtra = Astro.slots.has('default');
+---
+
+<div class="bg-violeta-capa">
+  <div class="frame grid gap-x-24 gap-y-8 py-24 lg:grid-cols-12 lg:items-baseline lg:py-32">
+    <h1 class="font-display text-page-title text-papel lg:col-span-3">{title}</h1>
+    {
+      (lead !== undefined || hasExtra) && (
+        <div class="lg:col-span-9 lg:pl-24">
+          {lead !== undefined && <p class="max-w-[64ch] text-lead text-papel-suave">{lead}</p>}
+          {hasExtra && (
+            <div class:list={['text-body-sm text-papel-suave', lead !== undefined && 'mt-8']}>
+              <slot />
+            </div>
+          )}
+        </div>
+      )
+    }
+  </div>
+</div>

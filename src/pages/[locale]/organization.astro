@@ -62,7 +62,7 @@ const addresses: Address[] = [
 <BaseLayout locale={locale} routeKey="organization">
   <div class="frame pt-64 lg:pt-96">
     <h1 class="font-display text-display text-papel">{t(locale, 'organization.title')}</h1>
-    <p class="mt-24 max-w-[56ch] text-lead text-papel-suave">{t(locale, 'organization.lead')}</p>
+    <p class="mt-24 max-w-[64ch] text-lead text-papel-suave">{t(locale, 'organization.lead')}</p>
     {
       community.foundedYear !== undefined && (
         <p class="mt-16 text-label text-papel-suave">{t(locale, 'organization.since', { year: community.foundedYear })}</p>
@@ -72,14 +72,14 @@ const addresses: Address[] = [
 
     <Index closed>
       <IndexSection title={t(locale, 'organization.origin.title')}>
-        <div class="flex max-w-[68ch] flex-col gap-16 text-body text-papel-suave">
+        <div class="flex max-w-[72ch] flex-col gap-16 text-body text-papel-suave">
           <p>{t(locale, 'organization.origin.p1')}</p>
           <p>{t(locale, 'organization.origin.p2')}</p>
         </div>
       </IndexSection>
 
       <IndexSection title={t(locale, 'organization.how.title')}>
-        <div class="flex max-w-[68ch] flex-col gap-16 text-body text-papel-suave">
+        <div class="flex max-w-[72ch] flex-col gap-16 text-body text-papel-suave">
           <p>{t(locale, 'organization.how.free')}</p>
           <p>{t(locale, 'organization.how.sold')}</p>
           <p>{t(locale, 'organization.how.data')}</p>
@@ -126,12 +126,12 @@ const addresses: Address[] = [
           }
         </RegisterList>
         <div class="border-t border-pauta">
-          <p class="max-w-[68ch] py-24 text-body-sm text-papel-suave">{t(locale, 'organization.addresses.note')}</p>
+          <p class="max-w-[72ch] py-24 text-body-sm text-papel-suave">{t(locale, 'organization.addresses.note')}</p>
         </div>
       </IndexSection>
 
       <IndexSection title={t(locale, 'organization.contact.title')}>
-        <p class="max-w-[68ch] text-body text-papel-suave">{t(locale, 'organization.contact.discord')}</p>
+        <p class="max-w-[72ch] text-body text-papel-suave">{t(locale, 'organization.contact.discord')}</p>
         <div class="mt-16">
           <ArrowLink href={site.links.discord} label={t(locale, 'cta.join', { channel: 'Discord' })} />
         </div>

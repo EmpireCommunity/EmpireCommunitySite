@@ -29,14 +29,14 @@ const requestPhrase = channelPhrase(locale, channels, 'disjunction');
 <BaseLayout locale={locale} routeKey="join">
   <div class="frame pt-64 lg:pt-96">
     <h1 class="font-display text-display text-papel">{t(locale, 'join.title')}</h1>
-    <p class="mt-24 max-w-[56ch] text-lead text-papel-suave">{t(locale, 'join.lead')}</p>
+    <p class="mt-24 max-w-[64ch] text-lead text-papel-suave">{t(locale, 'join.lead')}</p>
 
     <div class="mt-48 grid gap-x-24 gap-y-16 border-t border-pauta pt-48 pb-64 lg:grid-cols-12 lg:pb-96">
       {
         channels.map((channel) => (
           <section class="flex flex-col gap-16 lg:col-span-6 lg:last:col-span-6 lg:only:col-span-8">
             <h2 class="font-display text-title text-papel">{channel.label}</h2>
-            <p class="max-w-[56ch] flex-1 text-body-sm text-papel-suave">{channel.description}</p>
+            <p class="max-w-[64ch] flex-1 text-body-sm text-papel-suave">{channel.description}</p>
             <div class="sm:max-w-[280px]">
               <ChannelButton
                 href={site.links.discord}

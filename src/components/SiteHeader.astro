@@ -1,6 +1,7 @@
 ---
 // Header of every locale page (information-architecture section 4, DESIGN.md "Layout" and "Navigation").
-// - 1024 px and up: 72 px row with wordmark, the five pages and the language selector.
+// - 1024 px and up: 56 px row (T-69, as at every width) with wordmark, the five pages and the language selector. The
+//   current page is `papel` at weight 500 with a 2 px bar of `papel` over the header's bottom rule, as wide as its text.
 // - Below 1024 px: 56 px row with wordmark, selector and a Menu button; the pages move into the menu panel.
 // - Below 640 px: the selector goes to a 44 px strip above the row (two full names do not fit beside the logo).
 // The menu is a native <details>: it works with no script and no client framework, the browser exposes the
@@ -22,10 +23,13 @@ interface Props {
 const { locale, routeKey } = Astro.props;
 
 const pageLink =
-  'inline-flex min-h-[44px] items-center text-papel-suave [overflow-wrap:anywhere] hover:text-papel aria-[current=page]:text-papel aria-[current=page]:underline aria-[current=page]:decoration-1 aria-[current=page]:underline-offset-8 motion-safe:transition-colors';
+  'inline-flex min-h-[44px] items-center text-papel-suave [overflow-wrap:anywhere] hover:text-papel aria-[current=page]:font-medium aria-[current=page]:text-papel motion-safe:transition-colors';
+const barClass =
+  'lg:relative lg:h-full aria-[current=page]:after:absolute aria-[current=page]:after:inset-x-8 aria-[current=page]:after:-bottom-px aria-[current=page]:after:h-[2px] aria-[current=page]:after:bg-papel aria-[current=page]:after:content-[""]';
+const menuCurrent = 'aria-[current=page]:border-s-2 aria-[current=page]:border-papel aria-[current=page]:ps-12';
 ---
 
-<header class="bg-violeta-ata">
+<header class="border-b border-pauta bg-violeta-ata">
   <div class="sm:hidden">
     <div class="frame flex min-h-[44px] items-center justify-end">
       <LanguageSelector locale={locale} routeKey={routeKey} />
@@ -34,7 +38,7 @@ const pageLink =
 
   <div class="relative">
     <div class="frame">
-      <div class="flex min-h-[56px] items-center gap-x-24 pr-[calc(46px+3.5rem)] lg:min-h-[72px] lg:pr-0">
+      <div class="flex min-h-[56px] items-center gap-x-24 pr-[calc(46px+3.5rem)] lg:pr-0">
         <a
           href={routePath(locale, 'home')}
           aria-label={t(locale, 'a11y.logo')}
@@ -44,15 +48,15 @@ const pageLink =
           <Wordmark />
         </a>
 
-        <nav aria-label={t(locale, 'nav.aria')} class="hidden lg:block">
-          <ul class="flex gap-8">
+        <nav aria-label={t(locale, 'nav.aria')} class="hidden self-stretch lg:block">
+          <ul class="flex h-full gap-8">
             {
               NAV_ITEMS.map((item) => (
-                <li>
+                <li class="lg:h-full">
                   <a
                     href={routePath(locale, item.key)}
                     aria-current={routeKey === item.key ? 'page' : undefined}
-                    class={`${pageLink} px-8 text-nav`}
+                    class={`${pageLink} ${barClass} px-8 text-nav`}
                   >
                     {t(locale, item.label)}
                   </a>
@@ -84,7 +88,7 @@ const pageLink =
                   <a
                     href={routePath(locale, item.key)}
                     aria-current={routeKey === item.key ? 'page' : undefined}
-                    class={`${pageLink} w-full py-8 text-title`}
+                    class={`${pageLink} ${menuCurrent} w-full py-8 text-title`}
                   >
                     {t(locale, item.label)}
                   </a>
