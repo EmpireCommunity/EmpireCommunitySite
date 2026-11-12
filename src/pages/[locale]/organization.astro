@@ -40,7 +40,7 @@ const communityName =
   '.';
 
 // Official addresses protect against imitation. The EmpireMuse address comes from its project entry; the game-server
-// status site is not up yet (empirecommunity.cloud answers 404), so it is listed without a link and as coming soon.
+// status site is listed without a link and as coming soon while `linksNotLive` in site.yaml names it (it answers 404 until it exists).
 const muse = projects.map((entry) => entry.data).find((project) => project.id === 'empiremuse' && project.url !== undefined);
 interface Address {
   purpose: MessageKey;
@@ -48,10 +48,13 @@ interface Address {
   status: DataStatus;
   url?: string;
 }
+const cloudLive = !site.linksNotLive.includes('cloud');
 const addresses: Address[] = [
   { purpose: 'organization.addresses.main', host: new URL(site.origin).hostname, status: 'live' },
   ...(muse?.url === undefined ? [] : [{ purpose: 'organization.addresses.muse' as const, host: new URL(muse.url).hostname, status: muse.status, url: muse.url }]),
-  { purpose: 'organization.addresses.cloud', host: 'empirecommunity.cloud', status: 'coming-soon' },
+  cloudLive
+    ? { purpose: 'organization.addresses.cloud', host: new URL(site.links.cloud).hostname, status: 'live', url: site.links.cloud }
+    : { purpose: 'organization.addresses.cloud', host: new URL(site.links.cloud).hostname, status: 'coming-soon' },
   { purpose: 'organization.addresses.github', host: new URL(site.links.github).host + new URL(site.links.github).pathname, status: 'live', url: site.links.github },
 ];
 ---

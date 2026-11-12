@@ -24,12 +24,13 @@ export function deriveTotals(parts: SupportData['parts'], targetCents: number): 
   };
 }
 
-/** "R$ 3.000" (pt-BR) and "R$ 3,000" (en-US); cents appear only when the value has them. */
+/** BRL as `Intl.NumberFormat` writes it per locale ("R$ 3.000" in pt-BR, "R$3,000" in en-US); cents appear only when the value has them. */
 export function formatBrl(cents: number, locale: Locale): string {
-  const hasCents = cents % 100 !== 0;
-  const number = new Intl.NumberFormat(locale === 'pt-br' ? 'pt-BR' : 'en-US', {
-    minimumFractionDigits: hasCents ? 2 : 0,
-    maximumFractionDigits: hasCents ? 2 : 0,
+  const digits = cents % 100 === 0 ? 0 : 2;
+  return new Intl.NumberFormat(locale === 'pt-br' ? 'pt-BR' : 'en-US', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
   }).format(cents / 100);
-  return `R$ ${number}`;
 }

@@ -23,16 +23,21 @@ export interface JoinChannel {
   description: string;
 }
 
-/** The channels whose audience includes the locale, in file order (Discord first). No `url`, on purpose. */
+/** Discord is always first (D-3, R-5): the other channels follow by id, because the collection has no order field. */
+const CHANNEL_FIRST = 'discord';
+
+/** The channels whose audience includes the locale, Discord first, then the others by id. No `url`, on purpose. */
 export async function getJoinChannels(locale: Locale): Promise<JoinChannel[]> {
   const entries = await getCollection('joinChannels');
-  return entries.flatMap(({ data }) => {
-    const label = data.label[locale];
-    const description = data.description[locale];
-    return data.audience.includes(locale) && label !== undefined && description !== undefined
-      ? [{ id: data.id, label, description }]
-      : [];
-  });
+  return entries
+    .flatMap(({ data }) => {
+      const label = data.label[locale];
+      const description = data.description[locale];
+      return data.audience.includes(locale) && label !== undefined && description !== undefined
+        ? [{ id: data.id, label, description }]
+        : [];
+    })
+    .sort((a, b) => Number(b.id === CHANNEL_FIRST) - Number(a.id === CHANNEL_FIRST) || a.id.localeCompare(b.id));
 }
 
 /** "no Discord e no WhatsApp" / "on Discord": one phrase per channel, joined as the language does. */
@@ -73,7 +78,7 @@ export async function getTeam(locale: Locale): Promise<{ founder: TeamPerson | u
   return { founder: people.find((person) => person.isFounder), members: people.filter((person) => !person.isFounder) };
 }
 
-/** Live servers first, then the others by name: the data collection has no order field and the store does not keep file order. */
+/** Live servers first, then the others by name: the data collection has no order field, so the order is explicit here. */
 export function sortGameServers<T extends { name: string; status: string }>(servers: readonly T[]): T[] {
   return [...servers].sort((a, b) => Number(a.status !== 'live') - Number(b.status !== 'live') || a.name.localeCompare(b.name));
 }

@@ -17,6 +17,12 @@ test('link targets are project urls and external site links, never pages of this
   assert.deepEqual(linkTargets([], { origin: 'https://example.org', links: { x: 'https://example.org.evil.test/' } }).length, 1);
 });
 
+test('a link named in linksNotLive is not probed', () => {
+  const pending = { ...site, links: { ...site.links, cloud: 'https://status.example.net' }, linksNotLive: ['cloud'] };
+  assert.deepEqual(linkTargets([], pending).map((target) => target.where), ['site.yaml links.github']);
+  assert.equal(linkTargets([], { ...pending, linksNotLive: [] }).length, 2);
+});
+
 test('repo targets are the projects that carry a repo', () => {
   assert.deepEqual(repoTargets(projects).map((target) => target.repo), ['Org/A', 'Org/B']);
 });

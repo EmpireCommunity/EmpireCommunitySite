@@ -3,6 +3,9 @@
 // from static.cloudflareinsights.com with the public site token in a data attribute. No inline script, so the strict CSP
 // holds (the default policy allows exactly that host). Included by BaseLayout on every locale page except Apoiar, which
 // has no analytics host in its CSP; the neutral pages (root chooser, 404, /discord) have no script at all.
+// `type="module"` is how Cloudflare's docs print the manual snippet (Web Analytics, SPA page). The beacon reads its config
+// from `document.currentScript` and, when that is null (module scripts), from `script[data-cf-beacon]`, so a classic
+// defer script is not needed (read in beacon.min.js, T-17a).
 import { getSite } from '../lib/site-data.ts';
 
 const { analytics } = await getSite();

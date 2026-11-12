@@ -9,7 +9,7 @@ import { CommunityRulesSchema } from '../src/schemas/community-rules.ts';
 import { TeamMemberSchema } from '../src/schemas/team.ts';
 import {
   analyticsBeacon, discordLinks, discordPage, gateCss, hasEffectiveDate, legalMarkdownHtml, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, mainContent, membersFallback, paymentGuard, paymentWords, personData, supportPage, donationsBlockElsewhere,
-  whatsappAbsent, whatsappInviteLink,
+  staleDates, whatsappAbsent, whatsappInviteLink,
   type Finding,
 } from './lib/dist-checks.ts';
 import { PENDING } from './lib/pending.ts';
@@ -121,6 +121,18 @@ const people = team.map((person) => ({
   names: [person.name, person.nickname].filter((name): name is string => typeof name === 'string' && name !== ''),
 }));
 for (const file of files.filter((f) => TEXT_EXTENSIONS.test(f))) add(...personData(read(distDir, file), file, people));
+
+// Stale dates only warn (site-data section 12).
+const dateOf = (text: string, ...path: string[]): string | undefined => {
+  let node: unknown = parse(text);
+  for (const key of path) node = typeof node === 'object' && node !== null ? (node as Record<string, unknown>)[key] : undefined;
+  return typeof node === 'string' ? node : undefined;
+};
+add(...staleDates({
+  whatsappAsOf: dateOf(read('src/data', 'community.yaml'), 'whatsapp', 'asOf'),
+  supportVerifiedOn: dateOf(read('src/data', 'support.yaml'), 'verified', 'on'),
+  reviewOns: team.map((person) => ({ id: person.id, on: person.consent.reviewOn })),
+}, new Date()));
 
 // D-29, D-41: one Discord link; the invite only in /discord and only with the configured code, with no script; the page
 // structure (two language containers, one checkbox each, the join links after it) is checked against the data files.

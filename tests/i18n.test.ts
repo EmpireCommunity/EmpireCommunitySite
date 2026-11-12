@@ -23,6 +23,13 @@ test('no key mentions WhatsApp (site-data section 3)', () => {
   assert.equal(Object.keys(ptBr).some((key) => /whatsapp/i.test(key)), false);
 });
 
+// Value allowlist (site-data section 3): the one message that may name WhatsApp is the pt-BR join description.
+test('only the pt-br meta.join.description names WhatsApp', () => {
+  const named = (messages: Record<string, string>) => Object.entries(messages).filter(([, text]) => /whats\s?app/i.test(text)).map(([key]) => key);
+  assert.deepEqual(named(ptBr), ['meta.join.description']);
+  assert.deepEqual(named(enUs), []);
+});
+
 test('every message is non-empty', () => {
   for (const messages of [ptBr, enUs]) {
     for (const [key, text] of Object.entries(messages)) assert.notEqual(text.trim(), '', key);

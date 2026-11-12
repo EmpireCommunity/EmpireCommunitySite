@@ -56,8 +56,10 @@ describe('support totals', () => {
   });
 });
 
-test('formats BRL per locale, with cents only when present', () => {
-  assert.equal(formatBrl(300_000, 'pt-br'), 'R$ 3.000');
-  assert.equal(formatBrl(300_000, 'en-us'), 'R$ 3,000');
-  assert.equal(formatBrl(123_450, 'pt-br'), 'R$ 1.234,50');
+test('formats BRL as a currency per locale, with cents only when present', () => {
+  // Intl writes a no-break space after "R$" in pt-BR.
+  assert.equal(formatBrl(300_000, 'pt-br'), 'R$\u00a03.000');
+  assert.equal(formatBrl(300_000, 'en-us'), 'R$3,000');
+  assert.equal(formatBrl(123_450, 'pt-br'), 'R$\u00a01.234,50');
+  assert.equal(formatBrl(123_450, 'en-us'), 'R$1,234.50');
 });

@@ -36,6 +36,9 @@ const SLUGS: Readonly<Record<RouteKey, string>> = {
 export type InnerRouteKey = Exclude<RouteKey, 'home'>;
 export const INNER_ROUTE_KEYS = ROUTE_KEYS.filter((key): key is InnerRouteKey => key !== 'home');
 
+/** The member-count JSON: the origin fallback built by the site, and what the browser asks first (members-json section 3). */
+export const MEMBERS_JSON_PATH = '/data/members.json';
+
 export function slugOf(key: RouteKey): string {
   return SLUGS[key];
 }

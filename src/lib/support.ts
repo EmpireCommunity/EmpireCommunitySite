@@ -26,7 +26,9 @@ export interface SupportSnapshot {
 export async function getSupport(locale: Locale): Promise<SupportSnapshot> {
   const entry = await getEntry('support', 'support');
   if (entry === undefined) throw new Error('src/data/support.yaml is missing');
-  const { donations, goal, parts, partDonations } = entry.data;
+  const { donations, goal, specs, parts, partDonations } = entry.data;
+  // `specs` is valid in the schema and the contract but no page renders it yet: owner data fails the build instead of vanishing.
+  if (specs !== undefined) throw new Error('support specs: rendering specs is not built yet (support.astro has no place for them)');
   return {
     donations,
     goal: { id: goal.id, title: goal.title[locale], description: goal.description[locale], targetCents: goal.targetCents, ...deriveTotals(parts, goal.targetCents) },

@@ -111,12 +111,20 @@ links:
   discord: https://empirecommunity.org/discord      # literal; the only Discord link allowed on the site
   github: https://github.com/EmpireCommunity
   contributing: https://github.com/EmpireCommunity/.github/blob/main/CONTRIBUTING.md   # the organization's contribution guide, linked from Projects
+  cloud: https://empirecommunity.cloud              # game-server status site
+linksNotLive: [cloud]                               # optional; names of links that do not answer yet (see below)
 discord:                                            # the one place the invite is defined (D-29)
   inviteCode: <approved invite code>                # 2 to 32 characters, letters, digits and hyphen
   guildId: "<server id>"                            # 17 to 20 digits, quoted so it stays a string
 analytics:                                          # Cloudflare Web Analytics, manual snippet (D-52, routing-locale section 5)
   webAnalyticsToken: <32 hex characters>            # public: it is printed in the HTML, so it lives here and not in an environment variable
 ```
+
+`linksNotLive` lists the `links` names that are not live yet. Only `cloud` is allowed, because it is the one link with a
+not-live rendering (`github` and `contributing` are plain links on several pages; allowing them needs that rendering
+first). A missing key, an emptied one (`linksNotLive:` is null in YAML) and `[]` all mean no link is pending. A link on the
+list is not probed by `verify-links` (section 6, C-2), and Organization shows `cloud`'s host without a link and as coming
+soon. The address stays in `links` only, so going live is one edit: delete the item, or the whole key when it is the last one.
 
 `links.discord` is a literal in the schema. `discord.inviteCode` and `discord.guildId` are the **only** place the
 approved invite is defined **in this repository**: the `/discord` page ([routing-locale](routing-locale.md)) and the integrity
@@ -211,8 +219,8 @@ whatsapp:                                 # pt-BR only; optional
   sources and may show it; in `dist/` it appears only on `/discord` (section 12). That is its one source. The Discord invite has one source too (`site.yaml`, section 4). Whether the
   pt-BR join page shows one button or one per channel is a layout choice (Bússola); either way every `href` is
   `links.discord`.
-- Equal weight in pt-BR (D-3): the two channels share the same component, size, and prominence, ordered by the order
-  in this file. Visual treatment is Vitral's.
+- Equal weight in pt-BR (D-3): the two channels share the same component, size, and prominence, Discord first, then the
+  others by id. Visual treatment is Vitral's.
 - WhatsApp never appears in en-US output, including head tags, JSON-LD, sitemap and `llms.txt` (post-build scan). On
   `/discord`, a neutral page, it appears only inside the `lang="pt-BR"` container (section 12).
 
@@ -307,9 +315,10 @@ type SupportSnapshot = {
 };
 ```
 
-`specs` (optional highlights, below) is validated by the schema but not part of the snapshot yet; T-17 finding m-2
-decides whether it is rendered or removed. A part with a `photo` fails the build for now ("rendering a photo is not
-built yet"), so no photo can be published before the image pipeline exists.
+`specs` (optional highlights, below) is validated by the schema but not part of the snapshot yet, and no page renders it.
+A `support.yaml` with `specs` fails the build for now ("rendering specs is not built yet"), like a part with a `photo`
+("rendering a photo is not built yet"), so owner data never vanishes silently and no photo can be published before the
+image pipeline exists.
 
 `support.yaml`:
 
