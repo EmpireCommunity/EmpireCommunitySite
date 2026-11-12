@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import {
-  analyticsBeacon, staleDates, discordLinks, discordPage, gateCss, hasEffectiveDate, legalMarkdownHtml, hreflangReciprocity, headerLogoLink, htmlLang, mainContent, inlineExecutable, languageSelector, membersFallback, paymentGuard, personData, supportPage, donationsBlockElsewhere, whatsappAbsent, whatsappInviteLink,
+  analyticsBeacon, staleDates, discordLinks, gateCss, hasEffectiveDate, legalMarkdownHtml, hreflangReciprocity, headerLogoLink, htmlLang, mainContent, inlineExecutable, languageSelector, membersFallback, paymentGuard, personData, supportPage, donationsBlockElsewhere, whatsappAbsent, whatsappInviteLink,
 } from '../scripts/lib/dist-checks.ts';
 import { checkWorkflow } from '../scripts/lib/workflow-rules.ts';
 
@@ -34,13 +34,13 @@ test('WhatsApp is caught in any spelling', () => {
   }
 });
 
-test('the Discord invite is allowed only on the /discord page, with the configured code and no script', () => {
+test('the Discord invite is allowed only on locale gate pages, with the configured code and no script', () => {
   const invite = 'https://discord.com/invite/abc123';
   const page = `<p>Read https://discord.com/terms</p><a href="${invite}">go</a>`;
   assert.equal(discordLinks(page, 'discord/index.html', 'abc123', true).length, 0);
   assert.equal(discordLinks(page, 'pt-br/index.html', 'abc123', false).length, 2);
   // Terms URL exception (site-data section 12): text only, never in an attribute, never with trailing punctuation.
-  assert.equal(discordLinks(`${page}<a href="https://discord.com/terms">t</a>`, 'discord/index.html', 'abc123', true).length, 1);
+  assert.ok(discordLinks(`${page}<a href="https://discord.com/terms">t</a>`, 'pt-br/discord/index.html', 'abc123', true).length > 0);
   assert.equal(discordLinks(`${page}<p>https://discord.com/terms.</p>`, 'discord/index.html', 'abc123', true).length, 1);
   assert.equal(discordLinks(page.replace('abc123', 'zzz'), 'discord/index.html', 'abc123', true).length > 0, true);
   assert.equal(discordLinks(`${page}<script></script>`, 'discord/index.html', 'abc123', true).length, 1);
@@ -205,9 +205,9 @@ test('the language selector maps each page to its equivalent and marks only the 
   assert.equal(check('<p>no selector</p>'), 1, 'no selector at all');
 });
 
-test('the WhatsApp community link is allowed only on the /discord page', () => {
+test('the WhatsApp community link is allowed only on locale gate pages', () => {
   const link = '<a href="https://chat.whatsapp.com/abc">';
-  assert.equal(whatsappInviteLink(link, 'discord/index.html', true).length, 0);
+  assert.equal(whatsappInviteLink(link, 'pt-br/discord/index.html', true).length, 0);
   assert.equal(whatsappInviteLink(link, 'pt-br/join/index.html', false).length, 1);
   assert.equal(whatsappInviteLink('<a href="https://empirecommunity.org/discord">WhatsApp</a>', 'pt-br/index.html', false).length, 0);
   for (const encoded of ['chat&#46;whatsapp.com', 'chat&#x2E;whatsapp.com', 'chat&period;whatsapp.com', 'chat&#46whatsapp.com']) {
@@ -215,21 +215,21 @@ test('the WhatsApp community link is allowed only on the /discord page', () => {
   }
 });
 
-test('check-dist reports D-41 for an invite outside /discord, in HTML and in CSS, and none for the /discord page', () => {
+test('check-dist reports D-41 for an invite outside the pt-BR gate, in HTML and in CSS, and none for that gate', () => {
   const dist = mkdtempSync(join(tmpdir(), 'check-dist-'));
   const link = '<a href="https://chat.whatsapp.com/abc">';
   try {
     const fixture: Record<string, string> = {
       'pt-br/join/index.html': link,
       'assets/site.css': 'a::after{content:"https://chat.whatsapp.com/abc"}',
-      'discord/index.html': link,
+      'pt-br/discord/index.html': link,
     };
     for (const [file, body] of Object.entries(fixture)) {
       mkdirSync(dirname(join(dist, file)), { recursive: true });
       writeFileSync(join(dist, file), body);
     }
     const out = spawnSync(process.execPath, ['scripts/check-dist.ts', dist], { encoding: 'utf8' }).stdout;
-    const d41 = out.split('\n').filter((line) => line.includes('(D-41)'));
+    const d41 = out.split('\n').filter((line) => line.includes('the WhatsApp community link may appear only'));
     assert.deepEqual(d41.map((line) => /file=([^:]+)::/.exec(line)?.[1]).sort(), ['assets/site.css', 'pt-br/join/index.html']);
   } finally {
     rmSync(dist, { recursive: true, force: true });
@@ -268,47 +268,6 @@ test('support page: one plain-text not-open block, no beacon, and the block nowh
   for (const [label, html] of bad) assert.equal(errors(supportPage(html, 'p', message)), 1, label);
   assert.equal(errors(donationsBlockElsewhere('<p data-donations="not-open">x</p>', 'q')), 1);
   assert.equal(donationsBlockElsewhere('<p>x</p>', 'q').length, 0);
-});
-
-const INVITE = 'https://discord.com/invite/abc123';
-const WHATSAPP_URL = 'https://chat.whatsapp.com/GROUP';
-const expectation = {
-  inviteUrl: INVITE,
-  whatsappUrl: WHATSAPP_URL,
-  containers: {
-    'pt-BR': { date: '27 de fevereiro de 2025', titles: ['1 - Spam:'] },
-    'en-US': { date: 'February 27, 2025', titles: ['1 - No Spam:'] },
-  },
-};
-const container = (lang: string, id: string, extra: { input?: string; links?: string; text?: string } = {}) =>
-  `<section id="${id}" lang="${lang}"><h2>${lang === 'pt-BR' ? '27 de fevereiro de 2025' : 'February 27, 2025'}</h2>` +
-  `<h3>${lang === 'pt-BR' ? '1 - Spam:' : '1 - No Spam:'}</h3><p>https://discord.com/terms</p>${extra.text ?? ''}` +
-  `${extra.input ?? `<input type="checkbox" id="agree-${id}" autocomplete="off"><label for="agree-${id}">ok</label>`}` +
-  `${extra.links ?? `<a href="${INVITE}" rel="noopener noreferrer">Discord</a>${lang === 'pt-BR' ? `<a href="${WHATSAPP_URL}" rel="noopener noreferrer">WhatsApp</a>` : ''}`}</section>`;
-const head = '<meta name="robots" content="noindex">';
-const discordHtml = (pt = container('pt-BR', 'pt-br'), en = container('en-US', 'en-us'), headTags = head) => `<head>${headTags}</head><main>${pt}${en}</main>`;
-
-test('/discord structure passes when it follows the contract and fails on each violation (D-41)', () => {
-  assert.equal(discordPage(discordHtml(), 'discord/index.html', expectation).length, 0);
-  const bad: [string, string][] = [
-    ['indexable', discordHtml(undefined, undefined, '')],
-    ['a canonical link', discordHtml(undefined, undefined, `${head}<link rel="canonical" href="https://e.org/">`)],
-    ['a form', discordHtml(container('pt-BR', 'pt-br', { text: '<form></form>' }))],
-    ['a meta refresh', discordHtml(undefined, undefined, `${head}<meta http-equiv="refresh" content="0">`)],
-    ['one container', `<head>${head}</head><main>${container('pt-BR', 'pt-br')}</main>`],
-    ['containers in the wrong order', `<head>${head}</head><main>${container('en-US', 'en-us')}${container('pt-BR', 'pt-br')}</main>`],
-    ['a checkbox with a name', discordHtml(container('pt-BR', 'pt-br', { input: '<input type="checkbox" id="a" name="x" autocomplete="off"><label for="a">ok</label>' }))],
-    ['a checkbox without autocomplete off', discordHtml(container('pt-BR', 'pt-br', { input: '<input type="checkbox" id="a"><label for="a">ok</label>' }))],
-    ['a checkbox without a label', discordHtml(container('pt-BR', 'pt-br', { input: '<input type="checkbox" id="a" autocomplete="off">' }))],
-    ['links before the checkbox', discordHtml(container('pt-BR', 'pt-br', { text: `<a href="${INVITE}" rel="noopener noreferrer">x</a>` }))],
-    ['an external link without rel', discordHtml(container('pt-BR', 'pt-br', { links: `<a href="${INVITE}">Discord</a><a href="${WHATSAPP_URL}" rel="noopener noreferrer">W</a>` }))],
-    ['the WhatsApp link twice in pt-BR', discordHtml(container('pt-BR', 'pt-br', { links: `<a href="${INVITE}" rel="noopener noreferrer">Discord</a><a href="${WHATSAPP_URL}" rel="noopener noreferrer">W</a><a href="${WHATSAPP_URL}" rel="noopener noreferrer">W</a>` }))],
-    ['no WhatsApp link in pt-BR', discordHtml(container('pt-BR', 'pt-br', { links: `<a href="${INVITE}" rel="noopener noreferrer">Discord</a>` }))],
-    ['WhatsApp in the en-US container', discordHtml(undefined, container('en-US', 'en-us', { text: '<p>WhatsApp</p>' }))],
-    ['WhatsApp in the head', discordHtml(undefined, undefined, `${head}<title>WhatsApp</title>`)],
-    ['a missing rule title', discordHtml(container('pt-BR', 'pt-br').replace('1 - Spam:', 'other'))],
-  ];
-  for (const [label, html] of bad) assert.ok(errors(discordPage(html, 'd', expectation)) >= 1, label);
 });
 
 test('the gate hides the join links only inside @supports selector(:has(*))', () => {

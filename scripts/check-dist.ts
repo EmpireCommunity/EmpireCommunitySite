@@ -8,12 +8,12 @@ import { formatRulesDate, inviteUrl } from '../src/lib/community-rules.ts';
 import { CommunityRulesSchema } from '../src/schemas/community-rules.ts';
 import { TeamMemberSchema } from '../src/schemas/team.ts';
 import {
-  analyticsBeacon, discordLinks, discordPage, gateCss, hasEffectiveDate, legalMarkdownHtml, headerLogoLink, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, mainContent, membersFallback, paymentGuard, paymentWords, personData, supportPage, donationsBlockElsewhere,
+  analyticsBeacon, discordChooser, internalDiscordLinks, discordLinks, discordPage, gateCss, hasEffectiveDate, legalMarkdownHtml, headerLogoLink, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, mainContent, membersFallback, paymentGuard, paymentWords, personData, supportPage, donationsBlockElsewhere,
   staleDates, whatsappAbsent, whatsappInviteLink,
   type Finding,
 } from './lib/dist-checks.ts';
 import { PENDING } from './lib/pending.ts';
-import { routePath, slugOf } from '../src/lib/routes.ts';
+import { LOCALES, routePath, slugOf, type Locale } from '../src/lib/routes.ts';
 
 const distDir = process.argv[2] ?? 'dist';
 const ORIGIN = 'https://empirecommunity.org';
@@ -95,7 +95,7 @@ for (const file of ['index.html', '404.html', 'discord/index.html'].filter((f) =
 
 // C-1: WhatsApp absent from en-US output, llms.txt, the root page and the legal pages of both locales.
 const whatsappScope = files.filter(
-  (file) => file.startsWith('en-us/') || file === 'llms.txt' || file === 'index.html' ||
+  (file) => file.startsWith('en-us/') || file === 'llms.txt' || file === 'index.html' || file === 'discord/index.html' ||
     LEGAL_SLUGS.some((slug) => file.startsWith(`pt-br/${slug}/`)),
 );
 // The pt-BR legal pages are scanned on their own text (<main>): the pt-BR footer, shared on every page, lists WhatsApp.
@@ -108,7 +108,7 @@ for (const file of listFiles('src/content/legal')) add(...whatsappAbsent(read('s
 // D-41: the WhatsApp community link is read only by the /discord page.
 // Stylesheets are scanned here too (a URL in `content:` or `url()` would publish the link); the other scans keep TEXT_EXTENSIONS.
 for (const file of files.filter((f) => TEXT_EXTENSIONS.test(f) || f.endsWith('.css'))) {
-  add(...whatsappInviteLink(read(distDir, file), file, file === 'discord/index.html'));
+  add(...whatsappInviteLink(read(distDir, file), file, file === 'pt-br/discord/index.html'));
 }
 
 // C-4: personal data of team.yaml appears only inside validated person blocks.
@@ -137,46 +137,52 @@ add(...staleDates({
   reviewOns: team.map((person) => ({ id: person.id, on: person.consent.reviewOn })),
 }, new Date()));
 
-// D-29, D-41: one Discord link; the invite only in /discord and only with the configured code, with no script; the page
-// structure (two language containers, one checkbox each, the join links after it) is checked against the data files.
-const invitePage = 'discord/index.html';
-if (!files.includes(invitePage)) {
-  add(pending(PENDING.discordPage, invitePage, 'the /discord page is not built'));
+// D-78: localized rules gates, plus a neutral chooser at the public address.
+const gateFiles = new Map<string, Locale>(LOCALES.map((locale) => [`${routePath(locale, 'discord').slice(1)}index.html`, locale] as const));
+const rulesResult = CommunityRulesSchema.safeParse(parse(read('src/data', 'community-rules.yaml')));
+if (!rulesResult.success) throw new Error(`src/data/community-rules.yaml is invalid: ${rulesResult.error.message}`);
+const rules = rulesResult.data;
+const channels = parse(read('src/data', 'join-channels.yaml')) as { id: string; url?: string }[];
+const whatsappUrl = channels.find((channel) => channel.id === 'whatsapp')?.url ?? '';
+for (const file of [...gateFiles.keys(), 'discord/index.html']) {
+  if (!files.includes(file)) add(pending(PENDING.discordPage, file, 'the gate page or chooser is not built'));
 }
 for (const file of htmlFiles) {
-  if (file === invitePage && inviteCode === undefined) {
-    add(pending(PENDING.discordPage, 'src/data/site.yaml', 'discord.inviteCode is not set, the invite page cannot be checked'));
-    continue;
+  const locale = gateFiles.get(file);
+  const html = read(distDir, file);
+  if (locale && inviteCode === undefined) add(pending(PENDING.discordPage, 'src/data/site.yaml', 'discord.inviteCode is not set'));
+  else add(...discordLinks(html, file, inviteCode ?? '', locale !== undefined));
+  if (/^(pt-br|en-us)\//.test(file)) add(...internalDiscordLinks(html, file, file.startsWith('pt-br/') ? 'pt-br' : 'en-us'));
+  if (locale && inviteCode !== undefined) {
+    add(...discordPage(html, file, {
+      locale, inviteUrl: inviteUrl(inviteCode), whatsappUrl, date: formatRulesDate(rules.updatedOn, locale),
+      rules: rules.rules.map((rule) => ({ title: rule.title[locale], body: rule.body[locale] })),
+      closing: rules.closing?.[locale],
+    }));
+    const stylesheets = [...html.matchAll(/<link\b[^>]*>/gi)]
+      .filter((tag) => /\brel=["']?stylesheet\b/i.test(tag[0]))
+      .flatMap((tag) => /\bhref=["']?\/([^"'\s>?#]+\.css)/i.exec(tag[0])?.[1] ?? [])
+      .filter((href) => files.includes(href));
+    if (stylesheets.length === 0) add({ level: 'error', file, message: 'no built stylesheet linked for gate CSS validation' });
+    else add(...gateCss(stylesheets.map((href) => read(distDir, href)).join('\n'), stylesheets.join(', ')));
   }
-  add(...discordLinks(read(distDir, file), file, inviteCode ?? '', file === invitePage));
 }
-if (files.includes(invitePage) && inviteCode !== undefined) {
-  const rulesResult = CommunityRulesSchema.safeParse(parse(read('src/data', 'community-rules.yaml')));
-  if (!rulesResult.success) throw new Error(`src/data/community-rules.yaml is invalid: ${rulesResult.error.message}`);
-  const rules = rulesResult.data;
-  const channels = parse(read('src/data', 'join-channels.yaml')) as { id: string; url: string }[];
-  const whatsappUrl = channels.find((channel) => channel.id === 'whatsapp')?.url ?? '';
-  const html = read(distDir, invitePage);
-  add(...discordPage(html, invitePage, {
-    inviteUrl: inviteUrl(inviteCode),
-    whatsappUrl,
-    containers: {
-      'pt-BR': { date: formatRulesDate(rules.updatedOn, 'pt-br'), titles: rules.rules.map((rule) => rule.title['pt-br']) },
-      'en-US': { date: formatRulesDate(rules.updatedOn, 'en-us'), titles: rules.rules.map((rule) => rule.title['en-us']) },
-    },
-  }));
-  // The linked stylesheets, whatever the attribute order; only files that exist in dist/, checked as one combined text.
-  const stylesheets = [...html.matchAll(/<link\b[^>]*>/gi)]
-    .filter((tag) => /\brel=["']?stylesheet\b/i.test(tag[0]))
-    .flatMap((tag) => /\bhref=["']?\/([^"'\s>?#]+\.css)/i.exec(tag[0])?.[1] ?? [])
-    .filter((href) => files.includes(href));
-  if (stylesheets.length === 0) add({ level: 'error', file: invitePage, message: 'no built stylesheet is linked: the gate CSS cannot be checked' });
-  else add(...gateCss(stylesheets.map((href) => read(distDir, href)).join('\n'), stylesheets.join(', ')));
+if (files.includes('discord/index.html')) {
+  add(...discordChooser(read(distDir, 'discord/index.html'), 'discord/index.html', rules.rules.flatMap((rule) => LOCALES.flatMap((locale) => [rule.title[locale], rule.body[locale]]))));
+}
+// Invite values and the WhatsApp group have one source each; generated URLs must never be copied elsewhere.
+for (const dir of ['src', 'scripts']) {
+  for (const file of listFiles(dir).filter((name) => /\.(?:astro|ts|js|json|yaml|md|css)$/.test(name))) {
+    const path = `${dir}/${file}`;
+    const text = read(dir, file);
+    if (path !== 'src/data/site.yaml' && inviteCode && text.includes(inviteCode)) add({ level: 'error', file: path, message: 'copied Discord invite code outside site.yaml' });
+    if (path !== 'src/data/join-channels.yaml' && whatsappUrl && text.includes(whatsappUrl)) add({ level: 'error', file: path, message: 'copied WhatsApp community URL outside join-channels.yaml' });
+  }
 }
 
 // D-52: the Web Analytics beacon on every locale page except Apoiar, and on no other page (root chooser, 404, /discord).
 for (const file of htmlFiles) {
-  const expected = localePages.includes(file) && !/^(pt-br|en-us)\/support\//.test(file);
+  const expected = localePages.includes(file) && !/^(pt-br|en-us)\/(?:support|discord)\//.test(file);
   add(...analyticsBeacon(read(distDir, file), file, expected, beaconToken));
 }
 
@@ -235,10 +241,10 @@ for (const file of ['sitemap-index.xml', 'sitemap-0.xml', 'robots.txt', 'llms.tx
 }
 if (files.includes('sitemap-0.xml')) {
   const sitemap = read(distDir, 'sitemap-0.xml');
-  for (const url of pageMap.keys()) {
+  for (const url of [...pageMap.keys()].filter((path) => !LOCALES.some((locale) => path === routePath(locale, 'discord')))) {
     if (!sitemap.includes(`<loc>${ORIGIN}${url}</loc>`)) add({ level: 'error', file: 'sitemap-0.xml', message: `missing ${url}` });
   }
-  for (const excluded of ['/', '/404.html', '/discord/']) {
+  for (const excluded of ['/', '/404.html', '/discord/', ...LOCALES.map((locale) => routePath(locale, 'discord'))]) {
     if (sitemap.includes(`<loc>${ORIGIN}${excluded}</loc>`)) add({ level: 'error', file: 'sitemap-0.xml', message: `must not list ${excluded}` });
   }
 }
@@ -254,7 +260,7 @@ if (files.includes('robots.txt')) {
 if (files.includes('llms.txt')) {
   // English file that links the en-US pages only (routing-locale section 5).
   for (const url of read(distDir, 'llms.txt').match(/https?:\/\/[^\s)]+/g) ?? []) {
-    if (!url.startsWith(`${ORIGIN}/en-us/`)) add({ level: 'error', file: 'llms.txt', message: `links outside the en-US pages: ${url}` });
+    if (!url.startsWith(`${ORIGIN}/en-us/`) || url === `${ORIGIN}${routePath('en-us', 'discord')}`) add({ level: 'error', file: 'llms.txt', message: `links outside the en-US pages: ${url}` });
   }
 }
 

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  SITE_ORIGIN, WORKER_CONFIG_URL, discordEntry, discordRetryDelay, findingLevel, inviteLookup, inviteGuild, inviteLinks,
+  SITE_ORIGIN, WORKER_CONFIG_URL, discordEntry, discordRedirect, discordRetryDelay, findingLevel, inviteLookup, inviteGuild, inviteLinks,
   liveMembers, noPayment, publicDestination, publicHeaders, rewriting, rootRedirect, sitemapUrls, siteUrl,
   workerCopies, type PublicResponse,
 } from '../scripts/lib/integrity-rules.ts';
@@ -10,8 +10,7 @@ const snapshot = (text = '', status = 200, headers: Record<string, string> = {})
 const now = Date.parse('2026-11-12T00:00:00Z');
 const invite = 'approved-invite';
 const guild = '1010657521775681556';
-const entry = (code = invite) => ['pt-BR', 'en-US'].map((lang) =>
-  `<section lang="${lang}"><p>Read https://discord.com/terms</p><a href="https://discord.com/invite/${code}">Join</a></section>`).join('');
+const entry = (code = invite) => `<html lang="en-US"><main><p>Read https://discord.com/terms</p><a href="https://discord.com/invite/${code}">Join</a></main></html>`;
 
 test('launch flags downgrade pending rows only; the active decision remains blocking', () => {
   assert.equal(findingLevel(true), 'warning');
@@ -19,7 +18,7 @@ test('launch flags downgrade pending rows only; the active decision remains bloc
 });
 
 test('HTTP destinations are restricted to the site and the two approved public reads', () => {
-  for (const url of [`${SITE_ORIGIN}/data/members.json`, `${SITE_ORIGIN}/?utm_source=ci`, `${SITE_ORIGIN}/discord?utm_source=ci`,
+  for (const url of [`${SITE_ORIGIN}/data/members.json`, `${SITE_ORIGIN}/?utm_source=ci`, `${SITE_ORIGIN}/discord?utm_source=ci`, `${SITE_ORIGIN}/discord/?utm_source=ci`, `${SITE_ORIGIN}/pt-br/discord/?utm_source=ci`, `${SITE_ORIGIN}/en-us/discord/?utm_source=ci`,
     WORKER_CONFIG_URL, `https://discord.com/api/v10/invites/${invite}?with_counts=true`]) assert.doesNotThrow(() => publicDestination(url));
   for (const url of ['https://example.com/', 'http://empirecommunity.org/', `${SITE_ORIGIN}/data/members.json?x=1`,
     `${SITE_ORIGIN}/d%61ta/members.json`, `${SITE_ORIGIN}/data/other.json`, `${SITE_ORIGIN}/pt-br/?x=1`,
@@ -37,19 +36,26 @@ test('sitemap discovery permits bounded same-origin URLs only and never discover
 });
 
 test('Discord entry derives one consistent invite per language without comparing deployed copy to main', () => {
-  const result = discordEntry(snapshot(entry('released-code')));
+  const result = discordEntry(snapshot(entry('released-code')), 'en-us');
   assert.equal(result.code, 'released-code');
   assert.deepEqual(result.problems, []);
   const bad = [
     snapshot(entry(), 302, { location: '/elsewhere' }), snapshot(entry(), 200, { location: '/elsewhere' }),
-    snapshot(entry().replace('en-US', 'pt-BR')), snapshot(entry().replace(invite, 'different-invite')),
+    snapshot(entry().replace('en-US', 'pt-BR')), snapshot(entry().replace('href=', 'data-href=')),
     snapshot(`${entry()}<script src="/script.js"></script>`), snapshot(`${entry()}<meta http-equiv="refresh" content="0;url=/">`),
     snapshot(`${entry()}<a href="https://discord.gg/other">bad</a>`), snapshot(`${entry()}<a href="https://discord.com/invite/${invite}">extra</a>`),
     snapshot(entry().replace('href=', 'data-href=')), snapshot(entry().replace('https://discord.com/terms', '<a href="https://discord.com/terms">terms</a>')),
   ];
-  for (const response of bad) assert.ok(discordEntry(response).problems.length > 0);
+  for (const response of bad) assert.ok(discordEntry(response, 'en-us').problems.length > 0);
   assert.ok(inviteLinks('<a href="https://discord&#46;com/invite/stale-code">go</a>', invite, false).length > 0);
-  assert.deepEqual(inviteLinks('<a href="https://empirecommunity.org/discord">go</a>', invite, false), []);
+  assert.ok(inviteLinks('<a href="https://empirecommunity.org/discord">go</a>', invite, false, '/en-us/').length > 0);
+});
+
+test('Discord country redirect preserves the query under the root launch policy', () => {
+  assert.deepEqual(discordRedirect(snapshot('', 302, { location: '/en-us/discord/?utm_source=ci' })), []);
+  for (const [status, location] of [[301, '/en-us/discord/?utm_source=ci'], [302, '/pt-br/discord/?utm_source=ci'], [302, '/en-us/discord/'], [302, 'https://example.com/en-us/discord/?utm_source=ci']] as const) {
+    assert.ok(discordRedirect(snapshot('', status, { location })).length > 0);
+  }
 });
 
 test('payment blocks are support-only; released wording may vary, payment markers never pass', () => {

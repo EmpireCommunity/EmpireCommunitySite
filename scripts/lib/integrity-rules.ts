@@ -1,8 +1,9 @@
+import { HTML_LANG, LOCALES, routePath, type Locale } from '../../src/lib/routes.ts';
 // Pure decisions for deploy section 8. Inputs are public, untrusted responses; time is supplied by the caller.
 import ts from 'typescript';
 import { DEFAULT_CSP, SUPPORT_CSP, PERMISSIONS_POLICY } from './security-headers.ts';
 import { membersFromPayload } from '../../src/lib/members.ts';
-import { discordLinks, paymentGuard } from './dist-checks.ts';
+import { discordLinks, htmlLang, internalDiscordLinks, paymentGuard } from './dist-checks.ts';
 
 export const SITE_ORIGIN = 'https://empirecommunity.org';
 export const WORKER_CONFIG_URL = 'https://raw.githubusercontent.com/EmpireCommunity/EmpireCommunitySite-Worker/main/wrangler.jsonc';
@@ -27,7 +28,7 @@ export function publicDestination(input: string): URL {
   if (url.origin === SITE_ORIGIN) {
     const path = decodeURIComponent(url.pathname);
     if (path.startsWith('/data/') && (url.pathname !== '/data/members.json' || url.search !== '')) throw new Error('Disallowed data probe');
-    if (url.search && !((url.pathname === '/' || url.pathname === '/discord') && url.search === '?utm_source=ci')) throw new Error('Disallowed public query');
+    if (url.search && !((url.pathname === '/' || /^\/discord\/?$/.test(url.pathname) || LOCALES.some((locale) => url.pathname === routePath(locale, 'discord'))) && url.search === '?utm_source=ci')) throw new Error('Disallowed public query');
   } else if (url.href !== WORKER_CONFIG_URL && !(url.origin === 'https://discord.com'
     && /^\/api\/v10\/invites\/[A-Za-z0-9-]{2,32}$/.test(url.pathname) && url.search === '?with_counts=true')) {
     throw new Error('Disallowed public destination');
@@ -53,34 +54,37 @@ function decoded(html: string): string {
   });
 }
 
-/** Derive the deployed invite, rather than comparing released HTML with main. No checkbox or WhatsApp checks. */
-export function discordEntry(response: PublicResponse): { code?: string; problems: string[] } {
+/** Derive the released invite independently on each locale gate; never compare released copy with main. */
+export function discordEntry(response: PublicResponse, locale: Locale): { code?: string; problems: string[] } {
   const problems: string[] = [];
   const html = decoded(response.text);
-  if (response.status !== 200 || response.headers.has('location')) problems.push('Discord entry must be 200 without Location');
-  const containers = [...html.matchAll(/<section\b([^>]*)>([\s\S]*?)<\/section>/gi)]
-    .filter((match) => /(?:^|\s)lang\s*=/.test(match[1]!));
-  const codes: string[] = [];
-  for (const lang of ['pt-BR', 'en-US']) {
-    const matches = containers.filter((match) => new RegExp(`(?:^|\\s)lang\\s*=\\s*["']${lang}["']`, 'i').test(match[1]!));
-    const links = [...(matches[0]?.[2] ?? '').matchAll(/<a\b[^>]*>/gi)].flatMap((anchor) => {
-      const href = /\shref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'<>`=]+))/i.exec(anchor[0]);
-      const invite = /^https:\/\/discord\.com\/invite\/([A-Za-z0-9-]{2,32})$/.exec(href?.[1] ?? href?.[2] ?? href?.[3] ?? '');
-      return invite?.[1] === undefined ? [] : [invite[1]];
-    });
-    if (matches.length !== 1 || links.length !== 1) problems.push('Each language container needs exactly one invite');
-    if (links[0]) codes.push(links[0]);
-  }
+  if (response.status !== 200 || response.headers.has('location')) problems.push('Discord gate must be 200 without Location');
+  if (htmlLang(html, 'live gate', HTML_LANG[locale]).length > 0) problems.push('Gate language does not match its URL');
+  const codes = [...html.matchAll(/<a\b[^>]*>/gi)].flatMap((anchor) => {
+    const href = /\shref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'<>`=]+))/i.exec(anchor[0]);
+    const invite = /^https:\/\/discord\.com\/invite\/([A-Za-z0-9-]{2,32})$/.exec(href?.[1] ?? href?.[2] ?? href?.[3] ?? '');
+    return invite?.[1] ? [invite[1]] : [];
+  });
   const code = codes[0];
-  if (code === undefined || codes.length !== 2 || codes.some((value) => value !== code)) problems.push('Language invites must agree');
-  if (code !== undefined && html.split(`https://discord.com/invite/${code}`).length - 1 !== 2) problems.push('Discord entry must have only the two language invites');
-  if (code !== undefined && discordLinks(html, '/discord', code, true).length > 0) problems.push('Discord entry contains disallowed URLs or scripts');
-  if (/http-equiv\s*=\s*["']?refresh/i.test(html)) problems.push('Discord entry must not refresh');
+  if (code === undefined || codes.length !== 1) problems.push('Each gate needs exactly one Discord invite');
+  if (code !== undefined && (html.split(`https://discord.com/invite/${code}`).length - 1 !== 1
+    || discordLinks(html, 'live gate', code, true).length > 0)) problems.push('Gate contains extra or disallowed Discord URLs or scripts');
+  if (/http-equiv\s*=\s*["']?refresh/i.test(html)) problems.push('Discord gate must not refresh');
   return { ...(code !== undefined ? { code } : {}), problems };
 }
 
-export function inviteLinks(html: string, code: string, entry: boolean): string[] {
-  return discordLinks(decoded(html), 'live page', code, entry).length === 0 ? [] : ['Disallowed Discord invite URL'];
+export function inviteLinks(html: string, code: string, entry: boolean, path = ''): string[] {
+  const locale = LOCALES.find((candidate) => path.startsWith(routePath(candidate, 'home')));
+  return discordLinks(decoded(html), 'live page', code, entry).length > 0
+    || (locale !== undefined && internalDiscordLinks(decoded(html), path, locale).length > 0) ? ['Disallowed Discord join URL'] : [];
+}
+
+/** D-78, non-Brazilian runner: the public chooser address redirects at the edge, keeping the query. */
+export function discordRedirect(response: PublicResponse): string[] {
+  try {
+    return response.status === 302 && new URL(response.headers.get('location') ?? '', SITE_ORIGIN).href === `${SITE_ORIGIN}${routePath('en-us', 'discord')}?utm_source=ci`
+      ? [] : ['Discord address must redirect temporarily to the en-US gate and preserve the query'];
+  } catch { return ['Invalid Discord redirect location']; }
 }
 
 export function noPayment(html: string, support: boolean): string[] {

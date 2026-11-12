@@ -1,3 +1,7 @@
+import { LOCALES, routePath } from '../src/lib/routes.ts';
+import { discordChooser } from './lib/dist-checks.ts';
+import { discordRedirect } from './lib/integrity-rules.ts';
+import { INTEGRITY_PENDING } from './lib/integrity-pending.ts';
 // HTTP header test (docs/contracts/routing-locale.md section 6). Runs against the built image in CI and against the
 // public URL after a deploy.
 // Usage: BASE_URL=http://127.0.0.1:18080 node scripts/http-test.ts      (add PUBLIC=1 for the proxy-layer headers)
@@ -92,24 +96,39 @@ const slashed = await fetch(`${base}/pt-br/projects/`, { redirect: 'manual' });
 await slashed.arrayBuffer();
 if (slashed.status !== 200) fail('GET /pt-br/projects/', `status ${slashed.status}, expected 200`);
 
-// /discord answers 200 with no Location header, with or without a query string (D-29), under the default headers
-// (CSP, Permissions-Policy, COOP, no-cache, no Set-Cookie: checkPath) and with the same link targets whatever the query.
-const discordProbe = await fetch(`${base}/discord`, { redirect: 'manual' });
-await discordProbe.arrayBuffer();
-if (discordProbe.status === 404 && PENDING.discordPage) {
-  console.log('::warning::GET /discord is 404 (pending in the scaffold, see scripts/lib/pending.ts)');
-} else {
-  const hrefs = (html: string) => [...html.matchAll(/\bhref="([^"]*)"/g)].map((match) => match[1] ?? '').sort();
+// D-78: locale gates are static, query-blind pages. The public address is a chooser on the image and a country
+// redirect at the edge. The root launch flag governs the latter until Guindaste applies R3/R4.
+const hrefs = (html: string) => [...html.matchAll(/\bhref="([^"]*)"/g)].map((match) => match[1] ?? '').sort();
+for (const locale of LOCALES) {
+  const path = routePath(locale, 'discord');
   const bodies: string[] = [];
-  for (const path of ['/discord', '/discord?utm_source=ci', '/discord/?utm_source=ci']) {
-    const response = await checkPath({ path, status: [200], csp: DEFAULT_CSP, cache: NO_CACHE });
-    if (response.headers.get('location') !== null) fail(`GET ${path}`, 'Location header present');
+  for (const suffix of ['', '?utm_source=ci']) {
+    const response = await checkPath({ path: path + suffix, status: [200], csp: DEFAULT_CSP, cache: NO_CACHE });
+    if (response.headers.has('location')) fail(`GET ${path + suffix}`, 'Location header present');
     bodies.push(await response.text());
   }
-  const [plain, ...withQuery] = bodies.map(hrefs);
-  withQuery.forEach((links, index) => {
-    if (JSON.stringify(links) !== JSON.stringify(plain)) fail(`GET /discord (query form ${index + 1})`, 'link targets differ from the page without a query string');
-  });
+  if (JSON.stringify(hrefs(bodies[0] ?? '')) !== JSON.stringify(hrefs(bodies[1] ?? ''))) fail(`GET ${path}`, 'query changes join targets');
+  await (await checkPath({ path, status: [405], csp: DEFAULT_CSP, cache: NO_CACHE }, { method: 'POST', body: 'x' })).arrayBuffer();
+}
+if (publicUrl) {
+  for (const path of ['/discord?utm_source=ci', '/discord/?utm_source=ci']) {
+    const response = await fetch(`${base}${path}`, { redirect: 'manual' });
+    await response.arrayBuffer();
+    const issues = discordRedirect({ status: response.status, headers: response.headers, text: '' });
+    for (const issue of issues) {
+      if (INTEGRITY_PENDING.root) console.log(`::warning::GET ${path}: ${issue} (root target pending launch)`);
+      else fail(`GET ${path}`, issue);
+    }
+  }
+} else {
+  for (const path of ['/discord', '/discord/', '/discord?utm_source=ci', '/discord/?utm_source=ci']) {
+    const response = await checkPath({ path, status: [200], csp: DEFAULT_CSP, cache: NO_CACHE });
+    if (response.headers.has('location')) fail(`GET ${path}`, 'origin chooser must not redirect');
+    for (const finding of discordChooser(await response.text(), path)) fail(`GET ${path}`, finding.message);
+  }
+  for (const path of ['/discord', '/discord/']) {
+    await (await checkPath({ path, status: [405], csp: DEFAULT_CSP, cache: NO_CACHE }, { method: 'POST', body: 'x' })).arrayBuffer();
+  }
 }
 
 if (problems.length > 0) {
