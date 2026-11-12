@@ -62,6 +62,8 @@ const purpose = community.purpose?.[locale];
 
     <NumbersStrip items={numbers} />
 
+    {/* The strip's bottom rule is the first section's top rule: pull the stack up 1 px so they draw one 1 px line. */}
+    <div class:list={[numbers.length > 0 && '-mt-px']}>
     <Index animate>
       {
         purpose !== undefined && (
@@ -119,6 +121,7 @@ const purpose = community.purpose?.[locale];
         </div>
       </IndexSection>
     </Index>
+    </div>
 
     <section class="border-t border-pauta py-64 lg:py-96">
       <div class="grid gap-x-24 gap-y-32 lg:grid-cols-12 lg:items-center">

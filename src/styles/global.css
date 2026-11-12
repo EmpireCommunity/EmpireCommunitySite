@@ -162,6 +162,11 @@
   }
 }
 
+/* Ledger is the figure-bearing size (amounts, progress): its digits are tabular wherever it is used. */
+.text-ledger {
+  font-variant-numeric: tabular-nums;
+}
+
 /* Page frame: 12-column grid area, 1312 px of content on a 1440 px page, side margins 16 / 32 / 64 px. */
 @utility frame {
   width: 100%;
