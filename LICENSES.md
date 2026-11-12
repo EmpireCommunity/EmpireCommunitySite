@@ -1,6 +1,6 @@
 # Third-party licenses
 
-The site code is MIT (see `LICENSE`). This file records the origin and license of everything we ship that we did not write.
+The site code is GPL-3.0-only (see `LICENSE`). This file records the origin and license of everything we ship that we did not write.
 
 ## Fonts
 
@@ -28,9 +28,9 @@ The brand marks stay trademarks of their owners; they are used only to name the 
 
 ## Brand (logo and icons)
 
-**The MIT license of this repository covers the code only. It does not apply to the brand files.** The Rack mark, the
+**The GPL v3 license of this repository covers the code only. It does not apply to the brand files.** The Rack mark, the
 lockup, the wordmark as a logo, the icon set and the share image are copyright EmpireCommunity, all rights reserved
-(owner decision D-46). No license is granted to copy, modify, redistribute or use them, and the MIT terms do not extend to
+(owner decision D-46). No license is granted to copy, modify, redistribute or use them, and the GPL v3 terms do not extend to
 them. They are published in this repository only because the site needs them to render.
 
 Files covered:
