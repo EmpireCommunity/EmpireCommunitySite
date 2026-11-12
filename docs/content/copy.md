@@ -192,6 +192,7 @@ Estrutura e regras em [`docs/design/information-architecture.md`](../design/info
 | goal.progress | {{secured}} de R$ 5.384,99 | {{secured}} of R$ 5,384.99 |
 | support.goal.reached | Este marco foi alcançado. Os custos da comunidade continuam: energia dos servidores, melhorias, hospedagem e domínios. | This milestone has been reached. Community costs continue: server power, upgrades, hosting and domains. |
 | support.progress.criterion | O progresso conta o valor das peças já compradas ou doadas, não dinheiro recebido. | Progress counts the value of parts already bought or donated, not money received. |
+| support.notice | Doações em dinheiro abrem em breve. | Money donations open soon. |
 | support.donations.notOpen | As doações em dinheiro ainda não estão abertas. O site não recebe dinheiro e não indica nenhuma forma de enviar. | Money donations are not open yet. This website does not receive money and does not give any way to send it. |
 | parts.title | Peças do servidor | Server parts |
 | parts.col.part | Peça | Part |
@@ -267,26 +268,24 @@ Uma única versão, com os dois idiomas na mesma página (`routing-locale`). O `
 
 ## Regras da comunidade: `/discord` (D-41)
 
-Uma única URL, com os dois idiomas na mesma página: pt-BR primeiro, en-US depois. Comportamento em `routing-locale`,
+Uma página por idioma (`/pt-br/discord/` e `/en-us/discord/`, D-78). Comportamento em `routing-locale`,
 dados em `site-data` §14 e layout na §7.10 da arquitetura. Nenhum texto desta seção cita o WhatsApp, e nenhum pode dizer
 ou sugerir que a confirmação fica registrada, é verificada ou é exigida pelo site.
 
 | Id | pt-BR | en-US |
 |---|---|---|
-| discord.meta.title | Regras da comunidade: EmpireCommunity | Community rules: EmpireCommunity |
-| discord.meta.description | As regras da comunidade EmpireCommunity e como entrar. | The EmpireCommunity rules and how to join. |
+| meta.discord.title | Regras da comunidade: EmpireCommunity | Community rules: EmpireCommunity |
+| meta.discord.description | As regras da comunidade EmpireCommunity e como entrar. | The EmpireCommunity rules and how to join. |
 | discord.heading | Regras da comunidade | Community rules |
 | discord.updated | Atualizadas em {{date}} | Updated on {{date}} |
-| discord.jump | Read in English | Read in English |
-| discord.agree | Li as regras e concordo com elas. Ao marcar, os botões para entrar aparecem logo abaixo. | I have read the rules and agree with them. Ticking this box shows the join buttons just below. |
-| discord.pending | Marque a caixa acima para ver os botões. | Tick the box above to see the buttons. |
-| discord.links.lead | Escolha por onde entrar. | Join us on Discord. |
+| discord.agree | Li as regras e concordo com elas. | I have read the rules and agree with them. |
+| discord.pending | Marque a caixa para ver os botões. | Tick the box to see the buttons. |
 
 `{{date}}` vem de `updatedOn` (`2025-02-27`): `27 de fevereiro de 2025` em pt-BR e `February 27, 2025` em en-US.
-`discord.jump` fica em inglês nos dois valores e aparece só no container pt-BR, com `lang="en-US"`.
+`discord.jump` e `discord.links.lead` foram removidas (T-69 §5): o seletor de idioma substitui a primeira e os botões já dizem o canal.
 
-Rótulos dos botões, vindos de `join-channels.yaml` (`site-data` §3 e §8): `Discord` e `WhatsApp` no container pt-BR;
-`Discord` no container en-US.
+Rótulos dos botões, vindos de `join-channels.yaml` (`site-data` §3 e §8): `Discord` e `WhatsApp` na página pt-BR;
+`Discord` na página en-US.
 
 ### Texto das regras
 

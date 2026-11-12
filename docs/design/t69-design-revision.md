@@ -295,3 +295,11 @@ Discord, perfil, outro lugar) e, se possível, uma captura do que foi apresentad
 - Favicon em disco visível na aba em 16 px (Chrome e Firefox, tema claro e escuro).
 - Contrastes: todos os pares já estão na tabela do DESIGN.md; `page-head` usa `papel` e `papel-suave` sobre
   `violeta-capa` (11,97:1 e 8,06:1).
+
+## 12. Apoiar: aviso de doações (D-79)
+
+O dono decidiu lançar sem doações abertas (D-79). A página Apoiar mostra, logo abaixo da faixa de cabeçalho e acima da
+meta, um bloco curto com `support.notice` (pt-BR: `Doações em dinheiro abrem em breve.`, en-US: `Money donations open
+soon.`), marcado `data-donations="soon"` e `role="note"`. É só texto: sem data prometida, sem link, sem valor, sem
+chave e sem forma de enviar dinheiro, e fica fora dos marcadores da guarda de pagamento (`site-data` §10), que continua
+valendo sem mudança. O bloco `data-donations="not-open"` com `support.donations.notOpen` segue na seção Doações.
