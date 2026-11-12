@@ -182,6 +182,8 @@ test('the header logo must be a link to the home page of the page (T-70: it was 
   assert.equal(headerLogoLink(header(svg), 'p', '/').length, 1, 'logo without a link');
   assert.equal(headerLogoLink(header(`<a href="/en-us/">${svg}</a>`), 'p', '/pt-br/').length, 1, 'wrong target');
   assert.equal(headerLogoLink(header(`<a href="/">Home</a>${svg}`), 'p', '/').length, 1, 'a link next to the logo is not the logo link');
+  assert.equal(headerLogoLink(header(`<!-- <a href="/">${svg}</a> -->${svg}`), 'p', '/').length, 1, 'a commented-out link is not a link');
+  assert.equal(headerLogoLink(`<!-- <header><a href="/">${svg}</a></header> -->` + header(svg), 'p', '/').length, 1, 'a commented-out header is skipped');
 });
 
 test('the language selector maps each page to its equivalent and marks only the current locale', () => {

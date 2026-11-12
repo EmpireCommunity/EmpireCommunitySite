@@ -393,7 +393,8 @@ export function htmlLang(html: string, file: string, expected: 'pt-BR' | 'en-US'
  * page: `/pt-br/` or `/en-us/` on a locale page, the root `/` on the chooser, the 404 and /discord.
  */
 export function headerLogoLink(html: string, file: string, expectedHref: string): Finding[] {
-  const header = /<header\b[^>]*>([\s\S]*?)<\/header>/i.exec(html)?.[1] ?? '';
+  const visible = html.replace(/<!--[\s\S]*?-->/g, ''); // a commented-out anchor is not a link
+  const header = /<header\b[^>]*>([\s\S]*?)<\/header>/i.exec(visible)?.[1] ?? '';
   const logoLinks = [...header.matchAll(/<a\b([^>]*)>(?:(?!<\/a>)[\s\S])*?<svg\b/gi)].map((match) => attributesOf(match[1] ?? ''));
   if (logoLinks.length === 0) return [err(file, 'the header logo is not a link')];
   const href = logoLinks[0]?.get('href');
