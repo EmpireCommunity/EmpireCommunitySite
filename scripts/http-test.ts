@@ -3,6 +3,7 @@
 // Usage: BASE_URL=http://127.0.0.1:18080 node scripts/http-test.ts      (add PUBLIC=1 for the proxy-layer headers)
 import { DEFAULT_CSP, SUPPORT_CSP, PERMISSIONS_POLICY } from './lib/security-headers.ts';
 import { PENDING } from './lib/pending.ts';
+import { isIntendedEdgeBlock } from './lib/edge-block.ts';
 
 const base = (process.env.BASE_URL ?? '').replace(/\/$/, '');
 const publicUrl = process.env.PUBLIC === '1';
@@ -23,6 +24,8 @@ type Expectation = { path: string; status: number[]; csp: string; cache: string 
 async function checkPath(expected: Expectation, init: RequestInit = {}): Promise<Response> {
   const response = await fetch(`${base}${expected.path}`, { redirect: 'manual', ...init });
   const where = `${init.method ?? 'GET'} ${expected.path}`;
+  // The edge refuses a query on /data/members.json before the origin sees it: the header contract does not apply.
+  if (isIntendedEdgeBlock({ publicUrl, path: expected.path, status: response.status, server: response.headers.get('server') })) return response;
   if (!expected.status.includes(response.status)) fail(where, `status ${response.status}, expected ${expected.status.join(' or ')}`);
   if (response.headers.get('content-security-policy') !== expected.csp) fail(where, 'Content-Security-Policy differs from the contract');
   if (response.headers.get('permissions-policy') !== PERMISSIONS_POLICY) fail(where, 'Permissions-Policy differs from the contract');
