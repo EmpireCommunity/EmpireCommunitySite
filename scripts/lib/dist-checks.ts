@@ -100,7 +100,7 @@ const TERMS_URL = 'https://discord.com/terms';
  * plain text, at most once per page. Gate pages have no script; internal button destinations are checked separately.
  */
 export function discordLinks(html: string, file: string, inviteCode: string, isInvitePage: boolean): Finding[] {
-  html = decodeReferences(visibleHtml(html));
+  html = decodeReferences(html);
   const findings: Finding[] = [];
   const invite = `https://discord.com/invite/${inviteCode}`;
   const textOnly = html.replace(/<[^>]*>/g, '');
@@ -199,9 +199,9 @@ export function discordPage(source: string, file: string, expected: DiscordPageE
     if (!rel.includes('noopener') || !rel.includes('noreferrer')) fail('external gate links need rel=noopener noreferrer');
   }
   for (const href of wanted) {
-    if (href === '' || decodeReferences(html).split(href).length - 1 !== 1) fail('each real join URL must occur exactly once on its gate page');
+    if (href === '' || decodeReferences(source).split(href).length - 1 !== 1) fail('each real join URL must occur exactly once on its gate page');
   }
-  findings.push(...discordLinks(decodeReferences(html), file, expected.inviteUrl.split('/').at(-1) ?? '', true));
+  findings.push(...discordLinks(decodeReferences(source), file, expected.inviteUrl.split('/').at(-1) ?? '', true));
   if (expected.locale === 'en-us') findings.push(...whatsappAbsent(html, file));
   const head = /<head\b[^>]*>([\s\S]*?)<\/head>/i.exec(html)?.[1] ?? '';
   if (WHATSAPP.test(head) || /chat\.whatsapp\.com/i.test(decodeReferences(head))) fail('WhatsApp reference in the gate head');
@@ -211,7 +211,7 @@ export function discordPage(source: string, file: string, expected: DiscordPageE
 /** The origin fallback chooses a language, without rules or real join links. Its header may link home. */
 export function discordChooser(source: string, file: string, rulesText: readonly string[] = []): Finding[] {
   const html = visibleHtml(source);
-  const findings = [...gateSafety(html, file), ...htmlLang(html, file, 'en-US'), ...whatsappAbsent(html, file)];
+  const findings = [...gateSafety(html, file), ...htmlLang(html, file, 'en-US'), ...whatsappAbsent(source, file)];
   const fail = (message: string) => findings.push(err(file, message));
   const links = anchors(mainContent(html));
   if (links.length !== 2) fail('chooser main needs exactly two language links');
@@ -222,7 +222,7 @@ export function discordChooser(source: string, file: string, rulesText: readonly
   }
   if (/<link\b[^>]*\brel=["'](?:canonical|alternate)["']/i.test(html)) fail('chooser has no canonical or hreflang alternates');
   if (/<input\b/i.test(html) || classGroups(html, 'gate').length > 0) fail('chooser must not contain a gate');
-  if ((html.match(DISCORD_URL) ?? []).length > 0) fail('chooser must not contain a Discord URL');
+  if ((decodeReferences(source).match(DISCORD_URL) ?? []).length > 0) fail('chooser must not contain a Discord URL');
   const text = plainText(mainContent(html));
   if (rulesText.some((rule) => rule.trim() !== '' && text.includes(plainText(rule)))) fail('chooser must not contain community rules');
   return findings;

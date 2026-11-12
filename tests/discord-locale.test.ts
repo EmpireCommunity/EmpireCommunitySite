@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { discordChooser, discordPage, internalDiscordLinks } from '../scripts/lib/dist-checks.ts';
+import { discordChooser, discordLinks, discordPage, internalDiscordLinks } from '../scripts/lib/dist-checks.ts';
 
 const inviteUrl = 'https://discord.com/invite/approved';
 const whatsappUrl = 'https://chat.whatsapp.com/group';
@@ -45,4 +45,11 @@ test('site join links use the current locale gate; the language selector may swi
   for (const href of ['/discord', '/discord/', 'https://empirecommunity.org/discord?x=1', '/en-us/discord/']) {
     assert.ok(internalDiscordLinks(`<a href="${href}">Join</a>`, 'pt-br/index.html', 'pt-br').length > 0, href);
   }
+});
+
+test('regression: published comments cannot hide Discord URLs from the dist scan', () => {
+  const comment = `<!-- <a href="${inviteUrl}">invite</a> -->`;
+  assert.ok(discordLinks(comment, 'en-us/index.html', 'approved', false).length > 0);
+  assert.ok(discordChooser(chooser + comment, 'discord/index.html').length > 0);
+  assert.ok(discordPage(gate + comment, 'pt-br/discord/index.html', expected).length > 0);
 });
