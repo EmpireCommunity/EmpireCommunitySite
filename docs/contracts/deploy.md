@@ -27,7 +27,7 @@
 | File | Trigger | Does | Permissions | Secrets |
 |---|---|---|---|---|
 | `ci.yml` | `pull_request`, push to `main` | lint, typecheck, tests, image-metadata check, build, content and `dist` checks (section 4), image build and image checks, HTTP header test (including `/discord`), workflow lint, secret scan, `verify-links` (network: project URLs answer, linked repositories are public, the invite resolves; not a required check, section 9; only the step that runs the script receives the automatic read-only `github.token`, to raise the API rate limit, and no secret is used) | `contents: read` | none |
-| `release.yml` | push of a tag `vX.Y.Z` (or `vX.Y.Z-rc.N`, a rehearsal) | **guards** (section 5), then build the image, push `X.Y.Z` (`X.Y.Z-rc.N` for a rehearsal) to Docker Hub with SBOM and provenance, create the attestation, create the GitHub Release with the changelog notes and `image-digest.txt`, print the digest in the run summary | `permissions: {}` at top; guards job `contents: read` and `actions: read` (it lists the CI runs of the commit); publish job adds `id-token: write`, `attestations: write` (no `packages`, nothing is published to GHCR); release job `contents: write` | `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`, stored in the `release` environment (section 11) and read only by the login step of the publish job, which declares `environment: release` |
+| `release.yml` | push of a tag `vX.Y.Z` (or `vX.Y.Z-rc.N`, a rehearsal) | **guards** (section 5), then build the image, push `X.Y.Z` (`X.Y.Z-rc.N` for a rehearsal) to Docker Hub with SBOM and provenance, create the attestation, create the GitHub Release with the changelog notes and `image-digest.txt`, print the digest in the run summary | `permissions: {}` at top; guards job `contents: read` and `actions: read` (it lists the CI runs of the commit); publish job adds `id-token: write`, `attestations: write` (no `packages`, nothing is published to GHCR); release job `contents: write` | `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`, stored at organization level for all public projects (D-76, section 11) and read only by the login step of the publish job |
 | `integrity.yml` | schedule, manual | checks the live site for invariants the release guards cannot see (section 8) | `contents: read` | none |
 
 `release.yml` MUST NOT be reachable from a pull request or a fork. This repository has no Cloudflare credential and no workflow that deploys the Worker (section 12). If a job needs write
@@ -187,7 +187,7 @@ Applied to `main` by the owner; the list states the control, not the current set
 
 - A pull request that adds a `traefik.*` label to the Dockerfile, or a label outside the allowed set of section 4 to
   the compose template, fails `ci.yml`. The allowed compose labels of section 4 pass.
-- A fork or pull request run cannot publish an image, and cannot read an environment secret.
+- A fork or pull request run cannot publish an image. Fork pull request runs receive no Docker Hub secrets; organization secrets remain available to authorized workflows in public projects (D-76).
 - An image built outside `release.yml` on a `vX.Y.Z` tag, or with a modified digest, fails the attestation verification.
 - `release.yml` publishes nothing for: a lightweight tag, a tag whose commit is not on `main`, a commit without a green `CI` run, a missing or empty changelog section, a compose template that names another version, a pending-check flag still `true`, or a version whose image already exists.
 - A push to `main` builds and publishes no image.
@@ -197,7 +197,7 @@ Applied to `main` by the owner; the list states the control, not the current set
 
 ## 11. Depends on the owner
 
-Strong authentication on the GitHub, Cloudflare and host provider accounts; the `release` environment of this repository, limited to deployment tags `v[0-9]*`, holding `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (the org-level copies are deleted once it works), steps in `docs/runbook/release.md`; applying and keeping the repository
+Strong authentication on the GitHub, Cloudflare and host provider accounts; the organization-level `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` secrets available to all public projects (D-76), steps in `docs/runbook/release.md`; applying and keeping the repository
 settings of sections 3 and 9; the rule that only the owner creates `v*` tags and that they cannot be moved or deleted (section 5); the Workers Builds setup of ADR-0004 (connection, preview builds off, dedicated trimmed token) and its runbook checklist; keeping failed-run
 notifications on; confirming the approved invite code in the pull request that sets it; the Cloudflare dashboard items copied into
 the runbook (the two root redirect rules, the `/data/` rules, the Worker route, features off); an explicit OK for each merge to the Worker repository's `main` (section 12). `/discord` needs no
