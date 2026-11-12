@@ -3,7 +3,7 @@
 - Version: 1. Owner: Alicerce. Consumers: Vitral (pages, selector, head tags), Forja (nginx, build scripts), Guindaste
   (Cloudflare rules, compose), Ensaio (C-3, C-5, C-8), Sentinela (headers, CSP).
 - Decisions: D-2 (two locales), D-3 (WhatsApp pt-BR only), D-8 (sitemap, robots, llms.txt, Web Analytics), D-15
-  (country-based root), D-29 (`/discord` served by the site), D-41 (`/discord` shows the community rules and releases the join links). Rationale for the root: [ADR-0002](../adr/0002-locale-entry-routing.md).
+  (country-based root), D-29 (`/discord` is the public address of the community entry), D-41 (the entry shows the community rules and releases the join links), D-78 (one gate page per language; `/discord` is a 302 by country like `/`; amends D-41 and replaces the "not a rule" part of D-29). Rationale for the rules: [ADR-0002](../adr/0002-locale-entry-routing.md).
 
 ## 1. URL space
 
@@ -21,20 +21,23 @@ Locale path segments are `pt-br` and `en-us`; the `lang` attribute and `hreflang
 | organization | `/pt-br/organization/` | `/en-us/organization/` |
 | terms | `/pt-br/terms-of-service/` | `/en-us/terms-of-service/` |
 | privacy | `/pt-br/privacy-policy/` | `/en-us/privacy-policy/` |
+| discord (gate, D-78) | `/pt-br/discord/` | `/en-us/discord/` |
 
 - **Slugs are identical in both locales and are English**, so the selector and `hreflang` map a page by swapping the
   first segment. The route keys and slugs live in one module (`src/lib/routes.ts`); nothing else hardcodes a URL.
 - Every route exists in both locales (C-3). The build fails if a route key has no page in one locale.
 - Join page content differs by audience (WhatsApp pt-BR only, C-1), the URL does not.
-- Every join button or call to action on a locale page links to `/discord` (D-41), never to Discord or WhatsApp
-  directly. The WhatsApp community link and the Discord invite exist only on the `/discord` page.
+- The `discord` route is a locale page but not a header menu item. Every join button or call to action on a locale page
+  links to the gate page of its own locale (`/{locale}/discord/`, from `routes.ts`; D-41, D-78), never to `/discord`,
+  Discord or WhatsApp directly. The WhatsApp community link and the Discord invite exist only on the gate pages (the
+  WhatsApp link on the pt-BR one only).
 
 ### Reserved and special paths
 
 | Path | Owner | Behavior |
 |---|---|---|
 | `/` | Cloudflare rules, origin fallback | 302 to a locale tree (section 3). Origin serves the chooser page with HTTP 200 if the rules are off. |
-| `/discord` | build (static page, D-29, D-41) | Community rules and join links, served by the site, HTTP 200 (**never a redirect**), live with the site. **No Cloudflare rule; nginx serves it directly** (section 6). See "The `/discord` page" below. Every join button on the site points here. |
+| `/discord`, `/discord/` | Cloudflare rules R3 and R4, origin fallback (D-78) | The public address of the community entry. 302 to the gate page of the visitor's language (section 3). Origin serves the chooser with HTTP 200 if the rules are off. Used by links outside the site; the site's own buttons point at the gate pages. See "`/discord` and the gate pages" below. |
 | `/data/members.json` | Worker, origin fallback | [members-json](members-json.md) |
 | `/sitemap-index.xml`, `/sitemap-0.xml` | build | section 5 |
 | `/robots.txt`, `/llms.txt` | build | section 5 |
@@ -44,32 +47,44 @@ Locale path segments are `pt-br` and `en-us`; the `lang` attribute and `hreflang
 | `/favicon.ico`, `/favicon.svg`, `/apple-touch-icon.png`, `/manifest.webmanifest` | build (`public/`) | static |
 
 A path without a locale prefix (for example `/projects/`) is a 404. There are no redirects from old or guessed URLs.
-`/discord` is the one deliberate exception to the locale prefix.
+`/` and `/discord` are the two deliberate exceptions to the locale prefix (both are redirects by country, D-15, D-78).
 
-### The `/discord` page (D-29, D-41)
+### `/discord` and the gate pages (D-29, D-41, D-78)
 
-A static page built to `dist/discord/index.html`. nginx serves `/discord` from its own exact location (section 6) and
-`/discord/` through `location /`; both answer 200, and the page goes live with the site. It **does not redirect**:
-D-41 replaced the D-29 behavior (a redirect with a link as fallback) with a page that shows the community rules and,
-only after a checkbox is ticked, the join links. The `<meta http-equiv="refresh">` of D-29 is removed.
+Two things carry the name and must not be confused:
 
-- **What it shows.** The community rules and the date they were last updated (2025-02-27 at the time of D-41), then a
-  checkbox confirming agreement, then the join links: **Discord** for everyone, **WhatsApp** inside the pt-BR content
-  only. Rules text and date come from `src/data/community-rules.yaml` (one source, site-data section 14). The
-  WhatsApp community link comes from the `whatsapp` entry of `join-channels.yaml` (one source, site-data section 8). The
-  invite code comes only from `src/data/site.yaml` (`discord.inviteCode`, site-data section 4), the approved invite,
-  and is the value the integrity check compares with the Worker repository's copy (members-json 2.6). The superseded invite is not
-  kept anywhere in the repository.
-- **Two language containers, each self-contained.** `<html lang="en-US">` (the neutral-page rule of section 3) with
-  exactly two sibling containers in `<main>`, `lang="pt-BR"` and `lang="en-US"`. Each holds, in its own language, the
-  rules, the updated date (formatted for that locale), its own checkbox with its label, and its own join links. The
-  pt-BR container has the Discord link and the WhatsApp link; the **en-US container has the Discord link only**.
-  Every WhatsApp reference (the word or the community URL) has a nearest ancestor `lang` of `pt-BR`; none appears in the
-  `<head>` (title, description, Open Graph, which use en-US strings) or in the en-US container (C-1 stays true).
+- **`/discord` is the public address**, used outside the site (organization profile, README badge, D-49). It is not
+  content. Cloudflare rules R3 and R4 (section 3) answer it with a 302 to the gate page in the visitor's language, as
+  `/` does for the home pages. `/discord/` (with the slash) is handled the same way.
+- **`/pt-br/discord/` and `/en-us/discord/` are the gate pages** (route key `discord`, one language per page). They show
+  the community rules and, after a checkbox, the join links. D-78 replaced the single bilingual page of D-41 with these
+  two. They are ordinary locale pages with the locale header and footer, so the language selector works on them like on
+  any other page (same route key, first segment swapped); no header menu item is marked current.
+
+**Origin fallback for `/discord` (rules off or direct origin access).** `src/pages/discord.astro` builds
+`dist/discord/index.html`, a static **chooser**: HTTP 200, `<html lang="en-US">`, two links (`/pt-br/discord/`,
+`/en-us/discord/`) with the names `Português (Brasil)` and `English` in their own language and a `lang` on each, the same
+markup rules as the root chooser (section 3), `<meta name="robots" content="noindex">`, no `hreflang` alternates and no
+canonical (it is not a page of a language pair), **no script, no invite, no WhatsApp reference and no rules text**. nginx
+serves `/discord` from its own exact location (section 6) and `/discord/` through `location /`; both answer 200 with
+the chooser, so an old link never breaks. The `<meta http-equiv="refresh">` of D-29 stays removed.
+
+**Gate pages, what they share (D-41 carried over, one gate group per page):**
+
+- **What a page shows.** The community rules and the date they were last updated (2025-02-27 at the time of D-41),
+  formatted for the page language, then one checkbox with its label confirming agreement, then the join links:
+  **Discord** on both pages and **WhatsApp** on the pt-BR page only (**the en-US page has the Discord link only**, C-1).
+  Rules text and date come from `src/data/community-rules.yaml` (one source, site-data section 14). The WhatsApp community
+  link comes from the `whatsapp` entry of `join-channels.yaml` (one source, site-data section 8) and is read only by the
+  pt-BR page. The invite code comes only from `src/data/site.yaml` (`discord.inviteCode`, site-data section 4), the
+  approved invite, and is the value the integrity check compares with the Worker repository's copy (members-json 2.6).
+  The superseded invite is not kept anywhere in the repository. No WhatsApp reference (the word or the URL) appears in a
+  `<head>` (title, description, Open Graph) on any page, and none appears on the en-US page.
+- **Structure.** `<html lang>` is the page's own language; `<main>` holds exactly one gate group, in that language.
   Order, columns and visual treatment are Bússola's, not this contract's.
-- **The gate is CSS only.** No script, no `<form>`, no `<noscript>`. Each container is a gate group: an
+- **The gate is CSS only.** No script, no `<form>`, no `<noscript>`. The gate group is an
   `<input type="checkbox">` with `id`, `autocomplete="off"` and **no `name`**, a `<label for>`, and the join links as
-  the checkbox's following content inside the same container (so the next tab stop after the checkbox is the first
+  the checkbox's following content inside the same group (so the next tab stop after the checkbox is the first
   link). The links are hidden with `display: none` (or `visibility: hidden`) until the checkbox is checked, using
   `:has()` inside `@supports selector(:has(*))`, for example
   `.gate:not(:has(.agree:checked)) .links { display: none }`. `display: none` removes the links from the tab order and
@@ -82,19 +97,23 @@ only after a checkbox is ticked, the join links. The `<meta http-equiv="refresh"
   source, a stylesheet override, CSS off, a browser without `:has()`, or an invite shared by someone else), and the
   gate is not a control the project relies on for anything. The page copy must not say or imply that agreement is
   recorded, verified or enforced. The community rules are enforced by moderation on the server, not by this page.
-- **Language-neutral and query-blind.** One URL for both locales, no locale prefix and no `hreflang`. The page is
-  static, so a query string on `/discord` is ignored and **never forwarded**: the link targets are fixed at build time
-  (`https://discord.com/invite/<inviteCode>` and the WhatsApp community link), and are the same with or without a query.
-- **Not an indexable page:** `<meta name="robots" content="noindex">`, absent from the sitemap, no canonical to a
-  locale page. No analytics snippet and **no script of any kind**. It uses the **default** headers and CSP of
-  section 6 (no new policy entry): the gate CSS lives in the shared external stylesheet, with no inline style.
-  External links carry `rel="noopener noreferrer"`.
+- **Query-blind.** The page is static, so a query string is ignored and **never forwarded**: the link targets are
+  fixed at build time (`https://discord.com/invite/<inviteCode>` and the WhatsApp community link) and are the same with
+  or without a query. A query that reaches `/discord` is carried by R3 and R4 to the gate page and stops there.
+- **Not an indexable page:** `<meta name="robots" content="noindex">` and absent from the sitemap (section 5). The
+  other head rules of section 4 apply (own canonical, reciprocal `hreflang`, `og:locale`) so the selector and the
+  equivalent-page mapping need no special case. No analytics snippet and **no script of any kind** (Privacy clause 4
+  says the community rules page is not counted). It uses the **default** headers and CSP of section 6 (no new policy
+  entry): the gate CSS lives in the shared external stylesheet, with no inline style. External links carry
+  `rel="noopener noreferrer"`.
+- **Links inside the site go straight to the gate page** (`/{locale}/discord/`, section 1), never through `/discord`,
+  so a visitor on the site is not geolocated again and keeps the language the selector gave them.
 - **Changing the invite or the rules** is a pull request (`discord.inviteCode`, or `community-rules.yaml` with a new
   `updatedOn`), merged and deployed through [deploy](deploy.md); the Worker follows an invite change through its own
   repository and deploy (members-json 2.6, D-55). No dashboard step.
-- Checks: the build scans of site-data section 12 (invite URL pattern, WhatsApp scope, page structure), the HTTP test
-  of section 6 (`/discord` answers 200, no `Location` header), a browser test of the gate (section 7, C-9) and the
-  integrity monitor of [deploy](deploy.md) section 8.
+- Checks: the build scans of site-data section 12 (invite URL pattern, WhatsApp scope, page structure for both gate
+  pages and the chooser), the HTTP test of section 6, a browser test of the gate (section 7, C-9), the rules test
+  (section 7, C-10) and the integrity monitor of [deploy](deploy.md) section 8.
 
 ## 2. Language selector (no cookie)
 
@@ -107,37 +126,58 @@ only after a checkbox is ticked, the join links. The `<meta http-equiv="refresh"
 - The selector never mentions WhatsApp, and the en-US selector target for join is the en-US join page.
 - Accessibility: reachable by keyboard, visible focus, labelled (`nav` with `aria-label` in the page language).
 
-## 3. Root `/`: language by visitor country (D-15)
+## 3. Root `/` and `/discord`: language by visitor country (D-15, D-78)
 
-Implemented as two **Cloudflare Single Redirects** on the zone `empirecommunity.org` (Rules > Redirect Rules, Free
-plan allows 10; this uses 2, and `/discord` needs none, D-29). Status code **302**, **preserve query string: on**.
+Implemented as four **Cloudflare Single Redirects** on the zone `empirecommunity.org` (Rules > Redirect Rules, Free
+plan allows 10; this uses 4: R1 and R2 for `/`, R3 and R4 for `/discord`). Status code **302**, **preserve query string:
+on**, static target. The `/data/` custom and rate-limit rules of members-json 2.9 are other products and do not count here.
 
 | # | Expression (rules language) | Target (static) |
 |---|---|---|
 | R1 | `http.host eq "empirecommunity.org" and http.request.uri.path eq "/" and ip.src.country eq "BR"` | `https://empirecommunity.org/pt-br/` |
 | R2 | `http.host eq "empirecommunity.org" and http.request.uri.path eq "/" and ip.src.country ne "BR"` | `https://empirecommunity.org/en-us/` |
+| R3 | `http.host eq "empirecommunity.org" and (http.request.uri.path eq "/discord" or http.request.uri.path eq "/discord/") and ip.src.country eq "BR"` | `https://empirecommunity.org/pt-br/discord/` |
+| R4 | `http.host eq "empirecommunity.org" and (http.request.uri.path eq "/discord" or http.request.uri.path eq "/discord/") and ip.src.country ne "BR"` | `https://empirecommunity.org/en-us/discord/` |
 
 - `ip.src.country` is the ISO 3166-1 alpha-2 code. Unknown and special values (for example Tor, `T1`) are not `BR`,
   so they get `/en-us/`.
-- Only the exact path `/` matches, so no other URL is affected. `www` is not covered (open point).
+- Only the exact paths match (`/` for R1 and R2; `/discord` and `/discord/` for R3 and R4), so no other URL is affected:
+  `/Discord`, `/discord/x` and every locale URL are untouched, and the targets do not match their own rules, so there
+  is no loop. `www` is not covered (open point).
+- **Preserve query string.** With the option on, Cloudflare puts the original query on the target and discards any query
+  written in the target; the four targets have none. A campaign parameter on `/discord?utm_source=x` therefore reaches
+  the gate page and is ignored there (routing-locale, gate pages).
+- **Prerequisite.** Single Redirects only apply to traffic proxied by Cloudflare for the hostname (Cloudflare docs, Single
+  Redirects, proxied DNS records). The apex record must be proxied (orange cloud); on 2026-11-12 the live site answered
+  through Cloudflare (`server: cloudflare`, a `cf-ray` header) and `/` answered 200 from the origin, which shows that no
+  redirect rule was active yet.
+- **Order of work (owner).** Create and test R1 and R2 first (C-8). Create R3 and R4 only after R1 and R2 redirect as
+  specified, then run C-10. If R1 or R2 does not redirect, stop and report: R3 and R4 would fail for the same reason, and
+  the chooser pages keep every address working meanwhile.
 - Never 301: a permanent redirect is cached by browsers and would lock the visitor into one language.
 - **Caching:** Single Redirects run before Cache Rules in Cloudflare's execution order, and Cloudflare does not cache
   HTML by default. Do not create a Cache Rule that matches `/`. The redirect response carries no cache headers from
   us; browsers do not cache a 302 without them.
 - **Crawlers:** not exempted (see ADR-0002). Search engines see `/` redirect to `/en-us/` when they crawl from the
-  US, and reach `/pt-br/` through the sitemap, internal links and `hreflang`.
+  US, and reach `/pt-br/` through the sitemap, internal links and `hreflang`. The gate pages are `noindex` and not in the
+  sitemap, so what `/discord` redirects to is irrelevant to search.
 - **Fallback chooser** (`src/pages/index.astro`, outside the locale folders, `redirectToDefaultLocale` left at its
   default `false`): static page, HTTP 200, two links (`/pt-br/`, `/en-us/`) with names in their own language, a
   `<link rel="alternate" hreflang="x-default" href="https://empirecommunity.org/">`, `<html lang="en-US">` (the
   `x-default` language, so the page has a language as WCAG 3.1.1 requires) and a `lang` on every link or text in the
-  other language. The bilingual 404 page and the `/discord` page follow the same rule (on `/discord`, each language container carries its own `lang`). No script. It is shown only when the rules are off or on direct origin access.
-- **Source of truth:** these expressions. The dashboard is not versioned, so Guindaste copies them into the Ops
+  other language. The bilingual 404 page and the `/discord` chooser follow the same rule. No script. The root chooser is shown only when R1 and R2 are off or on direct origin access, the `/discord` chooser only when R3 and R4 are.
+- **Source of truth:** these expressions (R1 to R4). The dashboard is not versioned, so Guindaste copies them into the Ops
   Runbook with the date applied; any change is made here first.
 - **Test plan (C-8):** from a Brazilian network, `curl -sI https://empirecommunity.org/?utm_source=t` must answer
   `302` with `location: https://empirecommunity.org/pt-br/?utm_source=t`. From a non-Brazilian network (or the
   Cloudflare Rules trace tool if it can set the country; not verified) expect `/en-us/?utm_source=t`.
   `curl -sI https://empirecommunity.org/pt-br/` must be 200 with no redirect (no loop). The scheduled integrity check
   in [deploy](deploy.md) section 8 repeats the non-Brazilian case.
+- **Test plan (C-10, `/discord`):** from a Brazilian network, `curl -sI "https://empirecommunity.org/discord?utm_source=t"`
+  must answer `302` with `location: https://empirecommunity.org/pt-br/discord/?utm_source=t`, and the same for
+  `/discord/`. From a non-Brazilian network expect `/en-us/discord/?utm_source=t`. `curl -sI` of `/pt-br/discord/` and
+  `/en-us/discord/` must be 200 with no `Location` (no loop), `/discord/x` and `/Discord` must be 404, and with the
+  rules off `/discord` must be the chooser (200). The scheduled integrity check repeats the non-Brazilian case.
 
 ## 4. Page head rules (every locale page)
 
@@ -148,20 +188,22 @@ plan allows 10; this uses 2, and `/discord` needs none, D-29). Status code **302
   **en-US** page on inner pages (everyone who is not Brazilian is served English, D-15).
 - Open Graph and `og:locale` (`pt_BR`, `en_US`) per page; `og:locale:alternate` for the other.
 - The en-US HTML, `hreflang` data, JSON-LD, `og` tags and `llms.txt` MUST NOT contain the WhatsApp link or the word
-  WhatsApp (C-1). A post-build script scans `dist/en-us/**`, `dist/llms.txt` and `dist/index.html` and fails the build.
-  The neutral `/discord` page is not in that scope, so it has its own rule (D-41): WhatsApp appears there only inside
-  the `lang="pt-BR"` container ("The `/discord` page" above, checked as in site-data section 12).
+  WhatsApp (C-1). A post-build script scans `dist/en-us/**` (which now includes `/en-us/discord/`), `dist/llms.txt`, `dist/index.html`
+  and `dist/discord/index.html` (the chooser) and fails the build. WhatsApp appears on exactly one gate page,
+  `/pt-br/discord/` ("`/discord` and the gate pages" above, checked as in site-data section 12).
 - Page `title` and `description` are required per locale in the page data (site-data).
 
 ## 5. Discovery files
 
 - **Sitemap:** `@astrojs/sitemap` with its `i18n` option (`defaultLocale: 'pt-br'`,
-  `locales: { 'pt-br': 'pt-BR', 'en-us': 'en-US' }`), plus a `filter` that keeps only the URLs under a locale home (`/pt-br/`, `/en-us/`), so `/`, `/404.html` and
-  `/discord/` never appear. All locale URLs are listed. `x-default` is carried by the HTML tags (Google accepts HTML or sitemap, one method is enough; they
+  `locales: { 'pt-br': 'pt-BR', 'en-us': 'en-US' }`), plus a `filter` that keeps only the URLs under a locale home (`/pt-br/`, `/en-us/`) **and drops the `discord` route**
+  (`/pt-br/discord/`, `/en-us/discord/`, which would otherwise pass the prefix test), so `/`, `/404.html`, `/discord/` and
+  the two gate pages never appear. All locale URLs are listed. `x-default` is carried by the HTML tags (Google accepts HTML or sitemap, one method is enough; they
   must agree).
 - **robots.txt:** `User-agent: *`, `Allow: /`, `Sitemap: https://empirecommunity.org/sitemap-index.xml`. `/data/` is
   not disallowed.
-- **llms.txt:** one file at the root, English, describing the community and linking the en-US pages. No WhatsApp.
+- **llms.txt:** one file at the root, English, describing the community and linking the en-US pages (not the gate
+  page, which is `noindex`). No WhatsApp.
 - **Cloudflare Web Analytics:** use the **manual JS snippet** in the layout (the token is public), never automatic
   injection, so the CSP can be tested before deploy. The snippet is **not included on the support pages**
   (`/pt-br/support/`, `/en-us/support/`), which are the pages that will carry payment-related content once donations open (D-28); the strict setting applies from launch so opening them later loosens nothing. Never send `Cache-Control: ... no-transform`
@@ -210,7 +252,7 @@ location = /data/members.json {
   include snippets/security-headers.conf;
   add_header Cache-Control "public, max-age=300" always; try_files $uri =404;
 }
-location = /discord {                       # D-29, D-41: the rules page, served directly, 200, no redirect
+location = /discord {                       # D-78: fallback chooser when R3/R4 are off; served directly, 200, no redirect
   include snippets/limit-methods.conf;
   include snippets/security-headers.conf;
   add_header Cache-Control "no-cache" always; try_files /discord/index.html =404;
@@ -273,7 +315,8 @@ add_header Cross-Origin-Opener-Policy "same-origin" always;
   listing, no `autoindex`, no proxying, no upstream.
 - **Trailing slash.** A locale URL without the slash (`/pt-br/join`) gets nginx's directory redirect to the slash form
   (`try_files $uri $uri/ =404`; relative `Location`, because `absolute_redirect off`). `/discord` has its own exact
-  location and is served directly with 200 and no redirect.
+  location and is served directly with 200 and no redirect; `/discord/` is served by `location /`. Both return the
+  chooser. Behind Cloudflare with R3 and R4 on, neither reaches the origin.
 
 ### Logging (D-20)
 
@@ -285,15 +328,18 @@ add_header Cross-Origin-Opener-Policy "same-origin" always;
 ### HTTP header test (required check)
 
 Run in CI against the built image, and again against the public URL after a deploy. For each of `/pt-br/`,
-`/en-us/support/`, `/discord`, an unknown path (status 404), a hashed file under `/_astro/`, `/data/members.json` and `/healthz`,
+`/en-us/support/`, `/pt-br/discord/`, `/en-us/discord/`, `/discord`, an unknown path (status 404), a hashed file under `/_astro/`, `/data/members.json` and `/healthz`,
 assert:
 
 - `Content-Security-Policy` is present and equals the policy for that path (the support pages have no Cloudflare
   hosts), `Permissions-Policy` and `Cross-Origin-Opener-Policy` are present;
 - `Cache-Control` matches the location's value;
 - `/data/members.json?x=1` returns 404 and a non-GET method returns 405 on every path tested, including `POST /healthz`;
-  `/pt-br/join` (no slash) answers a redirect to `/pt-br/join/` and `/pt-br/join/` answers 200; `/discord` returns 200 with no `Location`
-  header (D-41 keeps this: the page does not redirect) and its join links are identical with or without a query string;
+  `/pt-br/join` (no slash) answers a redirect to `/pt-br/join/` and `/pt-br/join/` answers 200; both gate pages return 200 with
+  no `Location` header and their join links are identical with or without a query string; against the **built image**
+  `/discord` and `/discord/` return 200 with no `Location` (the chooser; the rules do not exist there), while against the
+  public URL, once R3 and R4 are applied (the `root` launch flag, deploy section 8), they answer as C-10 says, so the test
+  asserts the chooser on the image and the 302 on the public URL;
 - no `Server` version string and no `Set-Cookie` anywhere;
 - against the public URL: `X-Content-Type-Options`, `Referrer-Policy` and `Strict-Transport-Security` are present.
 
@@ -305,4 +351,5 @@ assert:
 | C-1 | Post-build scan described in section 4. |
 | C-5 | Sitemap and robots lint; `hreflang` reciprocity check script over `dist/`; Web Analytics under the CSP in a browser test; the HTTP header test of section 6. |
 | C-8 | Section 3 test plan, plus a browser test that the selector changes locale and survives a reload with cookies and storage disabled. |
-| C-9 | Browser test of the `/discord` gate (Ensaio), in a browser with `:has()` support and JavaScript disabled: with the box unchecked, no join link is visible or reachable by Tab; after checking, the pt-BR container shows the Discord and WhatsApp links and the en-US container the Discord link only; unchecking hides them again; after a reload the box is unchecked; no cookie, storage entry or request is made by ticking it. The build checks of site-data section 12 cover the page structure. |
+| C-9 | Browser test of the gate on `/pt-br/discord/` and `/en-us/discord/` (Ensaio), in a browser with `:has()` support and JavaScript disabled: with the box unchecked, no join link is visible or reachable by Tab; after checking, the pt-BR page shows the Discord and WhatsApp links and the en-US page the Discord link only; unchecking hides them again; after a reload the box is unchecked; no cookie, storage entry or request is made by ticking it. The build checks of site-data section 12 cover the page structure. |
+| C-10 | Section 3 test plan for `/discord` (R3, R4), run by the owner or Guindaste after the rules exist; the scheduled integrity check repeats the non-Brazilian case. |
