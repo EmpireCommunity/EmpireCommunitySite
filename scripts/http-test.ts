@@ -25,7 +25,7 @@ async function checkPath(expected: Expectation, init: RequestInit = {}): Promise
   const response = await fetch(`${base}${expected.path}`, { redirect: 'manual', ...init });
   const where = `${init.method ?? 'GET'} ${expected.path}`;
   // The edge refuses a query on /data/members.json before the origin sees it: the header contract does not apply.
-  if (isIntendedEdgeBlock({ publicUrl, path: expected.path, status: response.status, server: response.headers.get('server') })) return response;
+  if (isIntendedEdgeBlock({ publicUrl, path: expected.path, status: response.status, hasContractCsp: response.headers.get('content-security-policy') === expected.csp })) return response;
   if (!expected.status.includes(response.status)) fail(where, `status ${response.status}, expected ${expected.status.join(' or ')}`);
   if (response.headers.get('content-security-policy') !== expected.csp) fail(where, 'Content-Security-Policy differs from the contract');
   if (response.headers.get('permissions-policy') !== PERMISSIONS_POLICY) fail(where, 'Permissions-Policy differs from the contract');
