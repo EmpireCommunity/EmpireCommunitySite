@@ -389,6 +389,18 @@ export function htmlLang(html: string, file: string, expected: 'pt-BR' | 'en-US'
 }
 
 /**
+ * Header logo (information-architecture section 4): the wordmark in the first `<header>` sits inside a link to the home
+ * page: `/pt-br/` or `/en-us/` on a locale page, the root `/` on the chooser, the 404 and /discord.
+ */
+export function headerLogoLink(html: string, file: string, expectedHref: string): Finding[] {
+  const header = /<header\b[^>]*>([\s\S]*?)<\/header>/i.exec(html)?.[1] ?? '';
+  const logoLinks = [...header.matchAll(/<a\b([^>]*)>(?:(?!<\/a>)[\s\S])*?<svg\b/gi)].map((match) => attributesOf(match[1] ?? ''));
+  if (logoLinks.length === 0) return [err(file, 'the header logo is not a link')];
+  const href = logoLinks[0]?.get('href');
+  return href === expectedHref ? [] : [err(file, `the header logo goes to ${href ?? 'nothing'}, expected ${expectedHref}`)];
+}
+
+/**
  * Language selector (routing-locale section 2). A selector is a `<nav>` that holds links with `hreflang` (the header renders
  * one per breakpoint, so each is checked on its own). Each has exactly one link per locale, with a supported `hreflang`
  * value, the same value in `lang`, an `href` to the equivalent page, and `aria-current="true"` on the current locale's
