@@ -28,7 +28,7 @@
 |---|---|---|---|---|
 | `ci.yml` | `pull_request`, push to `main` | lint, typecheck, tests, image-metadata check, build, content and `dist` checks (section 4), image build and image checks, HTTP header test (including `/discord`), workflow lint, secret scan, `verify-links` (network: project URLs answer, linked repositories are public, the invite resolves; not a required check, section 9; only the step that runs the script receives the automatic read-only `github.token`, to raise the API rate limit, and no secret is used) | `contents: read` | none |
 | `release.yml` | push of a tag `vX.Y.Z` (or `vX.Y.Z-rc.N`, a rehearsal) | **guards** (section 5), then build the image, push `X.Y.Z` (`X.Y.Z-rc.N` for a rehearsal) to Docker Hub with SBOM and provenance, create the attestation, create the GitHub Release with the changelog notes and `image-digest.txt`, print the digest in the run summary | `permissions: {}` at top; guards job `contents: read` and `actions: read` (it lists the CI runs of the commit); publish job adds `id-token: write`, `attestations: write` (no `packages`, nothing is published to GHCR); release job `contents: write` | `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`, stored in the `release` environment (section 11) and read only by the login step of the publish job, which declares `environment: release` |
-| `integrity.yml` | schedule, manual | checks the live site for invariants the release guards cannot see (section 8); not written yet | `contents: read` | none |
+| `integrity.yml` | schedule, manual | checks the live site for invariants the release guards cannot see (section 8) | `contents: read` | none |
 
 `release.yml` MUST NOT be reachable from a pull request or a fork. This repository has no Cloudflare credential and no workflow that deploys the Worker (section 12). If a job needs write
 permission, it is a separate job with its own `permissions` block.
@@ -141,33 +141,31 @@ fixed retention period for access logs.
 
 ## 8. Integrity monitor (`integrity.yml`, secret-free)
 
-**Still needed, in a smaller form.** With release by tag, the guards, the attestation and the owner-approved deploy
+**Public invariants outside the release.** With release by tag, the guards, the attestation and the owner-approved deploy
 cover what the repository and the image contain. They cannot see what changes **outside** them: Cloudflare settings
 (HTML-rewriting features, the root redirect rules, security headers added or removed at the edge), the Worker and its
-count, and the Discord invite, which can expire or be deleted. The monitor exists for those. It is **not written yet**:
-it is a small separate task for **Forja** (the workflow), with **Guindaste** answering its failures; Regente assigns
-the ref. If it is not wanted, the controls above stay valid but those outside changes go undetected, and the
-integrity rows referenced from other contracts (members-json 10.1, routing-locale section 3) lose their detector.
+count, and the Discord invite, which can expire or be deleted. The monitor exists for those:
+`integrity.yml` runs `scripts/integrity.ts`, with **Guindaste** answering its failures. The integrity rows referenced
+from members-json 10.1 and routing-locale section 3 are checked here.
 
 Runs on a schedule (every 6 hours) and on demand and reads **public URLs only**. Because production lags `main`
 (a merge is not a deploy), it **does not compare the live site with `main`**: every row is an invariant of the
 contract that holds for any released version. The one value taken from `main` is the Discord server id, which does not
 change per release. A failing check fails the run, and GitHub's failed-run notification reaches the owner. No webhook,
-token or other secret is used. Rows whose target is not live yet (member count until the Worker is deployed in T-14,
-root until the Cloudflare rules exist) warn only, through the same flag mechanism as section 4.
+token or other secret is used. Rows whose site or root target is not live yet warn only, using separate operational flags `site` and `root` in `scripts/lib/integrity-pending.ts`. The launch PR flips them to false (D-65); `check-pending` blocks a final tag while any of these values is not exactly false, without affecting prerelease tags. The live Worker rows have no deferral flag.
 
 | Check | Rule |
 |---|---|
-| No payment instruction (D-28) | `/pt-br/support/` and `/en-us/support/` carry the `data-donations="not-open"` block and none of the payment-guard markers of site-data section 10 (`data-pix`, payment-provider host or short link, BR Code marker, key-shaped strings, e-mail outside the allowlist), and the same holds for the home page of both locales. |
+| No payment instruction (D-28) | `/pt-br/support/` and `/en-us/support/` carry the `data-donations="not-open"` block and none of the payment-guard markers of site-data section 10 (`data-pix`, payment-provider host or short link, BR Code marker, key-shaped strings, e-mail outside the allowlist). The home page of both locales has the same payment-marker checks, without requiring a donations block (site-data section 10). |
 | Rewriting features | The delivered support page has no Cloudflare e-mail obfuscation or script-rewriting markers, so a re-enabled feature is detected. |
-| Discord entry (D-29, D-41) | `/discord` answers 200 with no `Location` header (the page shows the rules and never redirects); every Discord invite URL on it, one per language container, is the same `https://discord.com/invite/<code>` URL, with or without a query string on the request; the plain-text `https://discord.com/terms` of rule 5 is allowed as text, not in an attribute (site-data section 12, Terms URL exception) and is not an invite; the page has no script, no `<meta http-equiv="refresh">` and no other invite URL; the public invite lookup for that code returns the server id configured in `src/data/site.yaml` on `main`. The monitor does not tick the checkbox and does not check the WhatsApp link. |
+| Discord entry (D-29, D-41) | `/discord` answers 200 with no `Location` header (the page shows the rules and never redirects); every Discord invite URL on it, one per language container, is the same `https://discord.com/invite/<code>` URL, with or without a query string on the request; the plain-text `https://discord.com/terms` of rule 5 is allowed as text, not in an attribute (site-data section 12, Terms URL exception) and is not an invite; the page has no script, no `<meta http-equiv="refresh">` and no other invite URL; the public invite lookup for that code returns the server id configured in `src/data/site.yaml` on `main`. The monitor does not tick the checkbox and does not check the WhatsApp link. A 429 after the permitted retry is a warning, not a failure. |
+| Site-wide Discord links (D-41) | Crawl the public sitemap, up to 100 pages; every Discord invite link points through `/discord`, whose invite is checked above. |
 | Root | `/?utm_source=ci` answers `302` to `/en-us/?utm_source=ci` from the (non-Brazilian) runner. The Brazilian case is checked by hand (C-8). |
-| Member count | `/data/members.json` validates against the schema, `source` is not `built-in`, and `updatedAt` is not older than 3 days. |
-| Invite copies agree (members-json 2.6) | The public `wrangler.jsonc` on `main` of the Worker repository carries the same `DISCORD_GUILD_ID` as `src/data/site.yaml` on `main`; a different `DISCORD_INVITE_CODE` fails too, which is expected only between steps 2 and 3 of the rotation and clears on the next run. Reads public raw files only. Warns while the Worker repository has no `wrangler.jsonc`. |
-| Headers | `/pt-br/` and `/en-us/support/` carry the expected CSP and the other headers of routing-locale section 6. |
+| Member count | `/data/members.json` validates against the schema, `source` is not `built-in`, and `updatedAt` is not older than 3 days or more than 5 minutes in the future. |
+| Invite copies agree (members-json 2.6) | The public `wrangler.jsonc` on `main` of the Worker repository carries the same `DISCORD_GUILD_ID` as `src/data/site.yaml` on `main`; a different `DISCORD_INVITE_CODE` fails too, which is expected only between steps 2 and 3 of the rotation and clears on the next run. Reads public raw files only. The Worker is already live, so this row is blocking. |
+| Headers | `/pt-br/` and `/en-us/support/` carry the expected CSP and the other headers of routing-locale section 6. `Strict-Transport-Security` MUST carry exactly one valid `max-age` greater than 0; the contract sets no longer minimum duration. |
 
-Limits: GitHub may disable scheduled workflows of a public repository after a long period without repository
-activity (verify in GitHub's documentation and re-enable if it happens); the monitor sees what a visitor from the
+Limits: [GitHub disables scheduled workflows after 60 days without activity in a public repository](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows); Guindaste checks the workflow remains enabled and re-enables it if needed; the monitor sees what a visitor from the
 runner's network sees. Depends on the owner keeping the notifications on.
 
 ## 9. Branch and check requirements (D-17)
@@ -183,7 +181,7 @@ Applied to `main` by the owner; the list states the control, not the current set
   count is specified**, because the actor and the approver may be the same account (D-17); the compensating controls
   are this document's controls: required checks, PR-only merges, the release guards and the owner-only immutable
   `v*` tags (section 5), attestation verification before deploy, the payment guard of site-data section 10, the
-  integrity monitor (section 8) once written, and the owner's approval of each deploy.
+  integrity monitor (section 8), and the owner's approval of each deploy.
 
 ## 10. Negative tests (Ensaio)
 
