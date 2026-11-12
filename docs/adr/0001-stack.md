@@ -50,8 +50,9 @@ file in it is empty and its `package.json` has no dependencies.
   No Node at runtime.
 - **The build runs in GitHub Actions, never on the host** (D-10). CI runs lint, `astro check`, tests, build and the
   content checks in site-data. **Only a release tag `vX.Y.Z` on a commit of `main` publishes** an image `X.Y.Z` to Docker Hub (`empirecommunity/empirecommunity-site-org`, public: the owner rule is Docker Hub for public projects and GHCR for private ones; a merge to
-  `main` never builds one, D-24), with a build provenance attestation; pull requests and forks never publish and never
-  see a secret (the Docker Hub org secrets are read only by the publish job of the tag workflow). The host pulls **by digest**
+  `main` never builds one, D-24), with a build provenance attestation; pull requests and forks never publish. Fork pull request runs receive no secrets.
+  Under D-76, Docker Hub secrets remain at organization level for all public projects, without an environment tag gate;
+  only the publish job of the tag workflow currently references them (see deploy section 11 for the accepted risk). The host pulls **by digest**
   and verifies the attestation first; **CI holds no SSH key or any credential for the host** (pull model).
   The image must carry **no `traefik.*` label** (inherited or added), and CI fails if it does. All of this, with the
   workflow hygiene rules and the owner-approved deploy step, is specified in [deploy](../contracts/deploy.md).

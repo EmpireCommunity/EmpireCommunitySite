@@ -116,8 +116,6 @@ jobs:
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # The Docker Hub secrets live in this environment only, restricted to v* tags (docs/contracts/deploy.md section 11).
-    environment: release
     permissions:
       contents: read
       id-token: write
