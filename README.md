@@ -49,6 +49,12 @@ com worktrees e o mapa de risco, em [`AGENTS.md`](AGENTS.md).
 - Release por tag `vX.Y.Z` na `main`, decidida pelo dono: [`docs/runbook/release.md`](docs/runbook/release.md).
   O template de deploy está em `deploy/compose.yml`.
 
+## Entrada na comunidade
+
+Os links internos levam às regras no idioma da página: `/pt-br/discord/` ou `/en-us/discord/`. O endereço público
+`/discord` escolhe o idioma por país na Cloudflare; na origem, mostra uma escolha de idioma. As páginas de regras
+ficam fora do sitemap, sem scripts, e só a página em português mostra o link da comunidade WhatsApp.
+
 ## 🤝 Contribuição
 
 Antes de enviar alterações, consulte nossas diretrizes de engenharia e fluxo de trabalho no repositório [`.github`](https://github.com/EmpireCommunity/.github).

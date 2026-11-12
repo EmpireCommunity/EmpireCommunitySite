@@ -25,6 +25,8 @@ release happens and which version it gets. The release PR (`chore/release-X.Y.Z`
 
 ### Changed
 
+- Localize Discord entry checks (T-76, D-78): derive join routes per language, reject a stored Discord channel URL, exclude gates from discovery, validate each gate and the neutral chooser, and monitor the country redirect under the root launch flag. Gate pages remain script-free; only the pt-BR gate may publish the WhatsApp community link.
+
 - Add the owner-provided TS Shara XPro Universal 1500 VA UPS as a needed server part at R$ 1.399,99 and raise the full-cost goal to R$ 6.784,98; verify support data on 2026-11-12 (T-65).
 
 - Relicense the project code from MIT to GPL-3.0-only (GPL v3), using the unchanged official GNU license text (T-58, D-75).

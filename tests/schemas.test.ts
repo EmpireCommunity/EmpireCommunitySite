@@ -74,14 +74,16 @@ describe('entity rules', () => {
     assert.equal(GameServerSchema.safeParse({ ...server, status: 'live', howToJoin: both('x'), address: '1.2.3.4' }).success, false);
   });
 
-  test('WhatsApp channel is pt-br only (C-1); Discord uses the literal link', () => {
+  test('WhatsApp channel is pt-br only (C-1); Discord has no stored URL (D-78)', () => {
     const whatsapp = { id: 'whatsapp', url: 'https://chat.whatsapp.com/abc', audience: ['pt-br'], label: { 'pt-br': 'WhatsApp' }, description: { 'pt-br': 'x' } };
     assert.equal(JoinChannelSchema.safeParse(whatsapp).success, true);
     const leaked = { ...whatsapp, audience: ['pt-br', 'en-us'], label: both('WhatsApp'), description: both('x') };
     assert.equal(JoinChannelSchema.safeParse(leaked).success, false);
     const discord = { id: 'discord', url: 'https://discord.gg/abc', audience: ['pt-br', 'en-us'], label: both('Discord'), description: both('x') };
     assert.equal(JoinChannelSchema.safeParse(discord).success, false);
-    assert.equal(JoinChannelSchema.safeParse({ ...discord, url: 'https://empirecommunity.org/discord' }).success, true);
+    assert.equal(JoinChannelSchema.safeParse({ ...discord, url: 'https://empirecommunity.org/discord' }).success, false);
+    const withoutUrl = { id: discord.id, audience: discord.audience, label: discord.label, description: discord.description };
+    assert.equal(JoinChannelSchema.safeParse(withoutUrl).success, true);
   });
 });
 
