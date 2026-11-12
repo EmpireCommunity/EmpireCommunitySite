@@ -4,7 +4,7 @@
 # is derived from them at load: the sum of quantity x unit price over the purchased and donated parts, never money
 # received. No part has a photo yet (none was supplied). Never add placeholder values.
 schemaVersion: 1
-verified: { on: 2026-11-11, by: owner }
+verified: { on: 2026-11-12, by: owner }
 donations:
   status: not-open
 goal:
@@ -15,7 +15,7 @@ goal:
   description:
     pt-br: "A meta é montar um servidor local, com Xeon e 128 GB de RAM, para hospedar mais servidores de jogos. Ele está em montagem e ainda não está em uso. Esse é o primeiro marco: depois dele, continuam os custos da comunidade, como energia dos servidores, melhorias, hospedagem e domínios."
     en-us: "The goal is to build a local server, with a Xeon and 128 GB of RAM, to host more game servers. It is being built and is not in use yet. This is the first milestone: after it, community costs continue, such as server power, upgrades, hosting and domains."
-  targetCents: 538499
+  targetCents: 678498
 parts:
   - id: motherboard-machinist-e5-mr9a
     name:
@@ -85,6 +85,14 @@ parts:
     unitPriceCents: 15000
     status: purchased
     acquiredOn: 2026-11-01
+  - id: ups-ts-shara-xpro-universal-1500va
+    name:
+      pt-br: Nobreak TS Shara XPro Universal 1500VA, Senoidal Pura, Bivolt, 2 baterias
+      en-us: TS Shara XPro Universal 1500 VA sine wave UPS, bivolt, 2 internal batteries
+    category: other
+    quantity: 1
+    unitPriceCents: 139999
+    status: needed
 partDonations:
   accepted: true
   how:

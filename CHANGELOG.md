@@ -17,6 +17,8 @@ release happens and which version it gets. The release PR (`chore/release-X.Y.Z`
 
 ### Changed
 
+- Add the owner-provided TS Shara XPro Universal 1500 VA UPS as a needed server part at R$ 1.399,99 and raise the full-cost goal to R$ 6.784,98; verify support data on 2026-11-12 (T-65).
+
 - Relicense the project code from MIT to GPL-3.0-only (GPL v3), using the unchanged official GNU license text (T-58, D-75).
 
 - Remove the release environment gate; Docker Hub secrets stay at organization level for all public projects (T-59, D-76). Update the stack ADR, deploy contract and release runbook accordingly.
