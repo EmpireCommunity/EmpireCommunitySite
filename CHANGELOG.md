@@ -17,6 +17,8 @@ release happens and which version it gets. The release PR (`chore/release-X.Y.Z`
 
 ### Changed
 
+- Prepare launch (T-63, D-65): set the effective date of all four version 1.0 legal pages to 2026-11-12 and enable blocking legal-page, site and root integrity checks.
+
 - Relicense the project code from MIT to GPL-3.0-only (GPL v3), using the unchanged official GNU license text (T-58, D-75).
 
 - Remove the release environment gate; Docker Hub secrets stay at organization level for all public projects (T-59, D-76). Update the stack ADR, deploy contract and release runbook accordingly.

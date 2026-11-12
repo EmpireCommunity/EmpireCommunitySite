@@ -3,6 +3,7 @@ title: Política de Privacidade
 slug: privacy-policy
 locale: pt-br
 version: "1.0"
+effectiveDate: 2026-11-12
 ---
 
 ## 1. Quem é responsável {#controller}

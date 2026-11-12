@@ -3,6 +3,7 @@ title: Privacy Policy
 slug: privacy-policy
 locale: en-us
 version: "1.0"
+effectiveDate: 2026-11-12
 ---
 
 ## 1. Who is responsible {#controller}

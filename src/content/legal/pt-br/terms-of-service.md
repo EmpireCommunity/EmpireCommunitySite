@@ -3,6 +3,7 @@ title: Termos de Uso
 slug: terms-of-service
 locale: pt-br
 version: "1.0"
+effectiveDate: 2026-11-12
 ---
 
 ## 1. Sobre este site {#about}
