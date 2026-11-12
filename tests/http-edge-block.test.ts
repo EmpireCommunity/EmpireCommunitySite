@@ -9,7 +9,7 @@ test('the edge 403 on a members.json query is accepted at the public URL only', 
   assert.equal(isIntendedEdgeBlock({ ...edge, publicUrl: false }), false);
 });
 
-test('any other 403 (one carrying the origin's contract CSP included), path or status is still a failure', () => {
+test('any other 403 (one carrying the contract CSP included), path or status is still a failure', () => {
   assert.equal(isIntendedEdgeBlock({ ...edge, hasContractCsp: true }), false);
   assert.equal(isIntendedEdgeBlock({ ...edge, path: '/pt-br/?x=1' }), false);
   assert.equal(isIntendedEdgeBlock({ ...edge, path: '/data/members.json' }), false);
