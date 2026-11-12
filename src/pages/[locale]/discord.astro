@@ -28,13 +28,13 @@ const pair = page.links.length > 1;
     <p>{t(locale, 'discord.updated', { date: page.date })}</p>
   </PageHead>
 
-  <div class="gate frame pt-24 pb-24 lg:pt-32 lg:pb-32">
+  <div class="gate gate-fit frame pt-24 pb-24 lg:pt-32 lg:pb-32">
     <div class="lg:columns-2 lg:gap-x-48">
       {
         page.rules.map((rule) => (
-          <div class="break-inside-avoid pb-16">
-            <h2 class="font-display text-title text-papel">{rule.title}</h2>
-            <p class="mt-4 whitespace-pre-line text-body text-papel-suave">{rule.body}</p>
+          <div class="gate-rule break-inside-avoid pb-16">
+            <h2 class="gate-rule-title font-display text-title text-papel">{rule.title}</h2>
+            <p class="gate-rule-body mt-4 whitespace-pre-line text-body text-papel-suave">{rule.body}</p>
           </div>
         ))
       }

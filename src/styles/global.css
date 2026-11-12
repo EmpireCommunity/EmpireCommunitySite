@@ -270,6 +270,27 @@
   }
 }
 
+/*
+ * Short desktop viewports (1366 x 657, owner request: the rules, the box and the buttons without scrolling). Below 700 px
+ * of height, from 1024 px of width, the rules text is Body-sm (the spec's fallback, section 4.3) and the rhythm of the
+ * gate page tightens. Taller viewports keep Body.
+ */
+@media (width >= 64rem) and (height <= 700px) {
+  .gate-fit .gate-rule-body {
+    font-size: var(--text-body-sm);
+    line-height: var(--text-body-sm--line-height);
+  }
+  .gate-fit .gate-rule {
+    padding-bottom: var(--spacing-12);
+  }
+  .gate-fit .gate-rule-title {
+    font-size: 1.125rem;
+  }
+  .gate-fit.gate-fit {
+    padding-top: var(--spacing-12);
+  }
+}
+
 /* Legal text (Termos e Privacidade): the rendered Markdown, one column of up to 72 characters. Clause headings are Title,
    paragraphs Body; the anchor offset keeps a jumped-to clause clear of the top edge. */
 @utility legal-text {
