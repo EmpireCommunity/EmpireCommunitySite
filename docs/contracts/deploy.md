@@ -203,6 +203,14 @@ notifications on; confirming the approved invite code in the pull request that s
 the runbook (the two root redirect rules, the `/data/` rules, the Worker route, features off); an explicit OK for each merge to the Worker repository's `main` (section 12). `/discord` needs no
 dashboard item (D-29).
 
+D-76 accepts that these organization secrets are no longer limited to `v*` tag runs: a person with write access to
+any public project in scope can read them through a branch workflow. A compromised workflow or action in any such
+project can expose the shared credential, affecting every Docker Hub repository it can write to. The owner-only
+`v*` tag rule, the single login-step reference in `release.yml`, and digest/attestation verification before host pulls
+remain publication and deployment controls; they do not restrict organization-secret access. Keep the token least
+privileged (Image Push on the intended repositories); its actual scope and the organization access policy are owner
+settings to verify in the private runbook, not properties enforced by this repository.
+
 ## 12. Worker repository (D-55)
 
 The member-count Worker is not built, deployed or checked by anything in this repository. It lives in
