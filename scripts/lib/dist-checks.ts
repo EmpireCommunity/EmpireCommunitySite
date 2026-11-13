@@ -183,6 +183,7 @@ export function discordPage(source: string, file: string, expected: DiscordPageE
   if (inputs.length !== 1 || attrs.get('type')?.toLowerCase() !== 'checkbox' || !hasClass(attrs, 'agree')) fail('expected one .agree checkbox');
   if (!id || ![...group.matchAll(/<label\b([^>]*)>/gi)].some((label) => attributesOf(label[1] ?? '').get('for') === id)) fail('no label matches the checkbox');
   if (attrs.get('autocomplete') !== 'off' || attrs.has('name')) fail('checkbox needs autocomplete=off and no name');
+  if (attrs.has('disabled') || attrs.has('checked')) fail('checkbox must be neither disabled (links never show) nor pre-checked (links show before confirmation)');
   if (!input || !group.includes(input[0])) fail('checkbox must belong to the gate group');
   const text = plainText(main);
   for (const required of [expected.date, ...expected.rules.flatMap((rule) => [rule.title, rule.body]), ...(expected.closing ? [expected.closing] : [])]) {

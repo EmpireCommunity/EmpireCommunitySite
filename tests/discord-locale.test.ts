@@ -20,6 +20,7 @@ test('locale gate validates one group, owner rules/date and following join links
     gate.replace('<head>', '<head><meta http-equiv="refresh" content="0">'),
     gate.replace('rel="noopener noreferrer"', ''), gate.replace('</main>', `<a href="${whatsappUrl}">extra</a></main>`),
     gate.replace('<head>', '<head><title>WhatsApp</title>'),
+    gate.replace('autocomplete="off"', 'autocomplete="off" disabled'), gate.replace('autocomplete="off"', 'autocomplete="off" checked'),
   ];
   for (const html of bad.filter((html) => html !== gate)) assert.ok(discordPage(html, 'pt-br/discord/index.html', expected).length > 0, html);
   const en = gate.replace('lang="pt-BR"', 'lang="en-US"').replace(/<a href="https:\/\/chat.whatsapp.com\/group"[^>]*>WhatsApp<\/a>/, '');
