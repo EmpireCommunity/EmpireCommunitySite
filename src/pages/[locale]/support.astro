@@ -8,11 +8,12 @@
 import type { GetStaticPaths } from 'astro';
 import ArrowLink from '../../components/ArrowLink.astro';
 import Index from '../../components/Index.astro';
+import PageHead from '../../components/PageHead.astro';
 import IndexSection from '../../components/IndexSection.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { t } from '../../i18n/index.ts';
 import type { MessageKey } from '../../i18n/index.ts';
-import { LOCALES, isLocale } from '../../lib/routes.ts';
+import { LOCALES, isLocale, routePath } from '../../lib/routes.ts';
 import { getSite } from '../../lib/site-data.ts';
 import { getSupport } from '../../lib/support.ts';
 import { formatBrl } from '../../lib/support-rules.ts';
@@ -30,15 +31,20 @@ const reached = goal.remainingCents === 0;
 ---
 
 <BaseLayout locale={locale} routeKey="support">
-  <div class="frame pt-64 lg:pt-96">
-    <h1 class="font-display text-display text-papel">{t(locale, 'support.title')}</h1>
-    <p class="mt-24 max-w-[56ch] text-lead text-papel-suave">{t(locale, 'support.lead')}</p>
-    <div class="pb-48 lg:pb-64"></div>
+  <PageHead title={t(locale, 'support.title')} lead={t(locale, 'support.lead')} />
+  <div class="frame pt-24 lg:pt-32">
+    <p
+      data-donations="soon"
+      role="note"
+      class="mb-24 flex min-h-[48px] items-center border border-pauta-forte px-16 py-12 text-body font-medium text-papel lg:mb-32"
+    >
+      {t(locale, 'support.notice')}
+    </p>
 
     <Index closed>
       <IndexSection title={goal.title}>
         <p class="font-display text-figure tabular-nums text-papel">{target}</p>
-        <p class="mt-16 max-w-[68ch] text-body text-papel-suave">{goal.description}</p>
+        <p class="mt-16 max-w-[72ch] text-body text-papel-suave">{goal.description}</p>
         {
           hasProgress && (
             <div class="mt-24">
@@ -46,14 +52,14 @@ const reached = goal.remainingCents === 0;
               <p class="mt-12 text-ledger text-livro-entrada">
                 {reached ? t(locale, 'support.goal.reached') : t(locale, 'support.goal.progress', { secured: formatBrl(goal.securedCents, locale), target })}
               </p>
-              <p class="mt-8 max-w-[68ch] text-body-sm text-papel-suave">{t(locale, 'support.progress.criterion')}</p>
+              <p class="mt-8 max-w-[72ch] text-body-sm text-papel-suave">{t(locale, 'support.progress.criterion')}</p>
             </div>
           )
         }
       </IndexSection>
 
       <IndexSection title={t(locale, 'support.donations.title')}>
-        <p data-donations="not-open" class="max-w-[68ch] text-body text-papel">{t(locale, 'support.donations.notOpen')}</p>
+        <p data-donations="not-open" class="max-w-[72ch] text-body text-papel">{t(locale, 'support.donations.notOpen')}</p>
       </IndexSection>
 
       {
@@ -92,9 +98,9 @@ const reached = goal.remainingCents === 0;
       {
         partDonations?.accepted === true && (
           <IndexSection title={t(locale, 'support.partDonations.title')}>
-            <p class="max-w-[68ch] text-body text-papel-suave">{partDonations.how}</p>
+            <p class="max-w-[72ch] text-body text-papel-suave">{partDonations.how}</p>
             <div class="mt-16 flex flex-wrap gap-x-24">
-              <ArrowLink href={site.links.discord} label={t(locale, 'cta.join', { channel: 'Discord' })} />
+              <ArrowLink href={routePath(locale, 'discord')} label={t(locale, 'cta.join', { channel: 'Discord' })} />
               <a href={`mailto:${site.contact.general}`} class="link-text inline-flex min-h-[44px] items-center text-body">{site.contact.general}</a>
             </div>
           </IndexSection>
@@ -102,14 +108,14 @@ const reached = goal.remainingCents === 0;
       }
 
       <IndexSection title={t(locale, 'support.other.title')}>
-        <p class="max-w-[68ch] text-body text-papel-suave">{t(locale, 'support.other.body')}</p>
+        <p class="max-w-[72ch] text-body text-papel-suave">{t(locale, 'support.other.body')}</p>
         <div class="mt-16">
           <ArrowLink href={site.links.github} label={t(locale, 'footer.github')} />
         </div>
       </IndexSection>
 
       <IndexSection title={t(locale, 'support.transparency.title')}>
-        <div class="flex max-w-[68ch] flex-col gap-16 text-body text-papel-suave">
+        <div class="flex max-w-[72ch] flex-col gap-16 text-body text-papel-suave">
           <p>{t(locale, 'support.transparency.sold')}</p>
           <p>{t(locale, 'support.transparency.data')}</p>
         </div>

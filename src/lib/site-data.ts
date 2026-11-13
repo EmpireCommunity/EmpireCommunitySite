@@ -1,6 +1,6 @@
 // Reads of the data collections for the pages (docs/contracts/site-data.md). Every join link in the UI goes to
-// `links.discord` (R-5, D-41); a channel's own `url` is deliberately never returned from here, because the WhatsApp
-// group link is read only by the /discord page.
+// `routePath(locale, 'discord')` (D-78); a channel's own `url` is deliberately never returned from here, because the WhatsApp
+// group link is read only by the pt-BR gate page.
 import { getCollection, getEntry } from 'astro:content';
 import { t } from '../i18n/index.ts';
 import type { Locale } from './routes.ts';

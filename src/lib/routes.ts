@@ -5,7 +5,7 @@ export type Locale = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = 'pt-br';
 
 /** `lang` attribute and hreflang values. */
-export const HTML_LANG: Readonly<Record<Locale, string>> = { 'pt-br': 'pt-BR', 'en-us': 'en-US' };
+export const HTML_LANG = { 'pt-br': 'pt-BR', 'en-us': 'en-US' } as const satisfies Readonly<Record<Locale, string>>;
 /** Open Graph locale values. */
 export const OG_LOCALE: Readonly<Record<Locale, string>> = { 'pt-br': 'pt_BR', 'en-us': 'en_US' };
 
@@ -14,6 +14,7 @@ export const ROUTE_KEYS = [
   'projects',
   'game-servers',
   'join',
+  'discord',
   'support',
   'organization',
   'terms',
@@ -27,6 +28,7 @@ const SLUGS: Readonly<Record<RouteKey, string>> = {
   projects: 'projects',
   'game-servers': 'game-servers',
   join: 'join',
+  discord: 'discord',
   support: 'support',
   organization: 'organization',
   terms: 'terms-of-service',
@@ -68,4 +70,9 @@ export function xDefaultPath(key: RouteKey): string {
 
 export function isLocale(value: string): value is Locale {
   return (LOCALES as readonly string[]).includes(value);
+}
+
+/** Discovery lists locale pages except the noindex Discord gate (D-78). */
+export function isSitemapPath(path: string): boolean {
+  return LOCALES.some((locale) => path.startsWith(routePath(locale, 'home')) && path !== routePath(locale, 'discord'));
 }

@@ -1,10 +1,11 @@
+import { LOCALES, routePath } from '../src/lib/routes.ts';
 // Secret-free public observations only (deploy section 8). Never invoke http-test.ts here: its negative /data/ probes
 // belong to the local image test, not the live Worker. Run from the repository root: node scripts/integrity.ts.
 import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
 import { INTEGRITY_PENDING } from './lib/integrity-pending.ts';
 import {
-  SITE_ORIGIN, WORKER_CONFIG_URL, SITEMAP_LIMIT, discordEntry, discordRetryDelay, findingLevel,
+  SITE_ORIGIN, WORKER_CONFIG_URL, SITEMAP_LIMIT, discordEntry, discordRedirect, discordRetryDelay, findingLevel,
   inviteLookup, inviteLinks, liveMembers, noPayment, publicDestination, publicHeaders, rewriting, rootRedirect, sitemapUrls, siteUrl,
   workerCopies, type PublicResponse, type Level,
 } from './lib/integrity-rules.ts';
@@ -79,6 +80,10 @@ await check('Invite copies agree', false, async () => {
   return [...successful(response), ...workerCopies(response.text, invite, guild)];
 });
 await check('Root', INTEGRITY_PENDING.root, async () => rootRedirect(await once('/?utm_source=ci')));
+await check('Discord redirect', INTEGRITY_PENDING.root, async () => [
+  ...discordRedirect(await once('/discord?utm_source=ci')),
+  ...discordRedirect(await once('/discord/?utm_source=ci')),
+]);
 
 for (const path of ['/pt-br/', '/en-us/', '/pt-br/support/', '/en-us/support/']) {
   await check(`Payment guard ${path}`, INTEGRITY_PENDING.site, async () => {
@@ -96,11 +101,13 @@ for (const path of ['/pt-br/', '/en-us/support/']) {
 
 let deployedCode: string | undefined;
 await check('Discord entry', INTEGRITY_PENDING.site, async () => {
-  const plain = discordEntry(await once('/discord'));
-  const queried = discordEntry(await once('/discord?utm_source=ci'));
-  deployedCode = plain.code;
-  return [...plain.problems, ...queried.problems,
-    ...(plain.code === queried.code ? [] : ['Discord query changes the invite'])];
+  const results = await Promise.all(LOCALES.flatMap((locale) => [routePath(locale, 'discord'), `${routePath(locale, 'discord')}?utm_source=ci`]
+    .map(async (path) => discordEntry(await once(path), locale))));
+  const code = results[0]?.code;
+  const problems = results.flatMap((result) => result.problems);
+  if (code === undefined || results.some((result) => result.code !== code)) problems.push('Locale gates and queries must share one invite');
+  if (problems.length === 0) deployedCode = code;
+  return problems;
 });
 
 await check('Discord invite guild', INTEGRITY_PENDING.site, async () => {
@@ -138,7 +145,7 @@ await check('Site-wide Discord links', INTEGRITY_PENDING.site, async () => {
   }
   for (const url of pages) {
     const response = await once(url);
-    if (successful(response).length > 0 || inviteLinks(response.text, deployedCode, false).length > 0) return ['A public sitemap page has invalid status or Discord links'];
+    if (successful(response).length > 0 || inviteLinks(response.text, deployedCode, false, new URL(url).pathname).length > 0) return ['A public sitemap page has invalid status or Discord links'];
   }
   return [];
 });

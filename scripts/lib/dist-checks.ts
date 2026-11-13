@@ -1,3 +1,5 @@
+import { HTML_LANG, LOCALES, routePath, type Locale } from '../../src/lib/routes.ts';
+
 // Pure checks over the built site (docs/contracts/site-data.md section 12, routing-locale sections 4 and 6).
 // Each function takes text and returns findings; scripts/check-dist.ts reads the files and prints them.
 
@@ -58,12 +60,12 @@ function decodeReferences(text: string): string {
 }
 
 /**
- * The WhatsApp community link is read only by the /discord page (site-data section 8, D-41): nowhere else in `dist/`. The
+ * The WhatsApp community link is read only by the pt-BR gate page (site-data section 8, D-41): nowhere else in `dist/`. The
  * host alone fails too (fail closed: it has no other use on the site), and so does an entity-encoded one, which a browser
  * resolves to the same host (`chat&#46;whatsapp.com`).
  */
 export function whatsappInviteLink(text: string, file: string, isInvitePage: boolean): Finding[] {
-  return !isInvitePage && /chat\.whatsapp\.com/i.test(decodeReferences(text)) ? [err(file, 'the WhatsApp community link may appear only on the /discord page (D-41)')] : [];
+  return !isInvitePage && /chat\.whatsapp\.com/i.test(decodeReferences(text)) ? [err(file, 'the WhatsApp community link may appear only on the pt-BR gate page (D-41, D-78)')] : [];
 }
 
 const PERSON_BLOCK = /<article\b[^>]*\bdata-person-id=[^>]*>[\s\S]*?<\/article>/gi;
@@ -94,11 +96,11 @@ const DISCORD_URL = /(?:https?:)?\/\/(?:[a-z0-9-]+\.)*discord(?:app)?\.(?:com|gg
 const TERMS_URL = 'https://discord.com/terms';
 
 /**
- * The only Discord link on the site is https://empirecommunity.org/discord (not matched here: another host). A URL on a
- * Discord host appears only in the /discord page, and only as the invite with the configured code, plus the Terms URL as
- * plain text (never inside an attribute). That page has no script (D-29).
+ * A URL on a Discord host appears only in the two locale gates (D-78), as the configured invite or the Terms URL as
+ * plain text, at most once per page. Gate pages have no script; internal button destinations are checked separately.
  */
 export function discordLinks(html: string, file: string, inviteCode: string, isInvitePage: boolean): Finding[] {
+  html = decodeReferences(html);
   const findings: Finding[] = [];
   const invite = `https://discord.com/invite/${inviteCode}`;
   const textOnly = html.replace(/<[^>]*>/g, '');
@@ -111,81 +113,137 @@ export function discordLinks(html: string, file: string, inviteCode: string, isI
       findings.push(err(file, `Discord URL ${url} is not allowed here${isInvitePage ? ` (only ${invite} and ${TERMS_URL} as text)` : ''}`));
     }
   }
+  if (isInvitePage && termsTotal > 1) findings.push(err(file, 'the Terms URL appears more than once on a gate page'));
   if (termsTotal > termsInText) findings.push(err(file, `${TERMS_URL} is accepted only as text content, never inside an attribute`));
   if (isInvitePage) {
-    if (/<script\b/i.test(html)) findings.push(err(file, 'the /discord page must have no script'));
-    if (!html.includes(invite)) findings.push(err(file, `the /discord page does not carry ${invite}`));
+    if (/<script\b/i.test(html)) findings.push(err(file, 'gate pages must have no script'));
+    if (!html.includes(invite)) findings.push(err(file, `the gate page does not carry ${invite}`));
   }
   return findings;
 }
 
 export interface DiscordPageExpectation {
+  locale: Locale;
   inviteUrl: string;
   whatsappUrl: string;
-  /** Per language container: the formatted `updatedOn` date and the rule titles, from `community-rules.yaml`. */
-  containers: Record<'pt-BR' | 'en-US', { date: string; titles: readonly string[] }>;
+  date: string;
+  rules: readonly { title: string; body: string }[];
+  closing?: string | undefined;
 }
 
-const LANGUAGE_ORDER = ['pt-BR', 'en-US'] as const;
+const visibleHtml = (html: string) => html.replace(/<!--[\s\S]*?-->/g, '');
+const plainText = (html: string) => decodeEntities(decodeReferences(html.replace(/<[^>]*>/g, ' '))).replace(/\s+/g, ' ').trim();
+const anchors = (html: string) => [...html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)]
+  .map((match) => ({ attrs: attributesOf(match[1] ?? ''), text: plainText(match[2] ?? ''), at: match.index }));
+const hasClass = (attrs: Map<string, string>, name: string) => (attrs.get('class') ?? '').split(/\s+/).includes(name);
 
-/**
- * /discord structure (site-data section 12, routing-locale "The /discord page", D-41): exactly two language containers,
- * pt-BR then en-US; each has one checkbox (id, autocomplete="off", no name) with a matching label, its date and rule
- * titles, and its join links after the checkbox; the en-US container has the Discord link only; WhatsApp is inside the
- * pt-BR container only (none in the head); no form, noscript, style attribute or refresh; noindex, no canonical or
- * hreflang. The inline-script and Discord URL rules run on the page through the shared checks.
- */
-export function discordPage(html: string, file: string, expected: DiscordPageExpectation): Finding[] {
-  const findings: Finding[] = [];
+/** Balanced tag ranges for the agreed .gate/.gate-links interface; no dependency or layout element is required. */
+function classGroups(html: string, name: string): string[] {
+  const stack: { tag: string; start: number; selected: boolean }[] = [];
+  const groups: string[] = [];
+  for (const match of html.matchAll(/<\/?([a-z][a-z0-9:-]*)\b([^>]*)>/gi)) {
+    const tag = match[1]!.toLowerCase();
+    if (match[0].startsWith('</')) {
+      const top = stack.at(-1);
+      if (top?.tag !== tag) continue;
+      stack.pop();
+      if (top.selected) groups.push(html.slice(top.start, match.index + match[0].length));
+    } else if (!/^(?:area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/.test(tag) && !match[0].endsWith('/>')) {
+      stack.push({ tag, start: match.index, selected: hasClass(attributesOf(match[2] ?? ''), name) });
+    }
+  }
+  return groups;
+}
+
+function gateSafety(html: string, file: string): Finding[] {
+  const findings = inlineExecutable(html, file);
+  if ([...html.matchAll(/<main\b/gi)].length !== 1) findings.push(err(file, 'expected exactly one main element'));
+  if (/<(?:script|form|noscript)\b/i.test(html)) findings.push(err(file, 'gate and chooser pages have no script, form or noscript'));
+  if (/http-equiv\s*=\s*["']?refresh/i.test(html)) findings.push(err(file, 'gate and chooser pages must not refresh'));
+  const robots = [...html.matchAll(/<meta\b([^>]*)>/gi)].map((tag) => attributesOf(tag[1] ?? ''));
+  if (!robots.some((attrs) => attrs.get('name')?.toLowerCase() === 'robots' && /\bnoindex\b/i.test(attrs.get('content') ?? ''))) {
+    findings.push(err(file, 'gate and chooser pages must be noindex'));
+  }
+  return findings;
+}
+
+/** D-78: one localized gate in main; owner rules/date and both link ordering and CSS-group membership are checked. */
+export function discordPage(source: string, file: string, expected: DiscordPageExpectation): Finding[] {
+  const html = visibleHtml(source);
+  const findings = [...gateSafety(html, file), ...htmlLang(html, file, HTML_LANG[expected.locale])];
   const fail = (message: string) => findings.push(err(file, message));
-  if (/<(?:form|noscript)\b/i.test(html)) fail('the /discord page has a <form> or <noscript>');
-  if (/http-equiv\s*=\s*["']?refresh/i.test(html)) fail('the /discord page has a meta refresh');
-  const robots = [...html.matchAll(/<meta\b[^>]*>/gi)].some((tag) => /\bname=["']robots["']/i.test(tag[0]) && /\bcontent=["'][^"']*noindex/i.test(tag[0]));
-  if (!robots) fail('the /discord page must be noindex');
-  if (/<link\b[^>]*\brel=["'](?:canonical|alternate)["']/i.test(html)) fail('the /discord page has no canonical or hreflang');
+  const main = mainContent(html);
+  const groups = classGroups(main, 'gate');
+  const group = groups[0] ?? '';
+  if (groups.length !== 1) fail('expected exactly one gate group in main');
+  const inputs = [...main.matchAll(/<input\b([^>]*)>/gi)];
+  const input = inputs[0];
+  const attrs = attributesOf(input?.[1] ?? '');
+  const id = attrs.get('id');
+  if (inputs.length !== 1 || attrs.get('type')?.toLowerCase() !== 'checkbox' || !hasClass(attrs, 'agree')) fail('expected one .agree checkbox');
+  if (!id || ![...group.matchAll(/<label\b([^>]*)>/gi)].some((label) => attributesOf(label[1] ?? '').get('for') === id)) fail('no label matches the checkbox');
+  if (attrs.get('autocomplete') !== 'off' || attrs.has('name')) fail('checkbox needs autocomplete=off and no name');
+  if (attrs.has('disabled') || attrs.has('checked')) fail('checkbox must be neither disabled (links never show) nor pre-checked (links show before confirmation)');
+  if (!input || !group.includes(input[0])) fail('checkbox must belong to the gate group');
+  const text = plainText(main);
+  for (const required of [expected.date, ...expected.rules.flatMap((rule) => [rule.title, rule.body]), ...(expected.closing ? [expected.closing] : [])]) {
+    if (!text.includes(plainText(required))) fail('page does not render its localized rules, closing or date');
+  }
+  const linksGroup = classGroups(group, 'gate-links');
+  if (linksGroup.length !== 1) fail('expected one gate-links group following the checkbox');
+  const wanted = [expected.inviteUrl, ...(expected.locale === 'pt-br' ? [expected.whatsappUrl] : [])];
+  const links = anchors(linksGroup[0] ?? '');
+  if (links.map((link) => decodeReferences(link.attrs.get('href') ?? '')).join('\n') !== wanted.join('\n')) fail('gate links must be Discord first and WhatsApp only in pt-BR');
+  if (input && group.indexOf(linksGroup[0] ?? '') < group.indexOf(input[0])) fail('join links must follow the checkbox');
+  for (const link of links) {
+    const rel = (link.attrs.get('rel') ?? '').split(/\s+/);
+    if (!rel.includes('noopener') || !rel.includes('noreferrer')) fail('external gate links need rel=noopener noreferrer');
+  }
+  for (const href of wanted) {
+    if (href === '' || decodeReferences(source).split(href).length - 1 !== 1) fail('each real join URL must occur exactly once on its gate page');
+  }
+  findings.push(...discordLinks(decodeReferences(source), file, expected.inviteUrl.split('/').at(-1) ?? '', true));
+  if (expected.locale === 'en-us') findings.push(...whatsappAbsent(html, file));
+  const head = /<head\b[^>]*>([\s\S]*?)<\/head>/i.exec(html)?.[1] ?? '';
+  if (WHATSAPP.test(head) || /chat\.whatsapp\.com/i.test(decodeReferences(head))) fail('WhatsApp reference in the gate head');
+  return findings;
+}
 
-  const containers = [...html.matchAll(/<section\b([^>]*\blang=["']([^"']+)["'][^>]*)>([\s\S]*?)<\/section>/gi)];
-  const langs = containers.map((container) => container[2]);
-  if (langs.join() !== LANGUAGE_ORDER.join()) {
-    fail(`expected exactly two language containers (${LANGUAGE_ORDER.join(', ')}), found (${langs.join(', ')})`);
-    return findings;
+/** The origin fallback chooses a language, without rules or real join links. Its header may link home. */
+export function discordChooser(source: string, file: string, rulesText: readonly string[] = []): Finding[] {
+  const html = visibleHtml(source);
+  const findings = [...gateSafety(html, file), ...htmlLang(html, file, 'en-US'), ...whatsappAbsent(source, file)];
+  const fail = (message: string) => findings.push(err(file, message));
+  const links = anchors(mainContent(html));
+  if (links.length !== 2) fail('chooser main needs exactly two language links');
+  for (const [index, locale] of LOCALES.entries()) {
+    const link = links[index];
+    if (link?.attrs.get('href') !== routePath(locale, 'discord') || link.attrs.get('lang') !== HTML_LANG[locale]
+      || link.text !== (locale === 'pt-br' ? 'Português (Brasil)' : 'English')) fail('chooser language link has the wrong destination, lang or label');
   }
-  const hasLink = (inner: string, url: string) => inner.includes(`href="${url}"`);
-  for (const [, , lang, inner = ''] of containers) {
-    const where = `the ${lang} container`;
-    const wanted = expected.containers[lang as 'pt-BR' | 'en-US'];
-    const inputs = [...inner.matchAll(/<input\b[^>]*>/gi)].map((input) => input[0]);
-    const checkbox = inputs[0] ?? '';
-    const id = /\bid=["']([^"']+)["']/i.exec(checkbox)?.[1];
-    if (inputs.length !== 1 || !/\btype=["']checkbox["']/i.test(checkbox)) fail(`${where} needs exactly one checkbox`);
-    else {
-      if (id === undefined) fail(`${where}: the checkbox has no id`);
-      else if (!new RegExp(`<label\\b[^>]*\\bfor=["']${escapeRegExp(id)}["']`, 'i').test(inner)) fail(`${where}: no <label for> matches the checkbox`);
-      if (!/\bautocomplete=["']off["']/i.test(checkbox)) fail(`${where}: the checkbox needs autocomplete="off"`);
-      if (/\sname\s*=/i.test(checkbox)) fail(`${where}: the checkbox must have no name`);
-    }
-    const text = decodeEntities(inner.replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ');
-    if (!text.includes(wanted.date)) fail(`${where} does not show the rules date "${wanted.date}"`);
-    for (const title of wanted.titles) if (!text.includes(title)) fail(`${where} does not show the rule "${title}"`);
-    if ((inner.split(TERMS_URL).length - 1) > 1) fail(`${where}: ${TERMS_URL} appears more than once`);
-    const checkboxAt = inner.indexOf(checkbox);
-    const inviteAt = inner.indexOf(`href="${expected.inviteUrl}"`);
-    if (!hasLink(inner, expected.inviteUrl)) fail(`${where} has no Discord join link`);
-    else if (inviteAt < checkboxAt) fail(`${where}: the join links must follow the checkbox`);
-    if (inner.split(expected.inviteUrl).length - 1 > 1) fail(`${where}: the invite appears more than once`);
-    for (const link of inner.matchAll(/<a\b[^>]*\bhref=["'](https:\/\/(?:discord\.com|chat\.whatsapp\.com)\/[^"']*)["'][^>]*>/gi)) {
-      if (!/\brel=["'][^"']*noopener[^"']*noreferrer|\brel=["'][^"']*noreferrer[^"']*noopener/i.test(link[0])) fail(`${where}: external link ${link[1]} needs rel="noopener noreferrer"`);
-    }
-    if (lang === 'pt-BR') {
-      // The community link is rendered exactly once, in this container (site-data section 12).
-      const whatsappCount = expected.whatsappUrl === '' ? 0 : inner.split(expected.whatsappUrl).length - 1;
-      if (!hasLink(inner, expected.whatsappUrl)) fail(`${where} has no WhatsApp join link`);
-      else if (whatsappCount !== 1) fail(`${where}: the WhatsApp community link must appear exactly once, found ${whatsappCount}`);
+  if (/<link\b[^>]*\brel=["'](?:canonical|alternate)["']/i.test(html)) fail('chooser has no canonical or hreflang alternates');
+  if (/<input\b/i.test(html) || classGroups(html, 'gate').length > 0) fail('chooser must not contain a gate');
+  if ((decodeReferences(source).match(DISCORD_URL) ?? []).length > 0) fail('chooser must not contain a Discord URL');
+  const text = plainText(mainContent(html));
+  if (rulesText.some((rule) => rule.trim() !== '' && text.includes(plainText(rule)))) fail('chooser must not contain community rules');
+  return findings;
+}
+
+/** In-site joins use the page locale; alternate-language gate links are limited to the language selector interface. */
+export function internalDiscordLinks(html: string, file: string, locale: Locale): Finding[] {
+  const findings: Finding[] = [];
+  for (const link of anchors(visibleHtml(html))) {
+    let url: URL;
+    try { url = new URL(decodeReferences(link.attrs.get('href') ?? ''), `https://empirecommunity.org/${file.replace(/^\//, '')}`); } catch { continue; }
+    if (url.origin !== 'https://empirecommunity.org') continue;
+    if (/^\/discord\/?$/.test(url.pathname)) findings.push(err(file, 'join links use the locale gate, never the public /discord address'));
+    for (const target of LOCALES) {
+      if (target !== locale && url.pathname === routePath(target, 'discord')
+        && !(link.attrs.get('hreflang') === HTML_LANG[target] && link.attrs.get('lang') === HTML_LANG[target])) {
+        findings.push(err(file, 'a join link goes to the other locale gate'));
+      }
     }
   }
-  // WhatsApp (the word or the community URL) only inside the pt-BR container, never in the head or the en-US container.
-  const outsidePt = html.replace(containers[0]?.[0] ?? '', '');
-  if (WHATSAPP.test(outsidePt) || /chat\.whatsapp\.com/i.test(decodeReferences(outsidePt))) fail('a WhatsApp reference sits outside the pt-BR container (C-1, D-41)');
   return findings;
 }
 
@@ -294,7 +352,7 @@ export const BEACON_SRC = 'https://static.cloudflareinsights.com/beacon.min.js';
 /**
  * Cloudflare Web Analytics (routing-locale section 5, D-52). A locale page other than Apoiar carries exactly one beacon:
  * an external module script from the Cloudflare host whose `data-cf-beacon` holds the configured token and nothing else.
- * The support pages, the root chooser, the 404 and /discord carry none (the neutral pages have no script at all).
+ * The support pages, both gates, the root chooser, the 404 and /discord carry none (the neutral pages have no script at all).
  */
 export function analyticsBeacon(html: string, file: string, expected: boolean, token: string): Finding[] {
   const scripts = [...html.matchAll(/<script\b([^>]*)>/gi)].map((match) => attributesOf(match[1] ?? ''));

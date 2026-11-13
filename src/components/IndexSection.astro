@@ -1,28 +1,30 @@
 ---
-// One section of the Índice: pauta rule on top, title (Headline) in 4 columns on the left, content in 8 columns on the
-// right with 32 px of padding after A Margem. Below 1024 px the title sits above the content. Sections are contiguous:
+// One section of the Índice: pauta rule on top, title (Headline) in 3 columns on the left, content in 9 columns on the
+// right with 24 px of padding after A Margem. Below 1024 px the title sits above the content. Sections are contiguous:
 // the rule of one is the rule below the previous. A section of ruled lines (`rows`) has no padding of its own, the
-// rows carry their 24 px, and the title is lowered by the same 24 px to line up with the first one. Text sections
-// get 48 px (64 px from 1024 px). A section with no real data is not rendered by its page (R-6): title, rule and
+// rows carry their 16 px, and the title is lowered by the same 16 px to line up with the first one. Text sections
+// get 32 px (48 px from 1024 px). A section with no real data is not rendered by its page (R-6): title, rule and
 // anchor go together.
 interface Props {
   title: string;
   id?: string;
   rows?: boolean;
+  /** Text section with 24 px (32 px from 1024 px) of padding: the pages that must end above the fold (Infraestrutura, Participar). */
+  compact?: boolean;
 }
 
-const { title, id, rows = false } = Astro.props;
+const { title, id, rows = false, compact = false } = Astro.props;
 ---
 
 <section
   id={id}
-  class:list={['grid gap-x-24 border-t border-pauta lg:grid-cols-12', rows ? 'gap-y-0' : 'gap-y-24 py-48 lg:py-64']}
+  class:list={['grid gap-x-24 border-t border-pauta lg:grid-cols-12', rows ? 'gap-y-0' : compact ? 'gap-y-24 py-24 lg:py-32' : 'gap-y-24 py-32 lg:py-48']}
 >
-  <div class:list={['lg:col-span-4', rows && 'pt-24']}>
+  <div class:list={['lg:col-span-3', rows && 'pt-16']}>
     <h2 class="font-display text-headline text-papel">{title}</h2>
     <slot name="aside" />
   </div>
-  <div class="lg:col-span-8 lg:pl-32">
+  <div class="lg:col-span-9 lg:pl-24">
     <slot />
   </div>
 </section>

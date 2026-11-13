@@ -6,6 +6,7 @@ import type { GetStaticPaths } from 'astro';
 import { getCollection } from 'astro:content';
 import ArrowLink from '../../components/ArrowLink.astro';
 import Index from '../../components/Index.astro';
+import PageHead from '../../components/PageHead.astro';
 import IndexSection from '../../components/IndexSection.astro';
 import RegisterList from '../../components/RegisterList.astro';
 import RegisterRow from '../../components/RegisterRow.astro';
@@ -25,9 +26,8 @@ const servers = sortGameServers((await getCollection('gameServers')).map((entry)
 ---
 
 <BaseLayout locale={locale} routeKey="game-servers">
-  <div class="frame pt-64 lg:pt-96">
-    <h1 class="font-display text-display text-papel">{t(locale, 'servers.title')}</h1>
-    <p class="mt-24 max-w-[56ch] pb-48 text-lead text-papel-suave lg:pb-64">{t(locale, 'servers.lead')}</p>
+  <PageHead title={t(locale, 'servers.title')} lead={t(locale, 'servers.lead')} />
+  <div class="frame pt-24 lg:pt-32">
 
     <Index closed>
       {
@@ -44,8 +44,8 @@ const servers = sortGameServers((await getCollection('gameServers')).map((entry)
         )
       }
 
-      <IndexSection title={t(locale, 'home.servers.request')}>
-        <p class="max-w-[68ch] text-body text-papel-suave">
+      <IndexSection title={t(locale, 'home.servers.request')} compact>
+        <p class="max-w-[72ch] text-body text-papel-suave">
           {t(locale, 'servers.request.body', { channels: channelPhrase(locale, channels, 'disjunction') })}
         </p>
         <div class="mt-16">
@@ -53,13 +53,13 @@ const servers = sortGameServers((await getCollection('gameServers')).map((entry)
         </div>
       </IndexSection>
 
-      <IndexSection title={t(locale, 'servers.where.title')}>
-        <p class="max-w-[68ch] text-body text-papel-suave">{t(locale, 'servers.where.body')}</p>
+      <IndexSection title={t(locale, 'servers.where.title')} compact>
+        <p class="max-w-[72ch] text-body text-papel-suave">{t(locale, 'servers.where.body')}</p>
       </IndexSection>
 
-      <IndexSection title={t(locale, 'servers.own.title')}>
+      <IndexSection title={t(locale, 'servers.own.title')} compact>
         <Status locale={locale} status="coming-soon" label="servers.own.status" />
-        <p class="mt-8 max-w-[68ch] text-body text-papel-suave">{t(locale, 'servers.own.body')}</p>
+        <p class="mt-8 max-w-[72ch] text-body text-papel-suave">{t(locale, 'servers.own.body')}</p>
         <div class="mt-16">
           <ArrowLink href={routePath(locale, 'support')} label={t(locale, 'servers.own.link')} />
         </div>

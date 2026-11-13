@@ -14,12 +14,12 @@ const { question } = Astro.props;
 <li class="border-t border-pauta">
   <details class="group">
     <summary
-      class="flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-16 py-16 text-title hover:underline [&::-webkit-details-marker]:hidden"
+      class="flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-16 py-12 text-title hover:underline [&::-webkit-details-marker]:hidden"
     >
       <span class="font-display">{question}</span>
       <Icon name="plus" class="shrink-0 text-pauta-forte group-open:rotate-45 motion-safe:transition-transform" />
     </summary>
-    <div class="max-w-[68ch] pb-24 text-body text-papel-suave">
+    <div class="max-w-[72ch] pb-24 text-body text-papel-suave">
       <slot />
     </div>
   </details>
