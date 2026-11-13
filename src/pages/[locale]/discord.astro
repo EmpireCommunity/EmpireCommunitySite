@@ -41,8 +41,8 @@ const pair = page.links.length > 1;
     </div>
     {page.closing !== undefined && <p class="text-body font-medium text-papel">{page.closing}</p>}
 
-    <div class="mt-16 flex flex-col gap-16 border-t border-pauta pt-16 sm:min-h-[56px] sm:flex-row sm:items-center sm:justify-between">
-      <div class="flex min-h-[44px] items-center gap-12">
+    <div class="mt-16 flex flex-col gap-16 border-t border-pauta pt-16 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex min-h-[48px] items-center gap-12">
         <input type="checkbox" id="agree" class="agree size-24 shrink-0 accent-papel" autocomplete="off" />
         <label for="agree" class="py-8 text-body text-papel">{t(locale, 'discord.agree')}</label>
       </div>
