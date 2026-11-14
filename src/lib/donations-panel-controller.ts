@@ -38,7 +38,7 @@ export interface PanelResponse {
 }
 
 /** The snapshot holds at most 100 donations plus the owner's expenses: far below this. A larger body is refused unparsed. */
-export const MAX_BODY_CHARS = 512 * 1024;
+export const MAX_BODY_CHARS = 256 * 1024; // the contract caps the whole snapshot at 256 KB (6.13)
 const JSON_TYPE = /^application\/json\s*(;|$)/i;
 
 /** Everything outside the page the flow needs, injected: the browser entry passes the real ones. */

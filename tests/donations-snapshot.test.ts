@@ -114,6 +114,21 @@ test('figures that do not add up are refused: balance identity, listed totals, s
   assert.equal(parseSnapshot(withEdit((s) => { s.adjustments = [{ date: '2026-12-01', cents: 0.5, reason: { 'pt-br': 'a', 'en-us': 'a' } }]; })), undefined, 'cents stay integers');
 });
 
+test('the optional corrected marker (contract 6.13) is accepted only as true on out and adjustments rows, and the text limit is 280', () => {
+  const marked = parseSnapshot(withEdit((s) => {
+    s.out[0].corrected = true;
+    s.adjustments = [{ date: '2026-12-01', cents: 0, reason: { 'pt-br': 'a', 'en-us': 'a' }, corrected: true }];
+  }));
+  assert.ok(marked, 'a corrected row is accepted');
+  assert.equal(marked.out[0]?.corrected, true);
+  assert.equal(marked.adjustments[0]?.corrected, true);
+  assert.equal(parseSnapshot(withEdit((s) => { s.out[0].corrected = false; })), undefined, 'false is not a contract value');
+  assert.equal(parseSnapshot(withEdit((s) => { s.out[0].corrected = 'true'; })), undefined, 'a string is not a boolean');
+  assert.equal(parseSnapshot(withEdit((s) => { s.donations[0].corrected = true; })), undefined, 'a donation row has no marker');
+  assert.equal(parseSnapshot(withEdit((s) => { s.out[0].justification['pt-br'] = 'a'.repeat(281); })), undefined, 'a justification over 280 characters');
+  assert.ok(parseSnapshot(withEdit((s) => { s.out[0].justification['pt-br'] = 'a'.repeat(280); })), 'exactly 280 is fine');
+});
+
 test('a gap in seq (a refund) is fine and a list longer than it shows (count above the rows) is fine', () => {
   const gap = withEdit((s) => {
     s.donations = s.donations.filter((d: { seq: number }) => d.seq !== 5);

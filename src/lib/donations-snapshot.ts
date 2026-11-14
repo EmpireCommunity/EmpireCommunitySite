@@ -32,12 +32,16 @@ export interface Expense {
   /** A company name, or the labels `person` and `owner`. */
   payee: string;
   justification: LocalizedText;
+  /** Contract 6.13: present (and `true`) only on a row that replaces an earlier one. */
+  corrected?: true;
 }
 export interface Adjustment {
   date: string;
   /** Signed: an adjustment can add to or take from the balance. */
   cents: number;
   reason: LocalizedText;
+  /** Contract 6.13: present (and `true`) only on a row that replaces an earlier one. */
+  corrected?: true;
 }
 export interface Snapshot {
   schema: 2;
@@ -54,7 +58,7 @@ type Obj = Record<string, unknown>;
 
 const MAX_CENTS = 1_000_000_000_000;
 const MAX_ROWS = 5000;
-const MAX_TEXT = 500;
+const MAX_TEXT = 280; // contract 6.13: a justification or a reason is at most 280 characters
 const MAX_PAYEE = 80;
 const DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
 const INSTANT = /^(\d{4}-\d{2}-\d{2})T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,9})?Z$/;
@@ -179,8 +183,14 @@ function isDonation(value: unknown): value is Donation {
   return isCents(value.seq, 1) && isDay(value.date) && isCents(value.cents, 1) && (value.name === null || isDisplayName(value.name));
 }
 
+/** The optional `corrected` marker (contract 6.13): absent, or exactly `true`. The row keys are the base ones plus it. */
+function hasRowKeys(value: Obj, keys: readonly string[]): boolean {
+  if (!Object.hasOwn(value, 'corrected')) return hasExactKeys(value, keys);
+  return value.corrected === true && hasExactKeys(value, [...keys, 'corrected']);
+}
+
 function isExpense(value: unknown): value is Expense {
-  if (!isObject(value) || !hasExactKeys(value, ['date', 'category', 'cents', 'payee', 'justification'])) return false;
+  if (!isObject(value) || !hasRowKeys(value, ['date', 'category', 'cents', 'payee', 'justification'])) return false;
   return (
     isDay(value.date) &&
     (EXPENSE_CATEGORIES as readonly unknown[]).includes(value.category) &&
@@ -191,7 +201,7 @@ function isExpense(value: unknown): value is Expense {
 }
 
 function isAdjustment(value: unknown): value is Adjustment {
-  if (!isObject(value) || !hasExactKeys(value, ['date', 'cents', 'reason'])) return false;
+  if (!isObject(value) || !hasRowKeys(value, ['date', 'cents', 'reason'])) return false;
   return isDay(value.date) && isSignedCents(value.cents) && isLocalized(value.reason);
 }
 
@@ -252,8 +262,8 @@ export function parseSnapshot(input: unknown): Snapshot | undefined {
     generatedAt,
     received: { totalCents: received.totalCents, count: received.count, feesCents: received.feesCents },
     donations: donations.map((row) => ({ seq: row.seq, date: row.date, cents: row.cents, name: row.name })),
-    out: out.map((row) => ({ date: row.date, category: row.category, cents: row.cents, payee: row.payee, justification: { ...row.justification } })),
-    adjustments: adjustments.map((row) => ({ date: row.date, cents: row.cents, reason: { ...row.reason } })),
+    out: out.map((row) => ({ date: row.date, category: row.category, cents: row.cents, payee: row.payee, justification: { ...row.justification }, ...(row.corrected === true ? { corrected: true as const } : {}) })),
+    adjustments: adjustments.map((row) => ({ date: row.date, cents: row.cents, reason: { ...row.reason }, ...(row.corrected === true ? { corrected: true as const } : {}) })),
     balance: { calculatedCents: balance.calculatedCents, reconciledOn: balance.reconciledOn },
     audit: { head: audit.head, entries: audit.entries },
   };
