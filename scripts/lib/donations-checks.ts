@@ -129,14 +129,22 @@ function openBlockFindings(inside: readonly Item[], file: string, locale: string
   }
   const named = new Map<string, Map<string, string>[]>();
   let submits = 0;
+  // Only the controls INSIDE the form count: a control the block holds outside it has no form owner (the form attribute is banned on the
+  // whole page), so it posts nothing, and an empty form must not pass because its would-be fields sit beside it.
+  const owned = insideOf(forms[0]?.element as Element);
   for (const item of inside) {
-    if (!CONTROLS.has(item.name)) continue;
+    if (CONTROLS.has(item.name) && !owned.has(item.element)) findings.push(err(file, `a <${item.name}> of the open block sits outside the donation form`));
+  }
+  for (const item of inside) {
+    if (!CONTROLS.has(item.name) || !owned.has(item.element)) continue;
     const attrs = item.attrs;
     const type = (attrs.get('type') ?? (item.name === 'button' ? 'submit' : 'text')).toLowerCase();
     if (item.name === 'button') {
-      // One submit button; any other button is a script quick-fill: `type="button"`, so it never submits, and no name, so it is never posted.
+      // One submit button, with no name: a submit button posts its own name and value, so a name would add a fourth field. Any other button is
+      // a script quick-fill: `type="button"`, so it never submits, and no name, so it is never posted.
       if (type === 'submit') submits += 1;
-      else if (type !== 'button' || attrs.has('name')) findings.push(err(file, 'a button of the donation form is the submit button or a nameless type="button"'));
+      else if (type !== 'button') findings.push(err(file, 'a button of the donation form is the submit button or a type="button"'));
+      if (attrs.has('name')) findings.push(err(file, 'no button of the donation form has a name: a named button posts a field of its own'));
       continue;
     }
     if (item.name !== 'input') findings.push(err(file, `the donation form has no ${item.name}`));

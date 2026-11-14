@@ -142,6 +142,9 @@ const SCRIPTS = [
   'Runic', 'Ogham', 'Glagolitic', 'Gothic', 'Adlam', 'Nko', 'Yi',
 ].map((script) => ({ script, test: new RegExp(`^\\p{Script_Extensions=${script}}$`, 'u') }));
 const UNLISTED = 'Unlisted';
+// A letter whose Script_Extensions is Common or Inherited (for example U+02B9, a modifier letter) belongs to no one script, like a digit or a
+// space: it is ignored, as the contract says, and never counted as a script of its own.
+const NEUTRAL_LETTER = /^[\p{Script_Extensions=Common}\p{Script_Extensions=Inherited}]$/u;
 
 /**
  * Fallback without `Intl.Segmenter`: one cluster per base character, each combining mark joined to the character before it.
@@ -172,7 +175,7 @@ function graphemes(value: string): string[] | undefined {
 function singleScript(value: string): boolean {
   let common: Set<string> | undefined;
   for (const char of value) {
-    if (!LETTER.test(char)) continue;
+    if (!LETTER.test(char) || NEUTRAL_LETTER.test(char)) continue;
     const scripts = SCRIPTS.filter(({ test }) => test.test(char)).map(({ script }) => script);
     const set = new Set(scripts.length > 0 ? scripts : [UNLISTED]);
     common = common === undefined ? set : new Set([...common].filter((script) => set.has(script)));

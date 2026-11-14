@@ -30,11 +30,13 @@ export interface FetchInit {
   signal: AbortSignal;
 }
 
-/** The part of a `Response` the flow reads: the body is read as text so its size is checked before it is parsed. */
+/** The part of a `Response` the flow reads: the body is read in chunks so its size is bounded while it arrives, then checked before it is parsed. */
 export interface PanelResponse {
   ok: boolean;
   headers: { get(name: string): string | null };
   text(): Promise<string>;
+  /** The streamed body. When a stand-in has none, `text()` is read instead and its length is checked after. */
+  body?: { getReader(): { read(): Promise<ReadableStreamReadResult<Uint8Array>>; cancel(): Promise<void> } } | null;
 }
 
 /** The snapshot holds at most 100 donations plus the owner's expenses: far below this. A larger body is refused unparsed. */
@@ -64,6 +66,39 @@ function labelsOf(root: PanelNode): PanelLabels | undefined {
     categories[category] = label;
   }
   return { anonymous: labelAnonymous, received: labelReceived, spent: labelSpent, person: labelPerson, owner: labelOwner, corrected: labelCorrected, categories };
+}
+
+/**
+ * The body as text, or `undefined` when it is larger than `MAX_BODY_CHARS` bytes. With a streamed body the bytes are counted as they
+ * arrive and the reader is cancelled at the limit, so a response with no `Content-Length` cannot make the page hold or download more
+ * than the limit (`response.text()` would read it all first). The timeout is a separate limit (an abort ends the read with an error).
+ */
+async function readBounded(response: PanelResponse): Promise<string | undefined> {
+  const reader = response.body?.getReader();
+  if (reader === undefined) {
+    const text = await response.text();
+    return text.length > MAX_BODY_CHARS ? undefined : text;
+  }
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value === undefined) continue;
+    total += value.byteLength;
+    if (total > MAX_BODY_CHARS) {
+      await reader.cancel();
+      return undefined;
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder('utf-8').decode(bytes);
 }
 
 function setHidden(root: PanelNode, selector: string, hidden: boolean): void {
@@ -117,8 +152,8 @@ export async function startPanel(root: PanelNode | null, env: PanelEnv): Promise
     if (!response.ok || !JSON_TYPE.test(response.headers.get('content-type') ?? '')) return unavailable(root);
     const declared = Number(response.headers.get('content-length'));
     if (Number.isFinite(declared) && declared > MAX_BODY_CHARS) return unavailable(root);
-    const body = await response.text();
-    if (body.length > MAX_BODY_CHARS) return unavailable(root);
+    const body = await readBounded(response);
+    if (body === undefined) return unavailable(root);
     const snapshot = parseSnapshot(JSON.parse(body));
     if (snapshot === undefined) return unavailable(root);
     if (hasData(snapshot)) show(root, snapshot, labels, env);

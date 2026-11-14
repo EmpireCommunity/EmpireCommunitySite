@@ -289,3 +289,40 @@ test('the withdrawn counts: each line follows its own count, and a count alone k
     }
   }
 });
+
+// A streamed body with no Content-Length (CodeRabbit): the bytes are counted as they arrive and the reader is cancelled at the limit,
+// so the page never holds more than the limit and `text()` (which would read it all) is never called.
+function streamed(chunks: Uint8Array[], headers: Record<string, string> = { 'content-type': 'application/json' }) {
+  const log = { reads: 0, cancelled: false, textCalled: false };
+  const response: PanelResponse = {
+    ok: true,
+    headers: { get: (name) => headers[name.toLowerCase()] ?? null },
+    text: () => { log.textCalled = true; return Promise.resolve(''); },
+    body: {
+      getReader: () => ({
+        read: () => { const value = chunks[log.reads]; log.reads += 1; return Promise.resolve(value === undefined ? { done: true as const, value: undefined } : { done: false as const, value }); },
+        cancel: () => { log.cancelled = true; return Promise.resolve(); },
+      }),
+    },
+  };
+  return { log, response };
+}
+
+test('a streamed body with no length is bounded while it arrives, and a body split across chunks is decoded whole', async () => {
+  const encoder = new TextEncoder();
+  const overflow = streamed(Array.from({ length: 10 }, () => new Uint8Array(MAX_BODY_CHARS / 4 + 1)));
+  const refused = makePanel();
+  await startPanel(refused.root, makeEnv(overflow.response).env);
+  assert.equal(shown(refused), JSON.stringify(SENTENCE));
+  assert.equal(overflow.log.cancelled, true, 'the reader is cancelled at the limit');
+  assert.equal(overflow.log.reads, 4, 'it stopped at the fourth chunk, the one that crossed the limit, not after all ten');
+  assert.equal(overflow.log.textCalled, false);
+  // The same snapshot cut in the middle of a multi-byte character still parses.
+  const bytes = encoder.encode(JSON.stringify(edited((s) => { s.donations[1].name = 'João'; })));
+  const cut = bytes.indexOf(0xc3) + 1;
+  const whole = streamed([bytes.slice(0, cut), bytes.slice(cut)]);
+  const panel = makePanel();
+  await startPanel(panel.root, makeEnv(whole.response).env);
+  assert.equal(shown(panel), JSON.stringify(SHOWN));
+  assert.equal(whole.log.textCalled, false);
+});
