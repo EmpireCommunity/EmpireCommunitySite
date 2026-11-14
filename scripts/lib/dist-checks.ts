@@ -5,11 +5,11 @@ import { HTML_LANG, LOCALES, routePath, type Locale } from '../../src/lib/routes
 
 export type Finding = { level: 'error' | 'warning'; file: string; message: string };
 
-const err = (file: string, message: string): Finding => ({ level: 'error', file, message });
+export const err = (file: string, message: string): Finding => ({ level: 'error', file, message });
 const warn = (file: string, message: string): Finding => ({ level: 'warning', file, message });
 
 /** Attribute names (lower-cased, exact) and values of one tag's attribute text: `data-src` is not `src`; the first duplicate wins. */
-function attributesOf(text: string): Map<string, string> {
+export function attributesOf(text: string): Map<string, string> {
   const attrs = new Map<string, string>();
   for (const m of text.matchAll(/([^\s"'<>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g)) {
     const name = (m[1] ?? '').toLowerCase();
@@ -326,26 +326,8 @@ export function paymentGuard(text: string, file: string, allowedEmails: Readonly
   return findings;
 }
 
-const decodeEntities = (text: string) =>
+export const decodeEntities = (text: string) =>
   text.replace(/&#(\d+);/g, (_, code: string) => String.fromCodePoint(Number(code))).replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
-
-/**
- * A support page carries exactly one `data-donations="not-open"` block (site-data section 10, D-28). The block holds the
- * required message as plain text and nothing else: no link, form, button or any other markup that could point to a way
- * to send money. The analytics host is absent from the page (the strict baseline is kept for the later donation contract).
- */
-export function supportPage(html: string, file: string, notOpenMessage: string): Finding[] {
-  const findings: Finding[] = [];
-  const blocks = [...html.matchAll(/<([a-z][a-z0-9]*)\b[^>]*\bdata-donations=["']?not-open["']?[^>]*>([\s\S]*?)<\/\1>/gi)];
-  if (blocks.length !== 1) findings.push(err(file, `expected exactly one data-donations="not-open" block, found ${blocks.length}`));
-  for (const block of blocks) {
-    const inner = block[2] ?? '';
-    if (/</.test(inner)) findings.push(err(file, 'the data-donations="not-open" block must be plain text: no link, form, button or other markup'));
-    else if (decodeEntities(inner).trim() !== notOpenMessage) findings.push(err(file, 'the data-donations="not-open" block does not carry support.donations.notOpen'));
-  }
-  if (/cloudflareinsights|data-cf-beacon/i.test(html)) findings.push(err(file, 'the support pages carry no analytics beacon (site-data section 10)'));
-  return findings;
-}
 
 export const BEACON_SRC = 'https://static.cloudflareinsights.com/beacon.min.js';
 
@@ -375,11 +357,6 @@ export function analyticsBeacon(html: string, file: string, expected: boolean, t
     findings.push(err(file, 'data-cf-beacon must hold only the site token from site.yaml'));
   }
   return findings;
-}
-
-/** The donations block belongs to the support pages only: no other page states or suggests that a donation can be made. */
-export function donationsBlockElsewhere(html: string, file: string): Finding[] {
-  return /data-donations\s*=/i.test(html) ? [err(file, 'data-donations belongs to the support pages only')] : [];
 }
 
 /** "Pix" and "Mercado Pago" in page text are a warning for the PR reviewer, not a failure. */

@@ -47,8 +47,9 @@ pnpm dev | pnpm build | pnpm check (astro check) | pnpm lint | pnpm test
 | **Low** | Copy and translations, styling and tokens, assets, docs, version bumps. |
 
 High risk needs a short contract, a threat model on the sensitive surface, tests on the risky paths and one
-review each (architecture, tests, security) on the final commit. Donations are not open at launch: do not add
-any Pix or receiving-money schema until the donation contract exists.
+review each (architecture, tests, security) on the final commit. Donations are not open at launch (`donations.status: not-open`); the open state exists behind that default (P2-09) and
+only the opening (P2-12, owner's OK) flips it. Never add a Pix, payment-provider host, key or receiving-money schema to the
+site: the donation form only posts to the donations service on the same origin.
 
 ## Data rules that are easy to break
 

@@ -1,9 +1,9 @@
 ---
 // Inline SVG icons, 20 px by default, `currentColor`, hidden from assistive technology (DESIGN.md "Ícones").
-// Arrows and plus: Lucide (ISC), stroke 1.5. Discord and WhatsApp marks: Simple Icons (CC0), monochrome.
+// Arrows, plus and external link: Lucide (ISC), stroke 1.5. Discord and WhatsApp marks: Simple Icons (CC0), monochrome.
 // Origins are recorded in LICENSES.md. Add an icon here, never a package.
 interface Props {
-  name: 'arrow-right' | 'arrow-down' | 'plus' | 'discord' | 'whatsapp';
+  name: 'arrow-right' | 'arrow-down' | 'plus' | 'external-link' | 'discord' | 'whatsapp';
   size?: number;
   class?: string;
 }
@@ -47,6 +47,15 @@ const isBrand = name === 'discord' || name === 'whatsapp';
       <>
         <path d="M12 5v14" />
         <path d="m19 12-7 7-7-7" />
+      </>
+    )
+  }
+  {
+    name === 'external-link' && (
+      <>
+        <path d="M15 3h6v6" />
+        <path d="M10 14 21 3" />
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
       </>
     )
   }

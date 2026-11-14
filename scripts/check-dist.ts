@@ -8,10 +8,11 @@ import { formatRulesDate, inviteUrl } from '../src/lib/community-rules.ts';
 import { CommunityRulesSchema } from '../src/schemas/community-rules.ts';
 import { TeamMemberSchema } from '../src/schemas/team.ts';
 import {
-  analyticsBeacon, discordChooser, internalDiscordLinks, discordLinks, discordPage, gateCss, hasEffectiveDate, legalMarkdownHtml, headerLogoLink, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, mainContent, membersFallback, paymentGuard, paymentWords, personData, supportPage, donationsBlockElsewhere,
+  analyticsBeacon, discordChooser, internalDiscordLinks, discordLinks, discordPage, gateCss, hasEffectiveDate, legalMarkdownHtml, headerLogoLink, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, mainContent, membersFallback, paymentGuard, paymentWords, personData,
   staleDates, whatsappAbsent, whatsappInviteLink,
   type Finding,
 } from './lib/dist-checks.ts';
+import { donationsBlockElsewhere, reservedDonationsPath, supportPage, supportStatus } from './lib/donations-checks.ts';
 import { PENDING } from './lib/pending.ts';
 import { LOCALES, routePath, slugOf, type Locale } from '../src/lib/routes.ts';
 
@@ -186,7 +187,18 @@ for (const file of htmlFiles) {
   add(...analyticsBeacon(read(distDir, file), file, expected, beaconToken));
 }
 
-// D-28: support pages carry the donations-not-open block; the payment guard runs on dist/ and on the content sources.
+// D-28, P2-09: support pages carry one donations block in the state the site data asks for (`not-open` until the opening,
+// P2-12; `open` is the form that posts to the donations service); the payment guard runs on dist/ and on the content sources.
+// A pending flag counts unless it is exactly false (the same reading as the release guard); the parameter type is widened so the
+// flag is not narrowed to its current literal.
+const stillPending = (flag: boolean): boolean => flag !== false;
+// `CHECK_DIST_SUPPORT_DATA` points the run at another support data file. It is a TEST HOOK for the spawn test that proves an `open`
+// status with the legal texts pending fails the build (tests/dist-checks.test.ts), and it is never set in a workflow or a script: a
+// release run reads the repository file. Unset, the run reads `src/data/support.yaml`.
+const supportDataFile = process.env.CHECK_DIST_SUPPORT_DATA ?? 'src/data/support.yaml';
+const supportStatusResult = supportStatus(parse(readFileSync(supportDataFile, 'utf8')), stillPending(PENDING.legalPages));
+add(...supportStatusResult.findings);
+const donationsStatus = supportStatusResult.status;
 const supportFiles = new Set<string>();
 for (const locale of ['pt-br', 'en-us']) {
   const file = `${locale}/support/index.html`;
@@ -196,9 +208,11 @@ for (const locale of ['pt-br', 'en-us']) {
     continue;
   }
   const messages = JSON.parse(read('src/i18n/messages', `${locale}.json`)) as Record<string, string>;
-  const notOpen = messages['support.donations.notOpen'] ?? '';
-  add(...supportPage(read(distDir, file), file, notOpen));
+  const notOpenMessage = messages['support.donations.notOpen'] ?? '';
+  add(...supportPage(read(distDir, file), file, { status: donationsStatus === 'open' ? 'open' : 'not-open', notOpenMessage, locale }));
 }
+// `/donations/` belongs to the donations service (routing-locale, reserved paths): the site builds nothing under it.
+add(...reservedDonationsPath(files));
 for (const file of htmlFiles.filter((f) => !supportFiles.has(f))) add(...donationsBlockElsewhere(read(distDir, file), file));
 for (const file of files.filter((f) => TEXT_EXTENSIONS.test(f))) {
   const text = read(distDir, file);

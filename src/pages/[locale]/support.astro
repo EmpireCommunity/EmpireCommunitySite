@@ -1,12 +1,15 @@
 ---
-// Apoiar (information-architecture section 7.5): goal, donations not open, server parts, donate parts, other ways to
-// help, transparency. At launch the site receives no money and shows no way to send any (D-28), so there is one
-// `data-donations="not-open"` block and no payment instruction, account data or provider link anywhere. The page reads
+// Apoiar (information-architecture section 7.5): goal, donations (not open, or the form and the panel once open), server
+// parts, donate parts, other ways to help, transparency. The site never receives money (D-28): while not open there is one
+// `data-donations="not-open"` block; once open there is one `data-donations="open"` block whose form posts to the donations
+// service. Either way no payment instruction, account data or provider link is written in the page. The page reads
 // only `getSupport()`. The parts table (P-02) and the progress bar (P-03) exist only when there is real data: with no
 // secured value there is no bar and no "R$ 0" (D-39: this is the only page that shows it). Reaching the goal switches
 // the progress text and hides nothing (D-22).
 import type { GetStaticPaths } from 'astro';
 import ArrowLink from '../../components/ArrowLink.astro';
+import DonationsOpen from '../../components/DonationsOpen.astro';
+import DonationsPanel from '../../components/DonationsPanel.astro';
 import Index from '../../components/Index.astro';
 import PageHead from '../../components/PageHead.astro';
 import IndexSection from '../../components/IndexSection.astro';
@@ -28,18 +31,25 @@ const { goal, parts, partDonations } = support;
 const target = formatBrl(goal.targetCents, locale);
 const hasProgress = goal.securedCents > 0;
 const reached = goal.remainingCents === 0;
+// Donations are `not-open` until the opening (P2-12). Open adds the form and the transparency panel; the "soon" notice and
+// the not-open sentence go away, so the page never says both. While `not-open`, no form, panel or script reaches the page.
+const donationsOpen = support.donations.status === 'open';
 ---
 
 <BaseLayout locale={locale} routeKey="support">
   <PageHead title={t(locale, 'support.title')} lead={t(locale, 'support.lead')} />
   <div class="frame pt-24 lg:pt-32">
-    <p
-      data-donations="soon"
-      role="note"
-      class="mb-24 flex min-h-[48px] items-center border border-pauta-forte px-16 py-12 text-body font-medium text-papel lg:mb-32"
-    >
-      {t(locale, 'support.notice')}
-    </p>
+    {
+      !donationsOpen && (
+        <p
+          data-donations="soon"
+          role="note"
+          class="mb-24 flex min-h-[48px] items-center border border-pauta-forte px-16 py-12 text-body font-medium text-papel lg:mb-32"
+        >
+          {t(locale, 'support.notice')}
+        </p>
+      )
+    }
 
     <Index closed>
       <IndexSection title={goal.title}>
@@ -58,9 +68,18 @@ const reached = goal.remainingCents === 0;
         }
       </IndexSection>
 
-      <IndexSection title={t(locale, 'support.donations.title')}>
-        <p data-donations="not-open" class="max-w-[72ch] text-body text-papel">{t(locale, 'support.donations.notOpen')}</p>
-      </IndexSection>
+      {
+        donationsOpen ? (
+          <>
+            <DonationsOpen locale={locale} />
+            <DonationsPanel locale={locale} />
+          </>
+        ) : (
+          <IndexSection title={t(locale, 'support.donations.title')}>
+            <p data-donations="not-open" class="max-w-[72ch] text-body text-papel">{t(locale, 'support.donations.notOpen')}</p>
+          </IndexSection>
+        )
+      }
 
       {
         parts.length > 0 && (

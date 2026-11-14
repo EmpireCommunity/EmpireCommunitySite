@@ -310,7 +310,7 @@ The Support page reads **only** `getSupport()` from `src/lib/support.ts`, never 
 
 ```ts
 type SupportSnapshot = {
-  donations: { status: 'not-open' };
+  donations: { status: 'not-open' | 'open' };
   goal: { id: string; title: string; description: string; targetCents: number;
           securedCents: number; remainingCents: number; progress: number /* 0..1 */ };
   parts: { id: string; name: string; quantity: number; totalCents: number /* quantity x unit price */;
@@ -330,7 +330,7 @@ image pipeline exists.
 schemaVersion: 1
 verified: { on: 2026-11-11, by: owner }       # REQUIRED; review trail, not displayed
 donations:
-  status: not-open                             # the only value schema version 1 accepts (D-28)
+  status: not-open                             # `not-open` until the opening (P2-12); `open` shows the donation form (P2-09)
 goal:
   id: xeon-server
   title: { pt-br: ..., en-us: ... }
@@ -358,16 +358,52 @@ Rules:
   over parts with status `purchased` or `donated`; `remainingCents = max(0, targetCents - securedCents)`;
   `progress = min(1, securedCents / targetCents)`. `targetCents` is greater than 0. Currency is BRL (site.yaml).
   `quantity` is an integer from 1 to 99.
-- **Donations state.** `donations.status` is the literal `not-open`; any other value fails the build with the message
-  that donations are opened by a later contract. The schema is **strict**: an unknown key (`pix`, a gateway or payment
-  field, a recipient) fails the build, so payment data cannot enter the file without changing this contract. The
-  Support page renders one block marked `data-donations="not-open"` with the message `support.donations.notOpen`
-  (required in both locales). The message says that donations are not open yet; it gives **no payment instruction, no
+- **Donations state.** `donations.status` is `not-open` or `open` (P2-09, donations contract section 2); any other value
+  fails the build. The value stays `not-open` until the opening (P2-12): the build refuses `open` while Privacy and Terms
+  are still pending (`PENDING.legalPages`, donations contract section 10). The schema is **strict**: an unknown key
+  (`pix`, a gateway or payment field, a recipient) fails the build, so payment data cannot enter the file without changing
+  this contract. While `not-open`, the Support page renders one block marked `data-donations="not-open"` with the message
+  `support.donations.notOpen` (required in both locales) and no form, panel or script. While `open`, it renders instead one
+  block marked `data-donations="open"` holding one form: `method="post"`, `action="/donations/api/v1/checkout"` (the
+  donations service on the same origin), the fields `amount` (text in reais, `inputmode="decimal"`, `required`,
+  `maxlength="14"`), `locale` (hidden, the page locale) and `display_name` (`maxlength="20"`), one submit button and
+  optional nameless `type="button"` quick-fill buttons written by script; no radio, no other field, no external address,
+  no payment host (the redirect to the payment page is the service's, and the host is in the CSP `form-action`, a header).
+  The Support page also sends `<meta name="referrer" content="no-referrer">` in both states. The not-open message gives **no payment instruction, no
   account data and no link to a payment provider**. No other page, `llms.txt` or structured data states or suggests
   that a donation can be made now; that part is a human review of the copy in the PR. The owner-approved descriptive
   phrase that the community "runs on voluntary donations" (D-33, D-44) is allowed on Home, Join, Organization and
   Support, because it describes how the community is funded and not a way to give; `home.funding.body` states in the
   same text that money donations are not open yet.
+  The support page is read with **parse5** (`scripts/lib/donations-checks.ts`, a pinned devDependency: MIT, the HTML Standard's tree
+  construction) in the build and in the live monitor, so every rule applies to the tree a browser builds, never to a hand-made
+  reading of the text (two hand-written scanners were bypassed one after the other, which is why none is kept). The page is parsed
+  twice, scripting on and off, because a `noscript` element is text in one reading and markup in the other; a finding in either
+  counts. Any parse error named by the standard is a finding. The rules, on the tree: no `form` attribute and no `formaction`,
+  `formmethod`, `formtarget`, `formenctype` or `formnovalidate` on any element; no named control and no form outside the block;
+  inside the open block an address attribute (`href`, `src`, `action` and the like, the decoded value) holds no `&` and no
+  control or space character and starts with one slash that is not followed by a slash or a backslash, or with `#`; no `script`,
+  `iframe`, `object`, `embed`, `base`, `meta`, `link` and no svg `animate`, `set`, `animateTransform` or `animateMotion` in the block;
+  no `select` element anywhere on the page; the referrer meta and `<meta charset="utf-8">` (first element of `head`) are checked in both readings (nginx also sends `charset utf-8`). Other pages: the words
+  `data-donations` and a `Donations*.js` script name must not appear at all (a raw text check).
+  **Limits of the gate, written down so nobody reads more into it (P2-09 review):**
+  - `PENDING.legalPages` is a **proxy** for "Privacy and Terms carry their new version": it turns false when the legal files
+    have an `effectiveDate`, not when their text covers donations. The text that covers donations (donations contract
+    section 10) is a **human gate at P2-12**; the owner approves it before the flip.
+  - CI builds the not-open state only. The open markup is checked by unit tests on HTML strings (`tests/donations-checks.test.ts`),
+    never on a real open build, so a **build and `check-dist` run with `status: open` (and a legal-texts flag set for the
+    test) belongs to P2-11**, together with the browser test of the form.
+  - The not-open build still emits two orphan script bundles, `DonationsOpen...js` and `DonationsPanel...js`, in `dist/_astro`
+    (the bundler builds every component script; a conditional import did not remove them). No page references them: the build
+    refuses any not-open page, and any page but Support, that loads a `Donations*` script or carries a panel marker.
+  - **P2-11 browser e2e list:** Sentinela's crafted pages (an unquoted value ending in a quote, a no-break space or a vertical tab after
+    a tag name, markup inside an svg `script` or `style`, a `noscript` or `template` holding a form-tied control, a protocol-relative
+    address spelled with a character reference or a tab, a second referrer meta inside a `noscript` in `head`) run in a real browser,
+    to confirm the tree the guard reads is the one the browser builds. The unit tests prove the guard on parse5 only.
+  - **P2-11 checklist: the checkout host (`www.mercadopago.com.br`) is written in four places** that must stay equal, and equal
+    to the service's `303` allowlist: `nginx/nginx.conf` (the support map line), `scripts/lib/security-headers.ts`
+    (`SUPPORT_CSP`), the support row of the routing-locale CSP table, and `tests/integrity.test.ts`. The HTTP test and the
+    live monitor compare the first two with the header; the tests compare the rest by hand, so P2-11 checks all four.
 - **Goal is a milestone, not an end (D-22).** Reaching it (`remainingCents` is 0) switches the progress text to the
   required message `support.goal.reached`; nothing is hidden, closed or marked as complete. Ongoing community costs
   (power, upgrades, hosting, domains) are part of the same later donation contract.
@@ -448,7 +484,8 @@ effectiveDate: <launch day>     # YYYY-MM-DD, identical in both locales; absent 
   the owner to supply the name and the e-mail (depends on the owner).
 - **No payments at launch (D-28).** The Privacy and Terms texts at launch do not describe donations, a payment
   provider or payment data, because the site neither receives money nor offers a way to send it. The later donation
-  contract updates both texts, with a new `version` and `effectiveDate`, before donations open.
+  contract updates both texts, with a new `version` and `effectiveDate`, before donations open (the build refuses
+  `donations.status: open` until `PENDING.legalPages` is false).
 - Cloudflare Web Analytics is described as cookieless by Cloudflare; the drafter confirms the statement against
   Cloudflare's current documentation before publishing (not verified here).
 - JSON-LD and any other JSON embedded in HTML is serialized with `<`, `>`, `&`, U+2028 and U+2029 escaped; a fixture
@@ -469,7 +506,7 @@ effectiveDate: <launch day>     # YYYY-MM-DD, identical in both locales; absent 
 | `hreflang` reciprocity, sitemap content, canonical present | yes | C-5 |
 | Images: metadata absent (backstop; the primary control is the pre-commit step), size, alt | yes | privacy |
 | Team: opaque ids, scope rules, `dist` person markers and team images only from validated entries | yes | C-4, privacy |
-| Support: strict keys, `donations.status` is `not-open`, cents, derived totals, `verified` present, required messages (`support.donations.notOpen`, `support.goal.reached`, `support.progress.criterion`), payment guard on sources and `dist/` (section 10) | yes | money |
+| Support: strict keys, `donations.status` is `not-open` or `open` (open refused while the legal texts are pending), cents, derived totals, `verified` present, required messages (`support.donations.notOpen`, `support.goal.reached`, `support.progress.criterion`), payment guard on sources and `dist/` (section 10) | yes | money |
 | Legal Markdown has no raw HTML; JSON-LD escaping fixtures | yes | security |
 | `verify-links`: external URLs answer, repos public (network job) | yes in CI, not in local build | C-2 |
 | Stale `whatsapp.asOf`, `verified.on`, `reviewOn`; the words "Pix" or "Mercado Pago" in page text | warning | review |

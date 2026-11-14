@@ -89,7 +89,7 @@ for (const path of ['/pt-br/', '/en-us/', '/pt-br/support/', '/en-us/support/'])
   await check(`Payment guard ${path}`, INTEGRITY_PENDING.site, async () => {
     const response = await once(path);
     const support = path.endsWith('/support/');
-    return [...successful(response), ...noPayment(response.text, support), ...(support ? rewriting(response.text) : [])];
+    return [...successful(response), ...noPayment(response.text, support, path.split('/')[1]), ...(support ? rewriting(response.text) : [])];
   });
 }
 for (const path of ['/pt-br/', '/en-us/support/']) {

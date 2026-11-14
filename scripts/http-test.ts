@@ -5,7 +5,7 @@ import { INTEGRITY_PENDING } from './lib/integrity-pending.ts';
 // HTTP header test (docs/contracts/routing-locale.md section 6). Runs against the built image in CI and against the
 // public URL after a deploy.
 // Usage: BASE_URL=http://127.0.0.1:18080 node scripts/http-test.ts      (add PUBLIC=1 for the proxy-layer headers)
-import { DEFAULT_CSP, SUPPORT_CSP, PERMISSIONS_POLICY } from './lib/security-headers.ts';
+import { DEFAULT_CSP, SUPPORT_CSP, PERMISSIONS_POLICY, htmlCharsetProblem } from './lib/security-headers.ts';
 import { PENDING } from './lib/pending.ts';
 import { isIntendedEdgeBlock } from './lib/edge-block.ts';
 
@@ -37,6 +37,8 @@ async function checkPath(expected: Expectation, init: RequestInit = {}): Promise
   const cache = response.headers.get('cache-control');
   const acceptable = Array.isArray(expected.cache) ? expected.cache : [expected.cache];
   if (cache === null || !acceptable.includes(cache)) fail(where, `Cache-Control is ${cache}, expected ${acceptable.join(' or ')}`);
+  const charsetProblem = htmlCharsetProblem(response);
+  if (charsetProblem !== undefined) fail(where, charsetProblem);
   const server = response.headers.get('server');
   if (server !== null && /\d/.test(server)) fail(where, `Server header exposes a version: ${server}`);
   if (response.headers.get('set-cookie') !== null) fail(where, 'Set-Cookie present');
