@@ -406,8 +406,9 @@ port 8080. The request body is never read and nothing from a request is echoed i
   Worker** against its own variables. `fetchedAt` is the time of the successful Discord call, in the format of
   `updatedAt`.
 - No `Set-Cookie`, no `Access-Control-*`, no authentication: the body is three public values and a time.
-- **No access log and nothing written per request** (D-20). The process MAY write one line of fixed vocabulary per
-  scheduled fetch (the outcome and the HTTP status or an error class), never upstream text and never request data.
+- **No access log and nothing written per request** (D-20). The process MUST write **exactly one line of fixed
+  vocabulary per scheduled fetch** (the outcome and the HTTP status or an error class), never upstream text and never
+  request data: it is the only place that tells a removed invite from a refused address (2.4, 2.10).
 - Public exposure: Traefik routes only `Host` `empirecommunity.org` with `Path` `/data/members-source.json` to it
   ([deploy](deploy.md) section 13). Anyone may read it; that is accepted, and the edge rate limit of 2.9 covers it.
 

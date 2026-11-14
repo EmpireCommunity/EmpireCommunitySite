@@ -169,7 +169,7 @@ token or other secret is used. Rows whose site or root target is not live yet wa
 | Root | `/?utm_source=ci` answers `302` to `/en-us/?utm_source=ci` from the (non-Brazilian) runner. The Brazilian case is checked by hand (C-8). |
 | Discord redirect (D-78) | `/discord?utm_source=ci` answers `302` to `/en-us/discord/?utm_source=ci` from the (non-Brazilian) runner, and `/discord/` the same. Under the same `root` launch flag as the row above (warns before launch, blocks after). The Brazilian case is checked by hand (C-10). |
 | Member count | `/data/members.json` validates against the schema, `source` is not `built-in`, and `updatedAt` is not older than 3 days or more than 5 minutes in the future. |
-| Member count agrees with Discord (B-WK1) | Only while `source` is `discord-invite`: one direct invite lookup with counts from the runner; its `approximate_member_count` and the published `members` must be within the band of members-json 2.4 of each other (neither below half nor above double the other). A difference fails the row. **A lookup that does not answer 200 with the configured guild only warns** (whether Discord answers runner addresses is not verified), so this row never turns the monitor red by itself for a refused lookup. |
+| Member count agrees with Discord (B-WK1) | Only while `source` is `discord-invite`. It **reuses the answer of the invite lookup the Discord entry row already makes** (one call per run, asked with counts) and reads from it **only the count and the guild id; the body is never printed**, because the log of a public repository is public and the answer carries the inviter's user object. Its `approximate_member_count` and the published `members` must be within the band of members-json 2.4 of each other (neither below half nor above double the other); when either number is below 50, where that band does not apply, they must differ by at most 50. A difference fails the row. **A lookup that does not answer 200 with the configured guild only warns** (whether Discord answers runner addresses is not verified), so this row never turns the monitor red by itself for a refused lookup. |
 | Invite copies agree (members-json 2.6) | The public `wrangler.jsonc` on `main` of the Worker repository carries the same `DISCORD_GUILD_ID` as `src/data/site.yaml` on `main`; a different `DISCORD_INVITE_CODE` fails too, which is expected only between steps 2 and 3 of the rotation and clears on the next run. Reads public raw files only. The Worker is already live, so this row is blocking. |
 | Headers | `/pt-br/` and `/en-us/support/` carry the expected CSP and the other headers of routing-locale section 6. `Strict-Transport-Security` MUST carry exactly one valid `max-age` greater than 0; the contract sets no longer minimum duration. |
 
@@ -299,7 +299,10 @@ requirement above holds, and unless `DISCORD_INVITE_CODE` equals `discord.invite
 **Host procedure** (Guindaste; **the owner's OK for each deploy**; steps 1 to 3 and 5 of section 6 apply with the
 relay's digest and its own compose file):
 
-1. Take the relay digest from the release and **verify its attestation before pulling**, with the tag identity.
+1. Take the relay digest from **`relay-image-digest.txt`** of the release and **verify its attestation before
+   pulling**, with the tag identity. Both images share one repository, subject name and identity, so the attestation
+   proves the workflow and the tag, **not which of the two images a digest is**: a swapped digest passes it. That
+   fails safe (the site image answers 404 on the relay path) and **step 3a is the identity check**.
 2. Keep a dated backup of the compose file, set the `image:` line to the tag and that digest, pull and start,
    waiting for health.
 3. Verify: (a) from outside, `GET https://empirecommunity.org/data/members-source.json` answers 200 with the
