@@ -23,6 +23,7 @@
   ],
   "adjustments": [],
   "balance": { "calculatedCents": 23185, "reconciledOn": "2026-12-01" },
+  "voided": { "out": 1, "adjustments": 0 },
   "sources": { "received": "mercadopago", "out": "owner", "adjustments": "owner", "balance": "calculated" },
   "audit": { "head": "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0", "entries": 3 }
 }

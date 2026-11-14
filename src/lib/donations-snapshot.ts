@@ -51,6 +51,8 @@ export interface Snapshot {
   out: Expense[];
   adjustments: Adjustment[];
   balance: { calculatedCents: number; reconciledOn: string | null };
+  /** Contract 6.13: rows the owner withdrew with `void`. Not listed, outside the balance identity, not drawn yet (P2-09 copy). */
+  voided: { out: number; adjustments: number };
   audit: { head: string; entries: number };
 }
 
@@ -250,8 +252,8 @@ function consistent(snapshot: Snapshot): boolean {
 /** Validates an untrusted JSON value; `undefined` when anything is wrong (fail closed, never a partial snapshot). */
 export function parseSnapshot(input: unknown): Snapshot | undefined {
   if (!isObject(input)) return undefined;
-  if (!hasExactKeys(input, ['schema', 'generatedAt', 'received', 'donations', 'out', 'adjustments', 'balance', 'sources', 'audit'])) return undefined;
-  const { schema, generatedAt, received, donations, out, adjustments, balance, sources, audit } = input;
+  if (!hasExactKeys(input, ['schema', 'generatedAt', 'received', 'donations', 'out', 'adjustments', 'balance', 'voided', 'sources', 'audit'])) return undefined;
+  const { schema, generatedAt, received, donations, out, adjustments, balance, voided, sources, audit } = input;
   if (schema !== SNAPSHOT_SCHEMA || !isInstant(generatedAt)) return undefined;
   if (!isObject(received) || !hasExactKeys(received, ['totalCents', 'count', 'feesCents'])) return undefined;
   if (!isCents(received.totalCents, 0) || !isCents(received.count, 0) || !isCents(received.feesCents, 0)) return undefined;
@@ -266,6 +268,7 @@ export function parseSnapshot(input: unknown): Snapshot | undefined {
   // service's own tests pin the value. The panel never prints it.
   if (typeof sources.received !== 'string' || !/^[a-z]{1,32}$/.test(sources.received)) return undefined;
   if (sources.out !== 'owner' || sources.adjustments !== 'owner' || sources.balance !== 'calculated') return undefined;
+  if (!isObject(voided) || !hasExactKeys(voided, ['out', 'adjustments']) || !isCents(voided.out, 0) || !isCents(voided.adjustments, 0)) return undefined;
   if (!isObject(audit) || !hasExactKeys(audit, ['head', 'entries'])) return undefined;
   if (typeof audit.head !== 'string' || !HEX.test(audit.head) || !isCents(audit.entries, 0)) return undefined;
 
@@ -277,6 +280,7 @@ export function parseSnapshot(input: unknown): Snapshot | undefined {
     out: out.map((row) => ({ date: row.date, category: row.category, cents: row.cents, payee: row.payee, justification: { ...row.justification }, ...(row.corrected === true ? { corrected: true as const } : {}) })),
     adjustments: adjustments.map((row) => ({ date: row.date, cents: row.cents, reason: { ...row.reason }, ...(row.corrected === true ? { corrected: true as const } : {}) })),
     balance: { calculatedCents: balance.calculatedCents, reconciledOn: balance.reconciledOn },
+    voided: { out: voided.out, adjustments: voided.adjustments },
     audit: { head: audit.head, entries: audit.entries },
   };
   return consistent(snapshot) ? snapshot : undefined;

@@ -57,6 +57,12 @@ test('anything that is not exactly the schema is refused whole (fail closed)', (
     ['schema as a string', withEdit((s) => { s.schema = '2'; })],
     ['an extra top-level key', withEdit((s) => { s.extra = 1; })],
     ['a missing section', withEdit((s) => { delete s.audit; })],
+    ['a missing voided object', withEdit((s) => { delete s.voided; })],
+    ['voided with a missing key', withEdit((s) => { delete s.voided.adjustments; })],
+    ['voided with an extra key', withEdit((s) => { s.voided.other = 0; })],
+    ['a negative voided count', withEdit((s) => { s.voided.out = -1; })],
+    ['a fractional voided count', withEdit((s) => { s.voided.adjustments = 0.5; })],
+    ['a voided count as a string', withEdit((s) => { s.voided.out = '1'; })],
     ['an extra key in a donation', withEdit((s) => { s.donations[0].method = 'pix'; })],
     ['a payer field in a donation', withEdit((s) => { s.donations[0].payer = 'x'; })],
     ['a time of day in a donation date', withEdit((s) => { s.donations[0].date = '2026-12-03T10:00:00Z'; })],
@@ -112,6 +118,11 @@ test('figures that do not add up are refused: balance identity, listed totals, s
   const zero = withEdit((s) => { s.adjustments = [{ date: '2026-12-01', cents: 0, reason: { 'pt-br': 'Conferido.', 'en-us': 'Checked.' } }]; });
   assert.ok(parseSnapshot(zero), 'a zero-cent adjustment does not hide the panel');
   assert.equal(parseSnapshot(withEdit((s) => { s.adjustments = [{ date: '2026-12-01', cents: 0.5, reason: { 'pt-br': 'a', 'en-us': 'a' } }]; })), undefined, 'cents stay integers');
+});
+
+test('voided is required, also on an empty history, and kept as parsed', () => {
+  assert.deepEqual(parseSnapshot(withEdit(() => {}))?.voided, { out: 1, adjustments: 0 });
+  assert.deepEqual(parseSnapshot(withEdit((s) => { s.voided = { out: 0, adjustments: 0 }; }))?.voided, { out: 0, adjustments: 0 });
 });
 
 test('the optional corrected marker (contract 6.13) is accepted only as true on out and adjustments rows, and the text limit is 280', () => {
