@@ -9,6 +9,10 @@ release happens and which version it gets. The release PR (`chore/release-X.Y.Z`
 
 ## [Unreleased]
 
+### Added
+
+- Donations transparency panel for the Support page (P2-08, High, D-81). `DonationsPanel` and `src/scripts/donations-panel.ts` read one same-origin JSON (`/donations/api/v1/transparency`, snapshot schema 2 of the donations contract v6.1), validate it whole before drawing anything (`parseSnapshot`: exact keys, integer cents, real days, the balance identity, newest-first `seq`, the contract's display-name set at 20 graphemes) and write only with `textContent`. A wrong, hostile or unreachable snapshot shows one plain sentence and never a partial list; an empty one shows nothing. The donor name sits in a cell that isolates its direction (`dir="auto"`, `unicode-bidi: isolate`) and clips its overflow. Amounts carry their direction in words and in the sign. Locale strings added in both languages. The panel is inert until donations are open: `support.astro` renders it only when `donations.status` is `open`, which the schema still refuses (P2-09 widens it), so today the page carries no panel markup and no script. Tests cover the schema, hostile names and the render (a stand-in document that throws on `innerHTML`).
+
 ### Changed
 
 - T-69 design revision, UI part (T-75, D-78, D-79). Type scale at about 80 percent (`display` 56 px and only on the Home `h1`, new `page-title` 40 px for every inner page, body 16 px, nav 15 px, buttons 16 px, label 13 px), page frame up to 1600 px with 16 / 32 / 48 px margins, Índice in 3 + 9 columns, 56 px header at every width, `section-y` 40 / 64 px, ruled lines with 16 px of padding and no fixed height, 48 px channel buttons 240 px wide. The current page in the header is `papel` at weight 500 with a 2 px bar over the header rule (a bar on the left in the collapsed menu). Every inner page, the legal pages and the 404 open with a `page-head` band in `violeta-capa`. The footer has the lockup on the left, the four groups on the right and a centered bottom bar. The favicon files are the approved disc versions (`favicon.svg`, `favicon.ico`, `icon-192.png`, `icon-512.png`; `apple-touch-icon.png` is unchanged).

@@ -1,0 +1,143 @@
+---
+// The donations panel of the Support page (docs/contracts/donations.md section 6, plan P2-08, Bússola's walkthrough of
+// T-74): the totals, each donation (date, name or "anonymous", amount), the expenses, the adjustments and the calculated
+// balance. This file is only the static frame: every heading and column name is written here from the locale messages;
+// the numbers and rows come from the snapshot and are drawn by `src/scripts/donations-panel.ts` with `textContent`.
+// The whole block starts `hidden` and the script shows it only when there is real data (R-6) or, if the service does not
+// answer, one plain sentence. The page renders this component only when donations are open (support.astro): while the
+// site says "not open" it adds no markup and no script. The panel text never promises real time (it says when the
+// snapshot was built) and never calls the balance the Mercado Pago balance.
+import IndexSection from './IndexSection.astro';
+import { t } from '../i18n/index.ts';
+import type { MessageKey } from '../i18n/index.ts';
+import { EXPENSE_CATEGORIES } from '../lib/donations-snapshot.ts';
+import type { Locale } from '../lib/routes.ts';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const text = (key: string): string => t(locale, `donations.panel.${key}` as MessageKey);
+// The labels the script puts in rows: `data-label-category-hosting` and so on.
+const categoryLabels = Object.fromEntries(
+  EXPENSE_CATEGORIES.map((category) => [`data-label-category-${category}`, text(`category.${category}`)]),
+);
+
+const head = 'py-12 pr-16 text-left text-label font-normal text-papel-suave';
+const headNum = 'py-12 text-right text-label font-normal text-papel-suave max-md:text-left';
+const caption = 'pb-8 text-left font-display text-title text-papel';
+const note = 'mt-12 max-w-[72ch] text-body-sm text-papel-suave';
+---
+
+<div
+  data-donations-panel
+  hidden
+  data-label-anonymous={text('anonymous')}
+  data-label-received={text('dir.in')}
+  data-label-spent={text('dir.out')}
+  data-label-person={text('payee.person')}
+  data-label-owner={text('payee.owner')}
+  {...categoryLabels}
+>
+  <IndexSection title={text('title')} id="doacoes">
+    <div data-panel-body hidden>
+      <dl class="grid max-w-[48rem] grid-cols-2 gap-x-24 gap-y-16 border-b border-pauta pb-16 sm:grid-cols-3">
+        <div class="flex flex-col-reverse justify-end">
+          <dt class="text-body-sm text-papel-suave">{text('total')}</dt>
+          <dd class="font-display text-figure tabular-nums text-papel" data-field="total"></dd>
+        </div>
+        <div class="flex flex-col-reverse justify-end">
+          <dt class="text-body-sm text-papel-suave">{text('count')}</dt>
+          <dd class="font-display text-figure tabular-nums text-papel" data-field="count"></dd>
+        </div>
+        <div class="flex flex-col-reverse justify-end">
+          <dt class="text-body-sm text-papel-suave">{text('balance')}</dt>
+          <dd class="font-display text-figure tabular-nums text-papel" data-field="balance"></dd>
+        </div>
+      </dl>
+
+      <div data-block="donations" hidden class="mt-24">
+        <table class="w-full">
+          <caption class={caption}>{text('latest.caption')}</caption>
+          <thead class="max-md:sr-only">
+            <tr>
+              <th scope="col" class={head}>{text('col.date')}</th>
+              <th scope="col" class={head}>{text('col.name')}</th>
+              <th scope="col" class={headNum}>{text('col.amount')}</th>
+            </tr>
+          </thead>
+          <tbody data-rows="donations"></tbody>
+        </table>
+        <p class={note}>{text('latest.note')}</p>
+      </div>
+
+      <div data-block="out" hidden class="mt-32">
+        <table class="w-full">
+          <caption class={caption}>{text('out.caption')}</caption>
+          <thead class="max-md:sr-only">
+            <tr>
+              <th scope="col" class={head}>{text('col.date')}</th>
+              <th scope="col" class={head}>{text('col.category')}</th>
+              <th scope="col" class={head}>{text('col.payee')}</th>
+              <th scope="col" class={head}>{text('col.reason')}</th>
+              <th scope="col" class={headNum}>{text('col.amount')}</th>
+            </tr>
+          </thead>
+          <tbody data-rows="out"></tbody>
+        </table>
+        <p class={note}>{text('out.note')}</p>
+      </div>
+
+      <div data-block="adjustments" hidden class="mt-32">
+        <table class="w-full">
+          <caption class={caption}>{text('adjustments.caption')}</caption>
+          <thead class="max-md:sr-only">
+            <tr>
+              <th scope="col" class={head}>{text('col.date')}</th>
+              <th scope="col" class={head}>{text('col.reason')}</th>
+              <th scope="col" class={headNum}>{text('col.amount')}</th>
+            </tr>
+          </thead>
+          <tbody data-rows="adjustments"></tbody>
+        </table>
+      </div>
+
+      <div class="mt-32">
+        <h3 class={caption}>{text('balance.title')}</h3>
+        <dl class="max-w-[32rem] border-t border-pauta text-body-sm">
+          <div class="flex justify-between gap-16 border-b border-pauta py-12">
+            <dt class="text-papel-suave">{text('balance.received')}</dt>
+            <dd class="tabular-nums text-livro-entrada" data-field="sumReceived"></dd>
+          </div>
+          <div class="flex justify-between gap-16 border-b border-pauta py-12">
+            <dt class="text-papel-suave">{text('balance.fees')}</dt>
+            <dd class="tabular-nums text-livro-saida" data-field="sumFees"></dd>
+          </div>
+          <div class="flex justify-between gap-16 border-b border-pauta py-12">
+            <dt class="text-papel-suave">{text('balance.out')}</dt>
+            <dd class="tabular-nums text-livro-saida" data-field="sumOut"></dd>
+          </div>
+          <div data-block="adjustments-line" hidden class="flex justify-between gap-16 border-b border-pauta py-12">
+            <dt class="text-papel-suave">{text('balance.adjustments')}</dt>
+            <dd class="tabular-nums text-papel" data-field="sumAdjustments"></dd>
+          </div>
+          <div class="flex justify-between gap-16 py-12 font-medium">
+            <dt class="text-papel">{text('balance.calculated')}</dt>
+            <dd class="tabular-nums text-papel" data-field="balance"></dd>
+          </div>
+        </dl>
+        <p class={note}>{text('balance.note')}</p>
+        <p class="mt-4 max-w-[72ch] text-body-sm text-papel-suave">
+          {text('generated')} <span data-field="generatedAt"></span>.{' '}
+          <span data-block="reconciled" hidden>{text('reconciled')} <span data-field="reconciledOn"></span>.</span>
+        </p>
+      </div>
+    </div>
+    <p data-panel-unavailable hidden role="status" class="max-w-[72ch] text-body text-papel-suave">{text('unavailable')}</p>
+  </IndexSection>
+</div>
+
+<script>
+  import '../scripts/donations-panel.ts';
+</script>

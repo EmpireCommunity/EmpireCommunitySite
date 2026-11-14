@@ -1,0 +1,28 @@
+{
+  "schema": 2,
+  "generatedAt": "2026-12-04T06:30:00.000Z",
+  "received": { "totalCents": 27500, "count": 8, "feesCents": 315 },
+  "donations": [
+    { "seq": 8, "date": "2026-12-03", "cents": 2500, "name": null },
+    { "seq": 7, "date": "2026-12-03", "cents": 1000, "name": "Example A" },
+    { "seq": 6, "date": "2026-12-02", "cents": 10000, "name": null },
+    { "seq": 5, "date": "2026-12-01", "cents": 5000, "name": "Example B" },
+    { "seq": 4, "date": "2026-12-01", "cents": 1000, "name": "Example C" },
+    { "seq": 3, "date": "2026-11-30", "cents": 500, "name": null },
+    { "seq": 2, "date": "2026-11-30", "cents": 2500, "name": "Example D" },
+    { "seq": 1, "date": "2026-11-29", "cents": 5000, "name": "Example A" }
+  ],
+  "out": [
+    {
+      "date": "2026-12-01",
+      "category": "domain",
+      "cents": 4000,
+      "payee": "Example Registrar Ltd",
+      "justification": { "pt-br": "Renovação anual do domínio.", "en-us": "Yearly domain renewal." }
+    }
+  ],
+  "adjustments": [],
+  "balance": { "calculatedCents": 23185, "reconciledOn": "2026-12-01" },
+  "sources": { "received": "mercadopago", "out": "owner", "adjustments": "owner", "balance": "calculated" },
+  "audit": { "head": "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0", "entries": 3 }
+}

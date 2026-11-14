@@ -291,6 +291,21 @@
   }
 }
 
+/*
+ * The display name of a donor on the transparency panel (donations contract section 6, T-56 V3): the one text a stranger
+ * writes. The name isolates its own direction, so a right-to-left name cannot reorder the date and the amount around it,
+ * and it is clipped to a fixed width, so a long or odd name cannot draw outside its cell.
+ */
+.donor-name {
+  display: inline-block;
+  max-width: 24ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+  unicode-bidi: isolate;
+}
+
 /* Legal text (Termos e Privacidade): the rendered Markdown, one column of up to 72 characters. Clause headings are Title,
    paragraphs Body; the anchor offset keeps a jumped-to clause clear of the top edge. */
 @utility legal-text {
