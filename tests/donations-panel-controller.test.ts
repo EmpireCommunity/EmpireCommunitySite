@@ -326,3 +326,21 @@ test('a streamed body with no length is bounded while it arrives, and a body spl
   assert.equal(shown(panel), JSON.stringify(SHOWN));
   assert.equal(whole.log.textCalled, false);
 });
+
+test('a streamed body of exactly the limit is accepted and one byte more is refused, and the reader is cancelled only for the second (Ensaio s12)', async () => {
+  const encoder = new TextEncoder();
+  const padded = new Uint8Array(MAX_BODY_CHARS).fill(0x20); // padded in BYTES: the fixture holds multi-byte characters
+  padded.set(encoder.encode(JSON.stringify(fixture)));
+  const half = padded.byteLength / 2;
+  const exact = streamed([padded.slice(0, half), padded.slice(half)]);
+  const accepted = makePanel();
+  await startPanel(accepted.root, makeEnv(exact.response).env);
+  assert.equal(shown(accepted), JSON.stringify(SHOWN));
+  assert.equal(exact.log.cancelled, false);
+  const over = streamed([padded.slice(0, half), padded.slice(half), new Uint8Array(1)]);
+  const refused = makePanel();
+  await startPanel(refused.root, makeEnv(over.response).env);
+  assert.equal(shown(refused), JSON.stringify(SENTENCE));
+  assert.equal(over.log.cancelled, true);
+  assert.equal(over.log.textCalled, false);
+});
