@@ -37,6 +37,10 @@ async function checkPath(expected: Expectation, init: RequestInit = {}): Promise
   const cache = response.headers.get('cache-control');
   const acceptable = Array.isArray(expected.cache) ? expected.cache : [expected.cache];
   if (cache === null || !acceptable.includes(cache)) fail(where, `Cache-Control is ${cache}, expected ${acceptable.join(' or ')}`);
+  // HTML carries its encoding in the header (routing-locale section 6; the support page guard reads UTF-8). A redirect answer is not a
+  // page: nginx does not run the charset filter on its small body, and no browser renders it.
+  const contentType = response.headers.get('content-type') ?? '';
+  if (response.status < 300 && /^text\/html/i.test(contentType) && !/;\s*charset=utf-8\s*$/i.test(contentType)) fail(where, `HTML is served without charset=utf-8: ${contentType}`);
   const server = response.headers.get('server');
   if (server !== null && /\d/.test(server)) fail(where, `Server header exposes a version: ${server}`);
   if (response.headers.get('set-cookie') !== null) fail(where, 'Set-Cookie present');

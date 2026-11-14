@@ -1,11 +1,12 @@
-// docs/contracts/site-data.md section 10. Medium at launch (D-28): the site receives no money and shows no way to
-// send any. The schema is strict, so a payment field (`pix`, a gateway, a recipient) fails the build instead of riding
+// docs/contracts/site-data.md section 10. The site receives no money (D-28): `donations.status` is `not-open` until the
+// opening (P2-12), `open` shows the form that posts to the donations service (P2-09); the payment page is never ours. The schema is strict, so a payment field (`pix`, a gateway, a recipient) fails the build instead of riding
 // along. Money is integer cents only; totals are derived at load (`src/lib/support-rules.ts`), never stored.
 import { z } from 'astro/zod';
 import { Image, IsoDate, Localized } from './common.ts';
 
-export const NOT_OPEN_MESSAGE =
-  'donations are opened by a later contract (site-data section 10, D-28): donations.status must be "not-open"';
+export const DONATIONS_STATUSES = ['not-open', 'open'] as const;
+export type DonationsStatus = (typeof DONATIONS_STATUSES)[number];
+export const STATUS_MESSAGE = 'donations.status must be "not-open" or "open" (site-data section 10; "open" waits for P2-12)';
 
 const Cents = z.number().int().min(0).max(100_000_000);
 
@@ -40,7 +41,7 @@ export const SupportSchema = z
     schemaVersion: z.literal(1),
     // Review trail, never displayed. Unverified data is never published.
     verified: z.strictObject({ on: IsoDate, by: z.literal('owner') }),
-    donations: z.strictObject({ status: z.literal('not-open', { error: NOT_OPEN_MESSAGE }) }),
+    donations: z.strictObject({ status: z.enum(DONATIONS_STATUSES, { error: STATUS_MESSAGE }) }),
     goal: z.strictObject({
       id: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
       title: Localized(60),

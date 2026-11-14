@@ -35,6 +35,8 @@ const otherLocales = LOCALES.filter((other) => other !== locale);
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {/* The Support page sends no Referer: the return from a payment carries identifiers in its address (donations contract section 2). */}
+    {routeKey === 'support' && <meta name="referrer" content="no-referrer" />}
     {noindex && <meta name="robots" content="noindex" />}
     <title>{title}</title>
     <meta name="description" content={description} />

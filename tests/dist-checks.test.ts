@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import {
-  analyticsBeacon, staleDates, discordLinks, gateCss, hasEffectiveDate, legalMarkdownHtml, hreflangReciprocity, headerLogoLink, htmlLang, mainContent, inlineExecutable, languageSelector, membersFallback, paymentGuard, personData, supportPage, donationsBlockElsewhere, whatsappAbsent, whatsappInviteLink,
+  analyticsBeacon, staleDates, discordLinks, gateCss, hasEffectiveDate, legalMarkdownHtml, hreflangReciprocity, headerLogoLink, htmlLang, mainContent, inlineExecutable, languageSelector, membersFallback, paymentGuard, personData, whatsappAbsent, whatsappInviteLink,
 } from '../scripts/lib/dist-checks.ts';
 import { checkWorkflow } from '../scripts/lib/workflow-rules.ts';
 
@@ -236,6 +236,30 @@ test('check-dist reports D-41 for an invite outside the pt-BR gate, in HTML and 
   }
 });
 
+test('check-dist fails the build when support.yaml says open while the legal texts are pending, and not when it says not-open (P2-09 m4)', () => {
+  const dist = mkdtempSync(join(tmpdir(), 'check-dist-'));
+  const data = (status: string) => {
+    const file = join(dist, `support-${status}.yaml`);
+    writeFileSync(file, `donations:\n  status: ${status}\n`);
+    return file;
+  };
+  const gate = 'donations.status "open" waits for the new Privacy and Terms';
+  const run = (file: string) => spawnSync(process.execPath, ['scripts/check-dist.ts', dist], { encoding: 'utf8', env: { ...process.env, CHECK_DIST_SUPPORT_DATA: file } });
+  try {
+    mkdirSync(join(dist, 'pt-br/join'), { recursive: true });
+    writeFileSync(join(dist, 'pt-br/join/index.html'), '<main></main>');
+    const open = run(data('open'));
+    assert.ok(open.stdout.split('\n').some((line) => line.startsWith('::error file=src/data/support.yaml::') && line.includes(gate)), 'the legal gate is reported for open');
+    assert.equal(open.status, 1, 'and the run exits non-zero');
+    const closed = run(data('not-open'));
+    assert.equal(closed.stdout.includes(gate), false, 'not-open does not trip the gate');
+    const invalid = run(data('opening'));
+    assert.ok(invalid.stdout.includes('donations.status must be "not-open" or "open"'), 'an unknown status is reported');
+  } finally {
+    rmSync(dist, { recursive: true, force: true });
+  }
+});
+
 test('legal pages are scanned on their <main> only, so the shared pt-BR footer may list the channel', () => {
   const page = '<footer>WhatsApp</footer><main><p>texto legal</p></main>';
   assert.equal(whatsappAbsent(mainContent(page), 'pt-br/terms-of-service/index.html').length, 0);
@@ -251,23 +275,6 @@ test('team data: a marker without an entry fails, and a name outside its person 
   assert.equal(personData(`${block}<footer>Ana Souza</footer>`, 'x.html', people).length, 1, 'name outside the block');
   assert.equal(personData('<p>Aninhas</p>', 'x.html', people).length, 0, 'whole words only');
   assert.equal(personData('<main>no team</main>', 'x.html', []).length, 0);
-});
-
-test('support page: one plain-text not-open block, no beacon, and the block nowhere else (D-28)', () => {
-  const message = 'Money donations are not open yet.';
-  const page = (block: string, extra = '') => `<main>${block}${extra}</main>`;
-  const ok = '<p data-donations="not-open" class="x">Money donations are not open yet.</p>';
-  assert.equal(supportPage(page(ok), 'p', message).length, 0);
-  const bad: [string, string][] = [
-    ['no block', page('')],
-    ['two blocks', page(ok, ok)],
-    ['a link inside the block', page('<p data-donations="not-open">Money donations are not open yet. <a href="https://x.test">Send</a></p>')],
-    ['another message', page('<p data-donations="not-open">Donate now</p>')],
-    ['an analytics beacon', page(ok, '<script defer src="https://static.cloudflareinsights.com/beacon.min.js"></script>')],
-  ];
-  for (const [label, html] of bad) assert.equal(errors(supportPage(html, 'p', message)), 1, label);
-  assert.equal(errors(donationsBlockElsewhere('<p data-donations="not-open">x</p>', 'q')), 1);
-  assert.equal(donationsBlockElsewhere('<p>x</p>', 'q').length, 0);
 });
 
 test('the gate hides the join links only inside @supports selector(:has(*))', () => {

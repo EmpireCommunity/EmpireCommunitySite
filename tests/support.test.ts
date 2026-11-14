@@ -17,10 +17,12 @@ describe('support schema (D-28)', () => {
   test('accepts the contract shape, with or without parts', () => {
     assert.equal(SupportSchema.safeParse(support).success, true);
     assert.equal(SupportSchema.safeParse({ ...support, parts: [] }).success, true);
+    assert.equal(SupportSchema.safeParse({ ...support, donations: { status: 'open' } }).success, true, 'open is a valid state (P2-09)');
   });
 
   const rejected: [string, unknown][] = [
-    ['donations opened', { ...support, donations: { status: 'open' } }],
+    ['a status that is neither not-open nor open', { ...support, donations: { status: 'opening' } }],
+    ['an open status with a payment field', { ...support, donations: { status: 'open', gateway: 'x' } }],
     ['a Pix field', { ...support, pix: 'key' }],
     ['a payment field inside donations', { ...support, donations: { status: 'not-open', gateway: 'x' } }],
     ['no verified block', { ...support, verified: undefined }],

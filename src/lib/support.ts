@@ -1,11 +1,11 @@
 // The only read of `support.yaml` (docs/contracts/site-data.md section 10). The collection schema has already refused
-// any payment field and any donations state other than `not-open`; this adds the derived totals. No payment, account
+// any payment field and any donations state other than `not-open` or `open`; this adds the derived totals. No payment, account
 // or donor data exists here, so none can reach a page.
 import { getEntry } from 'astro:content';
 import { deriveTotals } from './support-rules.ts';
 import type { SupportTotals } from './support-rules.ts';
 import type { Locale } from './routes.ts';
-import type { PartStatus } from '../schemas/support.ts';
+import type { DonationsStatus, PartStatus } from '../schemas/support.ts';
 
 export interface SupportPart {
   id: string;
@@ -17,7 +17,7 @@ export interface SupportPart {
 }
 
 export interface SupportSnapshot {
-  donations: { status: 'not-open' };
+  donations: { status: DonationsStatus };
   goal: { id: string; title: string; description: string; targetCents: number } & SupportTotals;
   parts: SupportPart[];
   partDonations: { accepted: boolean; how: string } | null;
