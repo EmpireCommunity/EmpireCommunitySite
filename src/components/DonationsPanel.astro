@@ -86,7 +86,6 @@ const note = 'mt-12 max-w-[72ch] text-body-sm text-papel-suave';
           </thead>
           <tbody data-rows="out"></tbody>
         </table>
-        <p class={note}>{text('out.note')}</p>
       </div>
 
       <div data-block="adjustments" hidden class="mt-32">
@@ -102,6 +101,7 @@ const note = 'mt-12 max-w-[72ch] text-body-sm text-papel-suave';
           <tbody data-rows="adjustments"></tbody>
         </table>
       </div>
+      <p data-block="owner-note" hidden class={note}>{text('out.note')}</p>
 
       <div class="mt-32">
         <h3 class={caption}>{text('balance.title')}</h3>

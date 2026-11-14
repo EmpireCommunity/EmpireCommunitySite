@@ -51,6 +51,7 @@ function show(root: HTMLElement, snapshot: Snapshot, labels: PanelLabels): void 
   setHidden(root, '[data-block="out"]', snapshot.out.length === 0);
   setHidden(root, '[data-block="adjustments"]', snapshot.adjustments.length === 0);
   setHidden(root, '[data-block="adjustments-line"]', snapshot.adjustments.length === 0);
+  setHidden(root, '[data-block="owner-note"]', snapshot.out.length === 0 && snapshot.adjustments.length === 0);
   setHidden(root, '[data-block="reconciled"]', snapshot.balance.reconciledOn === null);
   setHidden(root, '[data-panel-unavailable]', true);
   setHidden(root, '[data-panel-body]', false);
@@ -66,14 +67,19 @@ function unavailable(root: HTMLElement): void {
 async function load(root: HTMLElement): Promise<void> {
   const labels = labelsOf(root);
   if (labels === undefined) return;
+  // AbortController and a timer, not `AbortSignal.timeout`, which older browsers lack.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const response = await fetch(TRANSPARENCY_PATH, { credentials: 'omit', cache: 'default', signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+    const response = await fetch(TRANSPARENCY_PATH, { credentials: 'omit', cache: 'default', signal: controller.signal });
     if (!response.ok) return unavailable(root);
     const snapshot = parseSnapshot(await response.json());
     if (snapshot === undefined) return unavailable(root);
     if (hasData(snapshot)) show(root, snapshot, labels);
   } catch {
     unavailable(root);
+  } finally {
+    clearTimeout(timer);
   }
 }
 

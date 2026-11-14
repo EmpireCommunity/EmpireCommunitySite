@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { adjustmentRow, donationRow, donationRows, expenseRow, expenseRows, fieldValues } from '../src/lib/donations-render.ts';
+import { adjustmentRow, adjustmentRows, donationRow, donationRows, expenseRow, expenseRows, fieldValues, newestFirst } from '../src/lib/donations-render.ts';
 import type { PanelDocument, PanelElement, PanelLabels } from '../src/lib/donations-render.ts';
 import { parseSnapshot } from '../src/lib/donations-snapshot.ts';
 
@@ -140,4 +140,20 @@ test('field values are plain formatted strings for the totals, the balance lines
   assert.equal(flat.sumAdjustments, 'R$ 0,00');
   assert.ok(flat.generatedAt?.includes('04/12/2026'));
   assert.equal(flat.reconciledOn, '01/12/2026');
+});
+
+test('expenses and adjustments are shown newest day first whatever order the service sends them in', () => {
+  const dates = (rows: { date: string }[]): string[] => rows.map((row) => row.date);
+  const asc = [{ date: '2026-11-01' }, { date: '2026-12-01' }, { date: '2026-12-01' }, { date: '2026-10-01' }];
+  const sorted = newestFirst(asc.map((row, index) => ({ ...row, index })));
+  assert.deepEqual(dates(sorted), ['2026-12-01', '2026-12-01', '2026-11-01', '2026-10-01']);
+  assert.deepEqual(sorted.map((row) => row.index), [2, 1, 0, 3], 'among one day the later entry comes first');
+  assert.deepEqual(dates(newestFirst([...asc].reverse())), dates(sorted), 'the same either way');
+  const base = snapshot.out[0]!;
+  const out = [{ ...base, date: '2026-12-02', cents: 100 }, { ...base, date: '2026-12-09', cents: 200 }, { ...base, date: '2026-12-05', cents: 300 }];
+  const adjust = (date: string) => ({ date, cents: 1, reason: { 'pt-br': 'a', 'en-us': 'a' } });
+  const view = { ...snapshot, out, adjustments: [adjust('2026-12-01'), adjust('2026-12-04')] };
+  const firstDates = (rows: FakeElement[]): string[] => rows.map((row) => row.children[0]?.children[0]?.textContent ?? '');
+  assert.deepEqual(firstDates(expenseRows(doc, view, 'en-US', 'en-us', labels) as FakeElement[]), ['12/09/2026', '12/05/2026', '12/02/2026']);
+  assert.deepEqual(firstDates(adjustmentRows(doc, view, 'en-US', 'en-us', labels) as FakeElement[]), ['12/04/2026', '12/01/2026']);
 });

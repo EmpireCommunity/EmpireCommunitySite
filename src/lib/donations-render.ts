@@ -111,13 +111,23 @@ export function donationRows(doc: PanelDocument, snapshot: Snapshot, lang: strin
   return snapshot.donations.map((donation) => donationRow(doc, donation, lang, labels));
 }
 
-/** Expenses and adjustments are published in full; the panel shows the latest first. */
+/**
+ * Expenses and adjustments are published in full and the contract does not fix their order, so the panel sorts a copy:
+ * newest day first, and among rows of one day the later entry first (the sort is stable, the index breaks ties).
+ */
+export function newestFirst<T extends { date: string }>(rows: readonly T[]): T[] {
+  return rows
+    .map((row, index) => ({ row, index }))
+    .sort((a, b) => b.row.date.localeCompare(a.row.date) || b.index - a.index)
+    .map(({ row }) => row);
+}
+
 export function expenseRows(doc: PanelDocument, snapshot: Snapshot, lang: string, locale: PanelLocale, labels: PanelLabels): PanelElement[] {
-  return [...snapshot.out].reverse().map((expense) => expenseRow(doc, expense, lang, locale, labels));
+  return newestFirst(snapshot.out).map((expense) => expenseRow(doc, expense, lang, locale, labels));
 }
 
 export function adjustmentRows(doc: PanelDocument, snapshot: Snapshot, lang: string, locale: PanelLocale, labels: PanelLabels): PanelElement[] {
-  return [...snapshot.adjustments].reverse().map((adjustment) => adjustmentRow(doc, adjustment, lang, locale, labels));
+  return newestFirst(snapshot.adjustments).map((adjustment) => adjustmentRow(doc, adjustment, lang, locale, labels));
 }
 
 const sumCents = (rows: readonly { cents: number }[]): number => rows.reduce((total, row) => total + row.cents, 0);

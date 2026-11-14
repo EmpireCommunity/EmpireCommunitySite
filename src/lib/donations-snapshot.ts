@@ -3,7 +3,7 @@
 // the whole shape and refuses (returns `undefined`) on the first thing that is wrong, so a wrong or hostile file renders
 // nothing instead of something invented. No DOM here: the same function runs in the browser script and in the tests.
 // Display names are the one free-text field of the service, so they get the contract's own allowed set (section 2,
-// "Display name": letters, combining marks, digits, space, `_`, `-`, `'`, at most 20 grapheme clusters) as a second
+// "Display name": letters, combining marks, decimal digits (Nd only, at most 4 in all), space, `_`, `-`, `'`, at most 20 grapheme clusters) as a second
 // line of defence behind the service's filter. Rendering uses `textContent` only (donations-render.ts).
 
 export const TRANSPARENCY_PATH = '/donations/api/v1/transparency';
@@ -59,7 +59,9 @@ const MAX_PAYEE = 80;
 const DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
 const INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z$/;
 const HEX = /^[0-9a-f]{16,128}$/;
-const NAME_CHARS = /^[\p{L}\p{M}\p{N} _'-]+$/u;
+const NAME_CHARS = /^[\p{L}\p{M}\p{Nd} _'-]+$/u;
+const DIGIT = /\p{Nd}/gu;
+const MAX_NAME_DIGITS = 4;
 // Control and format characters (bidirectional overrides, zero-width, joiners): never in text the page prints.
 const FORBIDDEN_TEXT = /[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Cn}\u2028\u2029]/u;
 
@@ -103,12 +105,23 @@ const MAX_MARKS_PER_GRAPHEME = 2;
 const MAX_NAME_UNITS = 200;
 const MARK = /\p{M}/gu;
 
+/** Without `Intl.Segmenter`: one cluster per base character, each combining mark joined to the character before it. */
+function withoutSegmenter(value: string): string[] {
+  const parts: string[] = [];
+  for (const char of value) {
+    const last = parts.length - 1;
+    if (last >= 0 && /^\p{M}$/u.test(char)) parts[last] = `${parts[last]}${char}`;
+    else parts.push(char);
+  }
+  return parts;
+}
+
 /** Grapheme clusters of a name, or `undefined` when one carries more combining marks than the contract allows. */
 function graphemes(value: string): string[] | undefined {
   const parts =
     typeof Intl.Segmenter === 'function'
       ? [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(value)].map((part) => part.segment)
-      : [...value];
+      : withoutSegmenter(value);
   return parts.every((part) => (part.match(MARK) ?? []).length <= MAX_MARKS_PER_GRAPHEME) ? parts : undefined;
 }
 
@@ -120,6 +133,7 @@ export function isDisplayName(value: unknown): value is string {
   if (typeof value !== 'string' || value.length === 0 || value.length > MAX_NAME_UNITS) return false;
   if (value.trim() !== value || value.trim().length === 0) return false;
   if (!NAME_CHARS.test(value)) return false;
+  if ((value.match(DIGIT) ?? []).length > MAX_NAME_DIGITS) return false; // a phone number is not a nickname
   const parts = graphemes(value);
   return parts !== undefined && parts.length <= MAX_NAME_GRAPHEMES;
 }
@@ -166,7 +180,8 @@ export function balanceHolds(snapshot: Snapshot): boolean {
 /** Cross-field rules that need more than one section. */
 function consistent(snapshot: Snapshot): boolean {
   const { donations, received } = snapshot;
-  if (received.count < donations.length) return false;
+  // `donations[]` is the latest 100: exactly min(count, 100) rows, nothing truncated and nothing missing.
+  if (donations.length !== Math.min(received.count, MAX_LISTED_DONATIONS)) return false;
   // Every listed donation is in the totals; when the list is the whole history the totals must match it exactly.
   if (received.count === donations.length && received.totalCents !== sum(donations)) return false;
   if (received.totalCents < sum(donations)) return false; // a partial list can only be a part of the total

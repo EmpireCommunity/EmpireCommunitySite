@@ -14,6 +14,13 @@ const withEdit = (edit: (snapshot: Record<string, any>) => void): unknown => { /
   return snapshot;
 };
 
+// The latest 100 donations of a history of `count` donations (500 cents each), with the given grand total.
+const hundred = (count: number, totalCents: number): Record<string, unknown> => ({
+  received: { totalCents, count, feesCents: 315 },
+  donations: Array.from({ length: 100 }, (_, i) => ({ seq: count - i, date: '2026-12-01', cents: 500, name: null })),
+  balance: { calculatedCents: totalCents - 315 - 4000, reconciledOn: '2026-12-01' },
+});
+
 test('the contract-shaped fixture is accepted and keeps every field', () => {
   const snapshot = parseSnapshot(fixture);
   assert.ok(snapshot);
@@ -80,9 +87,12 @@ test('figures that do not add up are refused: balance identity, listed totals, s
     ['an expense not in the balance', withEdit((s) => { s.out[0].cents += 5; })],
     ['total different from the listed sum when the list is the whole history', withEdit((s) => { s.received.totalCents += 100; s.balance.calculatedCents += 100; })],
     ['count lower than the listed rows', withEdit((s) => { s.received.count = 7; })],
+    ['count above the rows when nothing was truncated', withEdit((s) => { s.received.count = 5; s.donations = s.donations.slice(0, 3); s.received.totalCents = 13500; s.balance.calculatedCents = 13500 - 315 - 4000; })],
+    ['a count with an empty list', withEdit((s) => { s.donations = []; })],
     ['seq repeated', withEdit((s) => { s.donations[1].seq = 8; })],
     ['seq not newest first', withEdit((s) => { s.donations.reverse(); })],
-    ['a total below the listed donations when the list is only part of the history', withEdit((s) => { s.received = { totalCents: 1, count: 120, feesCents: 0 }; s.balance.calculatedCents = 1 - 4000; })],
+    ['a total below the listed donations when the list is only part of the history', withEdit((s) => { Object.assign(s, hundred(120, 1)); })],
+    ['more history than 100 rows but a short list', withEdit((s) => { s.received = { totalCents: 99000, count: 120, feesCents: 315 }; s.balance.calculatedCents = 99000 - 315 - 4000; })],
   ];
   for (const [label, input] of bad) assert.equal(parseSnapshot(input), undefined, label);
   const adjusted = withEdit((s) => {
@@ -99,11 +109,8 @@ test('a gap in seq (a refund) is fine and a list longer than it shows (count abo
     s.balance.calculatedCents = 27500 - 5000 - 315 - 4000;
   });
   assert.ok(parseSnapshot(gap));
-  const more = withEdit((s) => {
-    s.received = { totalCents: 99000, count: 120, feesCents: 315 };
-    s.balance.calculatedCents = 99000 - 315 - 4000;
-  });
-  assert.ok(parseSnapshot(more));
+  assert.ok(parseSnapshot(withEdit((s) => { Object.assign(s, hundred(120, 60000)); })), 'the latest 100 rows of a longer history');
+  assert.ok(parseSnapshot(withEdit((s) => { Object.assign(s, hundred(100, 50000)); })), 'exactly 100 rows, all of the history');
 });
 
 // Display names: the one field a stranger writes. Each of these is refused by the read side too (contract section 2).
@@ -113,6 +120,7 @@ test('hostile or disallowed display names fail validation, on any donation row',
     '\u202Eevil', 'a\u202Db', 'zero\u200Bwidth', 'a\u2066b\u2069', 'line\nbreak', 'tab\there', ' leading', 'trailing ', '   ', '',
     '@admin', 'name.with.dot', 'a:b', 'a/b', 'https://x', 'emoji \u{1F600}', 'a'.repeat(21), '\uD800', 'x\u0000y',
     '\u2028', 'a\u2029b',
+    'x\u00B2', '\u00BD', 'Maria \u216B', 'a\u2460', '12345', '11 9 8765 4321', 'a1b2c3d4e5',
   ];
   for (const name of hostile) {
     assert.equal(isDisplayName(name), false, JSON.stringify(name));
@@ -122,12 +130,26 @@ test('hostile or disallowed display names fail validation, on any donation row',
 });
 
 test('allowed display names pass: any script, digits, the allowed punctuation and graphemes counted not code units', () => {
-  const ok = ['Maria', 'João 10', 'Ana-Clara', "O'Neil", 'a_b', 'Привет', '李小龍', 'مرحبا', 'e\u0301'.repeat(20), 'x'.repeat(20), 'a\u0301\u0302'];
+  const ok = ['1234', 'Ana 2026', '\u0661\u0662\u0663', 'Maria', 'João 10', 'Ana-Clara', "O'Neil", 'a_b', 'Привет', '李小龍', 'مرحبا', 'e\u0301'.repeat(20), 'x'.repeat(20), 'a\u0301\u0302'];
   for (const name of ok) assert.equal(isDisplayName(name), true, name);
   assert.equal(isDisplayName('x'.repeat(21)), false);
   assert.equal(isDisplayName('e\u0301'.repeat(21)), false);
   assert.equal(isDisplayName('a\u0301\u0302\u0303'), false, 'three combining marks in one grapheme (contract G2)');
   assert.equal(isDisplayName('a' + '\u0301'.repeat(160)), false, 'a stack of marks is refused by the marks rule, not by a code-unit cap');
+});
+
+test('without Intl.Segmenter (older browsers) names are still counted by base character, marks joined to the one before', () => {
+  const original = Intl.Segmenter;
+  Reflect.deleteProperty(Intl, 'Segmenter');
+  try {
+    assert.equal(typeof Intl.Segmenter, 'undefined');
+    assert.equal(isDisplayName('e\u0301'.repeat(20)), true, '20 base characters with a mark each');
+    assert.equal(isDisplayName('e\u0301'.repeat(21)), false);
+    assert.equal(isDisplayName('a\u0301\u0302\u0303'), false);
+  } finally {
+    Reflect.defineProperty(Intl, 'Segmenter', { value: original, configurable: true, writable: true });
+  }
+  assert.equal(typeof Intl.Segmenter, 'function');
 });
 
 test('money, day and time formatting follow the page language and never read the clock', () => {
