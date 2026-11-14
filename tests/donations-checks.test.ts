@@ -112,13 +112,13 @@ test('every address in the open block is local: one slash that is not followed b
   }
 });
 
-// One table pins what the checks read as the contract's value and what they refuse as a coded variant (Ensaio s2): quoting,
-// case and spacing of the markup are free, but an entity, a suffix, a duplicate or a different case of a NAME is not the
-// value the contract names, because attribute values are compared as written.
-test('coded variants: free markup spelling passes, a coded or altered value fails closed', () => {
+// One table pins what the checks read as the contract's value and what they refuse as a coded variant (Ensaio s2): case and
+// spacing of the markup are free, but quoting other than double quotes, an entity, a suffix, a duplicate or a different case
+// of a NAME is not the value the contract names, because the grammar is strict and attribute values are compared as written.
+test('coded variants: case and spacing of the markup are free, a coded or altered value, or any quoting but double quotes, fails closed', () => {
   const variants: [string, string, boolean][] = [
-    ['single quotes', OPEN_FORM.replace('method="post" action="/donations/api/v1/checkout"', "method='post' action='/donations/api/v1/checkout'"), true],
-    ['unquoted values', OPEN_FORM.replace('method="post" action="/donations/api/v1/checkout"', 'method=post action=/donations/api/v1/checkout'), true],
+    ['single quotes (the strict grammar takes double-quoted values only)', OPEN_FORM.replace('method="post" action="/donations/api/v1/checkout"', "method='post' action='/donations/api/v1/checkout'"), false],
+    ['unquoted values (same)', OPEN_FORM.replace('method="post" action="/donations/api/v1/checkout"', 'method=post action=/donations/api/v1/checkout'), false],
     ['upper-case tag and attribute names', OPEN_FORM.replace('<form id="donation-form" method="post"', '<FORM ID="donation-form" METHOD="post"').replace('</form>', '</FORM>'), true],
     ['upper-case method and type values', OPEN_FORM.replace('method="post"', 'method="POST"').replace('type="hidden"', 'type="HIDDEN"'), true],
     ['line breaks and tabs inside the tag', OPEN_FORM.replace('method="post" action', 'method="post"\n\t action'), true],
@@ -166,6 +166,52 @@ test('the whole support page is scanned, not only the block: no form attribute, 
   assert.equal(errors(supportPage(openPage(openBlock(), '<a href="/pt-br/" title="a>b">ok</a>'), 'p', OPEN)), 0, 'a quoted greater-than in an honest attribute is fine');
 });
 
+// Sentinela's proof of concept (P2-09 re-check M1 and M2): the page is read by the strict grammar, so nothing hides in a
+// stretch a tolerant scanner would read as one quoted value, and an address is judged as the browser resolves it.
+test('strict grammar: a quote that is not a double-quoted value, a comment or a stray "<" is a finding, so nothing hides behind it (Sentinela M1)', () => {
+  const after: [string, string][] = [
+    ['A: a form-tied button whose unquoted value ends in a quote', '<button form=donation-form formaction=/x name=evil value=a">go</button>'],
+    ['B: a second form whose unquoted value ends in a quote', '<form method=post action=//evil.example/ id=a"><input name=amount></form>'],
+    ['a single-quoted value', "<a title='x' href='/pt-br/'>x</a>"],
+    ['an unquoted value', '<a href=/pt-br/>x</a>'],
+    ['a quote inside a bare attribute name', '<a x"y="z">x</a>'],
+    ['a comment', '<!-- <form action="/x"> -->'],
+    ['a comment that hides a quote', '<!-- " --><p>x</p>'],
+    ['a CDATA section', '<![CDATA[ x ]]>'],
+    ['a processing instruction', '<?php x ?>'],
+    ['a stray "<"', '<p>1 < 2</p>'],
+    ['a "<" before a space', '< form action="/x">'],
+    ['a noscript element', '<noscript><form action="/x"></form></noscript>'],
+    ['a template element', '<template><input name="amount" form="donation-form"></template>'],
+    ['a textarea element', '<textarea><form action="/x"></textarea>'],
+    ['an xmp element', '<xmp><form action="/x"></xmp>'],
+    ['an unclosed script', '<script>var x = 1;'],
+    ['an empty noscript (the element itself)', '<noscript></noscript>'],
+    ['an empty template (the element itself)', '<template></template>'],
+    ['an empty textarea (the element itself)', '<textarea></textarea>'],
+  ];
+  for (const [label, extra] of after) {
+    assert.ok(errors(supportPage(openPage(openBlock(), extra), 'p', OPEN)) >= 1, `open: ${label}`);
+    assert.ok(errors(supportPage(notOpenPage(NOT_OPEN, extra), 'p', MESSAGE)) >= 1, `not open: ${label}`);
+    assert.ok(donationsBlock(openPage(openBlock(), extra), 'live', 'pt-br').findings.length > 0, `monitor: ${label}`);
+  }
+  // What the strict grammar does accept: the doctype, double-quoted values with a ">" or a single quote inside, bare attributes,
+  // self-closing tags, and the text of a script or a style (read as the browser reads it, not as markup).
+  const honest = '<!doctype html><a href="/pt-br/" title="a>b" data-x="it\'s" hidden>x</a><br/><script type="application/ld+json">{"a":"<b>"}</script><style>a > b { c: "d" }</style>';
+  assert.equal(errors(supportPage(openPage(openBlock(), honest), 'p', OPEN)), 0);
+});
+
+test('addresses in the block are judged as the browser resolves them: no "&", no control or space character, then the local rule (Sentinela M2)', () => {
+  const inBlock = (href: string) => openPage(swap('</form>', `</form><a href="${href}">x</a>`));
+  const refused = ['/&#47;evil.example/pay', '/&#x2F;evil.example/pay', '/&sol;evil.example', '/\t/evil.example/pay', '/\n/evil.example/pay', '/\r/evil.example', '/ /evil.example', '/\u0000/x', '/\u0085/x', '/x?a=1&b=2', '/x y'];
+  for (const href of refused) assert.ok(errors(supportPage(inBlock(href), 'p', OPEN)) >= 1, JSON.stringify(href));
+  for (const href of ['/pt-br/terms-of-service/#donations', '#obrigado', '/x?a=1']) assert.equal(errors(supportPage(inBlock(href), 'p', OPEN)), 0, href);
+  // The two PoC hosts: these resolve outside the site once the browser has dropped the tab or read the reference.
+  for (const href of ['/&#47;evil.example/pay', '/\t/evil.example/pay']) {
+    assert.equal(new URL(href.replace('&#47;', '/'), 'https://empirecommunity.org/pt-br/support/').host, 'evil.example', href);
+  }
+});
+
 test('the live monitor reads the same page: the open form passes with the path locale, a stray override or the wrong locale fails (Alicerce S2)', () => {
   assert.deepEqual(donationsBlock(openPage(), 'live', 'pt-br').findings, []);
   assert.equal(donationsBlock(openPage(), 'live', 'pt-br').state, 'open');
@@ -203,5 +249,7 @@ test('/donations/ is reserved, and the donations parts exist on the support page
   assert.equal(donationsBlockElsewhere('<div data-donations-panel hidden></div>', 'q').length, 1);
   assert.equal(donationsBlockElsewhere('<script type="module" src="/_astro/DonationsPanel.astro_astro_type_script_index_0_lang.x.js"></script>', 'q').length, 1);
   assert.equal(donationsBlockElsewhere('<p title="a>b" data-donations="open">x</p>', 'q').length, 1);
+  assert.equal(donationsBlockElsewhere('<a x=a" data-donations=open>x</a>', 'q').length, 1, 'raw text: behind an unquoted quote');
+  assert.equal(donationsBlockElsewhere('<!-- data-donations-panel -->', 'q').length, 1, 'raw text: in a comment');
   assert.equal(donationsBlockElsewhere('<p>x</p><script type="module" src="/_astro/page.abc.js"></script>', 'q').length, 0);
 });

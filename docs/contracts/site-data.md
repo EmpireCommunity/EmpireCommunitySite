@@ -375,6 +375,14 @@ Rules:
   phrase that the community "runs on voluntary donations" (D-33, D-44) is allowed on Home, Join, Organization and
   Support, because it describes how the community is funded and not a way to give; `home.funding.body` states in the
   same text that money donations are not open yet.
+  The support page is read by a **strict scanner** (`scripts/lib/donations-checks.ts`) in the build and in the live monitor: each
+  `<` must start a doctype or a tag whose attributes are a bare name or `name="double-quoted value"`; a comment, a CDATA section,
+  a single-quoted or unquoted value, a stray `<` and the elements whose content a browser reads as text (`noscript`, `template`,
+  `textarea`, `xmp`, `plaintext`, `noembed`, `noframes`) are findings. Astro writes exactly this grammar, so the rule costs
+  nothing today and a future component that breaks it fails the build instead of blinding the guard. Inside the open block an
+  address attribute (`href`, `src`, `action` and the like) holds no `&` and no control or space character, and starts with one
+  slash that is not followed by a slash or a backslash, or with `#`. Other pages: the words `data-donations` and a `Donations*.js`
+  script name must not appear at all.
   **Limits of the gate, written down so nobody reads more into it (P2-09 review):**
   - `PENDING.legalPages` is a **proxy** for "Privacy and Terms carry their new version": it turns false when the legal files
     have an `effectiveDate`, not when their text covers donations. The text that covers donations (donations contract

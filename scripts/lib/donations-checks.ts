@@ -1,10 +1,17 @@
 // Checks of the donations parts of the Support page (donations contract section 2 and 6.15, site-data section 10, plan P2-09),
 // shared by the build (`scripts/check-dist.ts`) and the live integrity monitor (`scripts/lib/integrity-rules.ts`). Pure:
-// HTML text in, findings out. The page is read as a list of tags by a tokenizer that does not stop at a `>` inside a quoted
-// attribute value, so no control can hide behind one. Attribute values are compared as written, never entity-decoded: a
-// coded variant (`&#47;donations...`, `am&#111;unt`) is not the value the contract names and fails closed.
+// HTML text in, findings out.
+//
+// The support page is read by a STRICT scanner, not a tolerant one. Every `<` must start a token this scanner accepts: a
+// doctype, or a tag whose attributes are each a bare name or `name="value"` with a double-quoted value, separated by white
+// space. Anything else on the page is itself a finding: a quote anywhere else (single-quoted or unquoted values), a comment,
+// a CDATA section, a `<` that starts nothing, and the elements whose content a browser reads as text instead of markup
+// (`noscript`, `template`, `textarea`, `xmp`, `plaintext`, `noembed`, `noframes`). The content of `script` and `style` is
+// skipped as the browser skips it. So the scanner and the browser cannot disagree about where a tag ends, and no control can
+// hide in a stretch the scanner read as a quoted value (Sentinela M1). Attribute values are compared as written, never
+// entity-decoded: a coded variant (`&#47;donations...`, `am&#111;unt`) is not the value the contract names and fails closed.
 import { CHECKOUT_PATH } from '../../src/lib/donation-amount.ts';
-import { attributesOf, decodeEntities, err } from './dist-checks.ts';
+import { decodeEntities, err } from './dist-checks.ts';
 import type { Finding } from './dist-checks.ts';
 
 interface Tag {
@@ -16,17 +23,54 @@ interface Tag {
   end: number;
 }
 
-const TAG = /<(\/?)([a-z][a-z0-9-]*)((?:"[^"]*"|'[^']*'|[^'">])*)>/gi;
+/** A doctype, or one tag: `<name`, then attributes that are a bare name or `name="value"`, each after white space, then `>`. */
+const TOKEN = /<(?:!doctype[^>]*>|(\/?)([a-z][a-z0-9-]*)((?:\s+[a-z_:@][a-z0-9_:.@-]*(?:="[^"]*")?)*)\s*\/?>)/iy;
+const ATTRIBUTE = /([^\s=]+)(?:="([^"]*)")?/g;
+const RAW_TEXT: ReadonlySet<string> = new Set(['script', 'style']);
+const TEXT_ONLY: ReadonlySet<string> = new Set(['noscript', 'template', 'textarea', 'xmp', 'plaintext', 'noembed', 'noframes']);
 
-function tagsOf(html: string): Tag[] {
-  return [...html.matchAll(TAG)].map((match) => ({
-    name: (match[2] ?? '').toLowerCase(),
-    attrs: attributesOf(match[3] ?? ''),
-    closing: match[1] === '/',
-    index: match.index ?? 0,
-    end: (match.index ?? 0) + match[0].length,
-  }));
+function attributesOf(text: string): Map<string, string> {
+  const attrs = new Map<string, string>();
+  for (const match of text.matchAll(ATTRIBUTE)) {
+    const name = (match[1] ?? '').toLowerCase();
+    if (!attrs.has(name)) attrs.set(name, match[2] ?? ''); // browsers keep the FIRST of a duplicate attribute
+  }
+  return attrs;
 }
+
+/** The tags of a page, and a finding for every stretch the strict grammar does not accept. */
+function scan(html: string): { tags: Tag[]; problems: string[] } {
+  const tags: Tag[] = [];
+  const problems: string[] = [];
+  let position = 0;
+  for (;;) {
+    const start = html.indexOf('<', position);
+    if (start < 0) break;
+    TOKEN.lastIndex = start;
+    const match = TOKEN.exec(html);
+    if (match === null) {
+      problems.push(`markup outside the strict grammar (a comment, a quote that is not a double-quoted attribute value, or a "<" that starts no tag) at offset ${start}: ${JSON.stringify(html.slice(start, start + 40))}`);
+      position = start + 1;
+      continue;
+    }
+    position = start + match[0].length;
+    if (match[2] === undefined) continue; // the doctype
+    const tag: Tag = { name: match[2].toLowerCase(), attrs: attributesOf(match[3] ?? ''), closing: match[1] === '/', index: start, end: position };
+    tags.push(tag);
+    if (!tag.closing && TEXT_ONLY.has(tag.name)) problems.push(`<${tag.name}> is not allowed on the support page: a browser reads its content as text, a scanner reads it as markup`);
+    if (!tag.closing && RAW_TEXT.has(tag.name)) {
+      const close = new RegExp(`</${tag.name}(?=[\\s/>])`, 'i').exec(html.slice(position));
+      if (close === null) {
+        problems.push(`<${tag.name}> is never closed`);
+        break;
+      }
+      position += close.index;
+    }
+  }
+  return { tags, problems };
+}
+
+const tagsOf = (html: string): Tag[] => scan(html).tags;
 
 /** The tags between an opening tag and its matching close tag (same name, nested ones counted), and the text span between them. */
 function elementOf(tags: readonly Tag[], position: number, html: string): { inner: string; within: Tag[]; start: number; end: number } | undefined {
@@ -51,6 +95,12 @@ const FORBIDDEN_IN_BLOCK: ReadonlySet<string> = new Set(['script', 'iframe', 'ob
 const URL_ATTRIBUTES = ['href', 'src', 'action', 'poster', 'data', 'srcset', 'xlink:href', 'background', 'cite', 'ping'] as const;
 /** A local address: one slash that is not followed by a slash or a backslash (a protocol-relative address), or a fragment. */
 const LOCAL_ADDRESS = /^(?:\/(?![/\\])|#)/;
+/** `&`, a space or a control character (C0, DEL, C1): by code point, so the check holds no control character in a pattern. */
+const hasUnsafeAddressCharacter = (value: string): boolean =>
+  [...value].some((char) => {
+    const code = char.codePointAt(0) ?? 0;
+    return char === '&' || code <= 0x20 || (code >= 0x7f && code <= 0x9f);
+  });
 
 /**
  * The `open` block (donations contract section 2, P2-09): exactly one form, posting by POST to the donations service on the
@@ -73,7 +123,9 @@ function openBlockFindings(tags: readonly Tag[], file: string, locale: string | 
     if (FORBIDDEN_IN_BLOCK.has(tag.name)) findings.push(err(file, `the open block holds no <${tag.name}>`));
     for (const attribute of URL_ATTRIBUTES) {
       const value = tag.attrs.get(attribute);
-      if (value !== undefined && !LOCAL_ADDRESS.test(value)) findings.push(err(file, `the open block holds only local addresses: ${attribute}="${value}"`));
+      // `&` (a character reference could spell a second slash) and any control or space character (a browser drops a tab or a
+      // newline inside an address) are refused before the local test, so the raw value is what the browser resolves (Sentinela M2).
+      if (value !== undefined && (hasUnsafeAddressCharacter(value) || !LOCAL_ADDRESS.test(value))) findings.push(err(file, `the open block holds only plain local addresses: ${attribute}=${JSON.stringify(value)}`));
     }
   }
   const named = new Map<string, Map<string, string>[]>();
@@ -128,8 +180,8 @@ const DONATIONS_SCRIPT = /(?:^|[/\\])Donations[^/\\]*\.js(?:$|[?#])/i;
  * monitor can each compare it with what they expect. `locale` is the page locale when the caller knows it.
  */
 export function donationsBlock(html: string, file: string, locale?: string): { state: 'not-open' | 'open' | 'invalid'; findings: Finding[] } {
-  const tags = tagsOf(html);
-  const findings: Finding[] = [];
+  const { tags, problems } = scan(html);
+  const findings: Finding[] = problems.map((problem) => err(file, problem));
   const marked = tags.map((tag, position) => ({ tag, position })).filter(({ tag }) => !tag.closing && tag.attrs.has('data-donations'));
   for (const { tag } of marked) {
     if (!['not-open', 'open', 'soon'].includes(tag.attrs.get('data-donations') ?? '')) findings.push(err(file, 'data-donations is "not-open", "open" or "soon"'));
@@ -236,11 +288,10 @@ export function reservedDonationsPath(files: readonly string[]): Finding[] {
  * Donations script, so no other page states or suggests that a donation can be made.
  */
 export function donationsBlockElsewhere(html: string, file: string): Finding[] {
+  // Raw text, not tags: nothing to hide behind a quote or a comment. `data-donations` (and the panel marker) and a `Donations*.js`
+  // script name are not words any other page has a reason to contain.
   const findings: Finding[] = [];
-  for (const tag of tagsOf(html)) {
-    if (tag.closing) continue;
-    if (tag.attrs.has('data-donations') || tag.attrs.has('data-donations-panel')) findings.push(err(file, 'data-donations belongs to the support pages only'));
-    if (tag.name === 'script' && DONATIONS_SCRIPT.test(tag.attrs.get('src') ?? '')) findings.push(err(file, 'a Donations script belongs to the support pages only'));
-  }
+  if (/data-donations/i.test(html)) findings.push(err(file, 'data-donations belongs to the support pages only'));
+  if (/Donations[^"'\s<>/\\]*\.js/i.test(html)) findings.push(err(file, 'a Donations script belongs to the support pages only'));
   return findings;
 }

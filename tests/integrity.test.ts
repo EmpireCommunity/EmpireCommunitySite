@@ -93,6 +93,19 @@ test('the live support page is scanned whole: a form attribute, an override or a
   assert.ok(noPayment(meta + '<p data-donations="not-open">Donations are not open.</p><div data-donations-panel hidden></div>', true, 'pt-br').length > 0, 'a panel marker while not open');
 });
 
+test('the live monitor refuses Sentinela\'s three inputs: a quote that hides controls, a coded second slash, a tab between the slashes (P2-09 M1, M2)', () => {
+  const meta = '<meta name="referrer" content="no-referrer">';
+  const open = (inBlock = '', after = '') => `${meta}<div data-donations="open"><form method="post" action="/donations/api/v1/checkout"><input type="hidden" name="locale" value="pt-br"><input name="amount" type="text" inputmode="decimal" required maxlength="14"><input name="display_name" type="text" maxlength="20"><button type="submit">Doar</button>${inBlock}</form></div>${after}`;
+  assert.deepEqual(noPayment(open(), true, 'pt-br'), []);
+  const attacks: [string, string][] = [
+    ['an unquoted value ending in a quote hides form, formaction and name', open('', '<button form=donation-form formaction=/x name=evil value=a">go</button>')],
+    ['the same hides a second form', open('', '<form method=post action=//evil.example/ id=a"><input name=amount></form>')],
+    ['a second slash as a character reference', open('<a href="/&#47;evil.example/pay">x</a>')],
+    ['a tab between the slashes', open('<a href="/\t/evil.example/pay">x</a>')],
+  ];
+  for (const [label, html] of attacks) assert.ok(noPayment(html, true, 'pt-br').length > 0, label);
+});
+
 test('support rewriting markers fail while ordinary HTML passes', () => {
   assert.deepEqual(rewriting('<p>Public support text.</p>'), []);
   for (const marker of ['data-cfemail', '/cdn-cgi/l/email-protection', 'rocket-loader', 'text/rocketscript', 'data-cf-beacon']) assert.ok(rewriting(marker).length > 0);
