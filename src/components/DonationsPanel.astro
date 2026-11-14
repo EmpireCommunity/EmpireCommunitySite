@@ -6,7 +6,8 @@
 // The whole block starts `hidden` and the script shows it only when there is real data (R-6) or, if the service does not
 // answer, one plain sentence. The page renders this component only when donations are open (support.astro): while the
 // site says "not open" it adds no markup and no script. The panel text never promises real time (it says when the
-// snapshot was built) and never calls the balance the Mercado Pago balance.
+// snapshot was built) and never calls the balance the Mercado Pago balance. A row the owner replaced carries a small
+// `corrected` word, and a row the owner withdrew shows only as a count (contract 6.13): nothing disappears silently.
 import IndexSection from './IndexSection.astro';
 import { t } from '../i18n/index.ts';
 import type { MessageKey } from '../i18n/index.ts';
@@ -38,6 +39,7 @@ const note = 'mt-12 max-w-[72ch] text-body-sm text-papel-suave';
   data-label-spent={text('dir.out')}
   data-label-person={text('payee.person')}
   data-label-owner={text('payee.owner')}
+  data-label-corrected={text('corrected')}
   {...categoryLabels}
 >
   <IndexSection title={text('title')} id="doacoes">
@@ -128,6 +130,12 @@ const note = 'mt-12 max-w-[72ch] text-body-sm text-papel-suave';
           </div>
         </dl>
         <p class={note}>{text('balance.note')}</p>
+        <p data-block="voided-out" hidden class="mt-4 max-w-[72ch] text-body-sm text-papel-suave">
+          {text('voided.out')}: <span data-field="voidedOut" class="tabular-nums"></span>.
+        </p>
+        <p data-block="voided-adjustments" hidden class="mt-4 max-w-[72ch] text-body-sm text-papel-suave">
+          {text('voided.adjustments')}: <span data-field="voidedAdjustments" class="tabular-nums"></span>.
+        </p>
         <p class="mt-4 max-w-[72ch] text-body-sm text-papel-suave">
           {text('generated')} <span data-field="generatedAt"></span>.{' '}
           <span data-block="reconciled" hidden>{text('reconciled')} <span data-field="reconciledOn"></span>.</span>

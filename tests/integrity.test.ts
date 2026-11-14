@@ -59,13 +59,27 @@ test('Discord country redirect preserves the query under the root launch policy'
 });
 
 test('payment blocks are support-only; released wording may vary, payment markers never pass', () => {
-  const block = '<p data-donations="not-open">Donations are not open.</p>';
+  const meta = '<meta name="referrer" content="no-referrer">';
+  const block = `${meta}<p data-donations="not-open">Donations are not open.</p>`;
   assert.deepEqual(noPayment(block, true), []);
   assert.deepEqual(noPayment('contact@empirecommunity.org', false), []);
-  for (const html of ['', block + block, '<p data-donations="not-open"><a href="/">go</a></p>']) assert.ok(noPayment(html, true).length > 0);
+  for (const html of ['', block + block, `${meta}<p data-donations="not-open"><a href="/">go</a></p>`, `${meta}<p data-donations="not-open"> </p>`, '<p data-donations="not-open">Donations are not open.</p>']) assert.ok(noPayment(html, true).length > 0);
   assert.ok(noPayment(block, false).length > 0);
   for (const marker of ['data-pix', 'https://mpago.la/x', 'BR.GOV.BCB.PIX', 'someone@example.com',
     '123e4567-e89b-42d3-a456-426614174000', '123.456.789-09', '12.345.678/0001-95']) assert.ok(noPayment(marker, false).length > 0);
+});
+
+test('the live support page may carry the open block: one form to the donations service and nothing else (P2-09)', () => {
+  const meta = '<meta name="referrer" content="no-referrer">';
+  const form = (action: string, field = 'amount') => `<div data-donations="open"><form method="post" action="${action}"><input type="hidden" name="locale" value="en-us"><input name="${field}" type="text" inputmode="decimal" required maxlength="14"><input name="display_name" type="text" maxlength="20"><button type="submit">Donate</button></form></div>`;
+  assert.deepEqual(noPayment(meta + form('/donations/api/v1/checkout'), true), []);
+  for (const html of [
+    meta + form('https://www.mercadopago.com.br/checkout/v1/redirect'),
+    meta + form('/donations/api/v1/other'),
+    meta + form('/donations/api/v1/checkout', 'amount_cents'),
+    form('/donations/api/v1/checkout'),
+  ]) assert.ok(noPayment(html, true).length > 0, html);
+  assert.ok(noPayment(meta + form('/donations/api/v1/checkout'), false).length > 0, 'the block belongs to support only');
 });
 
 test('support rewriting markers fail while ordinary HTML passes', () => {
@@ -92,7 +106,7 @@ test('live member schema, source and three-day freshness boundary use injected t
 
 test('public header invariants detect missing headers, CSP changes, cookies and version disclosure', () => {
   const headers = {
-    'content-security-policy': "default-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+    'content-security-policy': "default-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self' https://www.mercadopago.com.br; frame-ancestors 'none'",
     'permissions-policy': 'camera=(), microphone=(), geolocation=(), payment=(), interest-cohort=()',
     'cross-origin-opener-policy': 'same-origin', 'cache-control': 'no-cache', 'x-content-type-options': 'nosniff',
     'referrer-policy': 'strict-origin-when-cross-origin', 'strict-transport-security': 'max-age=31536000',

@@ -295,7 +295,8 @@ export function parseSnapshot(input: unknown): Snapshot | undefined {
 
 /** True when there is anything real to show: with no data the section is not rendered (site rule R-6). */
 export function hasData(snapshot: Snapshot): boolean {
-  return snapshot.received.count > 0 || snapshot.out.length > 0 || snapshot.adjustments.length > 0;
+  // A withdrawn row (`voided`) is public trace of real activity, so it keeps the section (contract 6.13).
+  return snapshot.received.count > 0 || snapshot.out.length > 0 || snapshot.adjustments.length > 0 || snapshot.voided.out > 0 || snapshot.voided.adjustments > 0;
 }
 
 // Formatting. `lang` is the page language (`pt-BR` or `en-US`). Money is BRL in integer cents, formatted like the rest of

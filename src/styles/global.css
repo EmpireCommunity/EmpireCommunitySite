@@ -338,3 +338,14 @@
     text-underline-offset: 0.18em;
   }
 }
+
+/*
+ * The thank-you note of the Support page (donations contract section 2, B-T74): shown only to someone who returns from a
+ * payment, by the fixed `#obrigado` fragment of the return address. CSS only: the page never reads the query string.
+ */
+.thanks-note {
+  display: none;
+}
+.thanks-note:target {
+  display: block;
+}

@@ -8,7 +8,7 @@ import { formatRulesDate, inviteUrl } from '../src/lib/community-rules.ts';
 import { CommunityRulesSchema } from '../src/schemas/community-rules.ts';
 import { TeamMemberSchema } from '../src/schemas/team.ts';
 import {
-  analyticsBeacon, discordChooser, internalDiscordLinks, discordLinks, discordPage, gateCss, hasEffectiveDate, legalMarkdownHtml, headerLogoLink, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, mainContent, membersFallback, paymentGuard, paymentWords, personData, supportPage, donationsBlockElsewhere,
+  analyticsBeacon, discordChooser, internalDiscordLinks, discordLinks, discordPage, gateCss, hasEffectiveDate, legalMarkdownHtml, headerLogoLink, hreflangReciprocity, htmlLang, inlineExecutable, languageSelector, mainContent, membersFallback, paymentGuard, paymentWords, personData, supportPage, donationsBlockElsewhere, openNeedsLegalTexts, reservedDonationsPath,
   staleDates, whatsappAbsent, whatsappInviteLink,
   type Finding,
 } from './lib/dist-checks.ts';
@@ -186,7 +186,15 @@ for (const file of htmlFiles) {
   add(...analyticsBeacon(read(distDir, file), file, expected, beaconToken));
 }
 
-// D-28: support pages carry the donations-not-open block; the payment guard runs on dist/ and on the content sources.
+// D-28, P2-09: support pages carry one donations block in the state the site data asks for (`not-open` until the opening,
+// P2-12; `open` is the form that posts to the donations service); the payment guard runs on dist/ and on the content sources.
+const supportData = parse(read('src/data', 'support.yaml')) as { donations?: { status?: unknown } };
+const donationsStatus = supportData.donations?.status;
+if (donationsStatus !== 'not-open' && donationsStatus !== 'open') {
+  add({ level: 'error', file: 'src/data/support.yaml', message: 'donations.status must be "not-open" or "open"' });
+}
+// Opening needs the legal texts first (donations contract section 10: Privacy and Terms get a new version and effective date).
+add(...openNeedsLegalTexts(donationsStatus === 'open', PENDING.legalPages));
 const supportFiles = new Set<string>();
 for (const locale of ['pt-br', 'en-us']) {
   const file = `${locale}/support/index.html`;
@@ -196,9 +204,11 @@ for (const locale of ['pt-br', 'en-us']) {
     continue;
   }
   const messages = JSON.parse(read('src/i18n/messages', `${locale}.json`)) as Record<string, string>;
-  const notOpen = messages['support.donations.notOpen'] ?? '';
-  add(...supportPage(read(distDir, file), file, notOpen));
+  const notOpenMessage = messages['support.donations.notOpen'] ?? '';
+  add(...supportPage(read(distDir, file), file, { status: donationsStatus === 'open' ? 'open' : 'not-open', notOpenMessage, locale }));
 }
+// `/donations/` belongs to the donations service (routing-locale, reserved paths): the site builds nothing under it.
+add(...reservedDonationsPath(files));
 for (const file of htmlFiles.filter((f) => !supportFiles.has(f))) add(...donationsBlockElsewhere(read(distDir, file), file));
 for (const file of files.filter((f) => TEXT_EXTENSIONS.test(f))) {
   const text = read(distDir, file);

@@ -35,7 +35,7 @@ class FakeElement implements PanelElement {
 const doc: PanelDocument = { createElement: (tag) => new FakeElement(tag) };
 
 const labels: PanelLabels = {
-  anonymous: 'anônimo', received: 'Entrada', spent: 'Saída', person: 'Pessoa', owner: 'Dono',
+  anonymous: 'anônimo', received: 'Entrada', spent: 'Saída', person: 'Pessoa', owner: 'Dono', corrected: 'corrigido',
   categories: { hosting: 'Hospedagem', domain: 'Domínio', power: 'Energia', hardware: 'Hardware', software: 'Software', fees: 'Taxas', withdrawal: 'Retirada', other: 'Outros' },
 };
 const snapshot = parseSnapshot(JSON.parse(readFileSync(new URL('./fixtures/transparency-snapshot.json', import.meta.url), 'utf-8')));
@@ -169,4 +169,26 @@ test('expenses and adjustments are shown newest day first whatever order the ser
 test('a zero-cent adjustment is shown as a plain zero, with a plus sign', () => {
   const row = adjustmentRow(doc, { date: '2026-12-01', cents: 0, reason: { 'pt-br': 'Conferido', 'en-us': 'Checked' } }, 'pt-BR', 'pt-br', labels) as FakeElement;
   assert.equal((row.children[2]?.children[0]?.children[1]?.textContent ?? '').replace(/\s/g, ' '), '+ R$ 0,00');
+});
+
+test('a corrected row carries the page word beside the isolated owner text, never inside it (contract 6.13)', () => {
+  const base = snapshot.out[0]!;
+  const corrected = expenseRow(doc, { ...base, corrected: true }, 'pt-BR', 'pt-br', labels) as FakeElement;
+  const cellOf = corrected.children[3]!;
+  assert.equal(cellOf.children.length, 2);
+  assert.equal(cellOf.children[0]?.className.includes('text-isolate'), true);
+  assert.equal(cellOf.children[0]?.textContent, base.justification['pt-br']);
+  assert.equal(cellOf.children[1]?.textContent, 'corrigido');
+  assert.deepEqual(cellOf.children[1]?.attributes, {}, 'the marker sets no attribute');
+  const plain = expenseRow(doc, base, 'pt-BR', 'pt-br', labels) as FakeElement;
+  assert.equal(plain.children[3]?.children.length, 1, 'no marker on an ordinary row');
+  const adjustment = adjustmentRow(doc, { date: '2026-12-01', cents: -500, reason: { 'pt-br': 'Correção', 'en-us': 'Correction' }, corrected: true }, 'pt-BR', 'pt-br', labels) as FakeElement;
+  assert.equal(adjustment.children[1]?.children[1]?.textContent, 'corrigido');
+});
+
+test('the withdrawn counts are formatted for the page language', () => {
+  const view = { ...snapshot, voided: { out: 1200, adjustments: 0 } };
+  assert.equal(fieldValues(view, 'pt-BR').voidedOut, '1.200');
+  assert.equal(fieldValues(view, 'en-US').voidedOut, '1,200');
+  assert.equal(fieldValues(view, 'en-US').voidedAdjustments, '0');
 });

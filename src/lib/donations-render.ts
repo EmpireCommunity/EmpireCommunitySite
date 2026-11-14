@@ -26,6 +26,8 @@ export interface PanelLabels {
   spent: string;
   person: string;
   owner: string;
+  /** The small marker on a row that replaces an earlier one (contract 6.13). */
+  corrected: string;
   categories: Readonly<Record<ExpenseCategory, string>>;
 }
 
@@ -53,10 +55,16 @@ function textCell(doc: PanelDocument, className: string, text: string): PanelEle
 }
 
 /** Text the owner wrote (a payee, a justification, a reason): its own direction, isolated like the donor name. */
-function ownerTextCell(doc: PanelDocument, className: string, text: string): PanelElement {
+function ownerTextCell(doc: PanelDocument, className: string, text: string, marker?: PanelElement): PanelElement {
   const span = make(doc, 'span', 'text-isolate', text);
   span.setAttribute('dir', 'auto');
-  return cell(doc, className, span);
+  // The marker is a sibling of the isolated text, never inside it, so the owner's text cannot reorder it.
+  return marker === undefined ? cell(doc, className, span) : cell(doc, className, span, marker);
+}
+
+/** The marker of a corrected row: a word in the page's language, written as text like everything else. */
+function correctedMarker(doc: PanelDocument, corrected: true | undefined, labels: PanelLabels): PanelElement | undefined {
+  return corrected === true ? make(doc, 'span', 'ml-8 whitespace-nowrap text-label text-papel-apagado', labels.corrected) : undefined;
 }
 
 /** An amount with its direction in words for assistive technology and its sign in the text: never colour alone. */
@@ -97,7 +105,7 @@ export function expenseRow(doc: PanelDocument, expense: Expense, lang: string, l
     textCell(doc, `${CELL} whitespace-nowrap tabular-nums`, formatDay(expense.date, lang)),
     textCell(doc, CELL, labels.categories[expense.category]),
     ownerTextCell(doc, `${CELL} text-papel`, payeeText(expense.payee, labels)),
-    ownerTextCell(doc, CELL, expense.justification[locale]),
+    ownerTextCell(doc, CELL, expense.justification[locale], correctedMarker(doc, expense.corrected, labels)),
     amountCell(doc, 'out', expense.cents, lang, labels.spent),
   );
   return tr;
@@ -108,7 +116,7 @@ export function adjustmentRow(doc: PanelDocument, adjustment: Adjustment, lang: 
   const direction = adjustment.cents >= 0 ? 'in' : 'out';
   tr.append(
     textCell(doc, `${CELL} whitespace-nowrap tabular-nums`, formatDay(adjustment.date, lang)),
-    ownerTextCell(doc, CELL, adjustment.reason[locale]),
+    ownerTextCell(doc, CELL, adjustment.reason[locale], correctedMarker(doc, adjustment.corrected, labels)),
     amountCell(doc, direction, adjustment.cents, lang, direction === 'in' ? labels.received : labels.spent),
   );
   return tr;
@@ -151,6 +159,8 @@ export function fieldValues(snapshot: Snapshot, lang: string): Record<string, st
     sumFees: formatSigned(snapshot.received.feesCents, lang, 'out'),
     sumOut: formatSigned(sumCents(snapshot.out), lang, 'out'),
     sumAdjustments: adjustments === 0 ? formatCents(0, lang) : formatSigned(adjustments, lang, adjustments > 0 ? 'in' : 'out'),
+    voidedOut: new Intl.NumberFormat(lang).format(snapshot.voided.out),
+    voidedAdjustments: new Intl.NumberFormat(lang).format(snapshot.voided.adjustments),
     generatedAt: formatGeneratedAt(snapshot.generatedAt, lang),
     reconciledOn: snapshot.balance.reconciledOn === null ? '' : formatDay(snapshot.balance.reconciledOn, lang),
   };

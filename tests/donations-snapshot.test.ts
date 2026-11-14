@@ -44,10 +44,20 @@ test('an empty but valid snapshot has no data to show', () => {
     s.donations = [];
     s.out = [];
     s.balance = { calculatedCents: 0, reconciledOn: null };
+    s.voided = { out: 0, adjustments: 0 };
   });
   const snapshot = parseSnapshot(empty);
   assert.ok(snapshot);
   assert.equal(hasData(snapshot), false);
+  const voidedOnly = parseSnapshot(withEdit((s) => {
+    s.received = { totalCents: 0, count: 0, feesCents: 0 };
+    s.donations = [];
+    s.out = [];
+    s.balance = { calculatedCents: 0, reconciledOn: null };
+    s.voided = { out: 0, adjustments: 2 };
+  }));
+  assert.ok(voidedOnly);
+  assert.equal(hasData(voidedOnly), true, 'a withdrawn row is public trace, so the section stays');
 });
 
 test('anything that is not exactly the schema is refused whole (fail closed)', () => {

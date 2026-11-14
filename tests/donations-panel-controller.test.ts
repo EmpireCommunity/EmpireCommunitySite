@@ -52,12 +52,12 @@ class FakeNode implements PanelNode {
 }
 
 const LABELS = {
-  labelAnonymous: 'anônimo', labelReceived: 'Entrada', labelSpent: 'Saída', labelPerson: 'Pessoa', labelOwner: 'Responsável',
+  labelAnonymous: 'anônimo', labelReceived: 'Entrada', labelSpent: 'Saída', labelPerson: 'Pessoa', labelOwner: 'Responsável', labelCorrected: 'corrigido',
   labelCategoryHosting: 'Hospedagem', labelCategoryDomain: 'Domínio', labelCategoryPower: 'Energia', labelCategoryHardware: 'Hardware',
   labelCategorySoftware: 'Software', labelCategoryFees: 'Taxas', labelCategoryWithdrawal: 'Retirada', labelCategoryOther: 'Outros',
 };
-const FIELDS = ['total', 'count', 'balance', 'sumReceived', 'sumFees', 'sumOut', 'sumAdjustments', 'generatedAt', 'reconciledOn'];
-const BLOCKS = ['donations', 'out', 'adjustments', 'adjustments-line', 'owner-note', 'reconciled'];
+const FIELDS = ['total', 'count', 'balance', 'sumReceived', 'sumFees', 'sumOut', 'sumAdjustments', 'voidedOut', 'voidedAdjustments', 'generatedAt', 'reconciledOn'];
+const BLOCKS = ['donations', 'out', 'adjustments', 'adjustments-line', 'owner-note', 'reconciled', 'voided-out', 'voided-adjustments'];
 
 function makePanel(dataset: Record<string, string | undefined> = LABELS) {
   const root = new FakeNode(dataset);
@@ -128,7 +128,7 @@ test('no mount point: nothing runs, nothing is fetched', async () => {
 });
 
 test('a missing label fails closed: no request and nothing shown', async () => {
-  for (const missing of ['labelAnonymous', 'labelOwner', 'labelCategoryDomain']) {
+  for (const missing of ['labelAnonymous', 'labelOwner', 'labelCorrected', 'labelCategoryDomain']) {
     const panel = makePanel({ ...LABELS, [missing]: undefined });
     const run = makeEnv(ok(fixture));
     await startPanel(panel.root, run.env);
@@ -159,6 +159,9 @@ test('a valid snapshot is shown, in both locales, with the page-language rows an
     assert.equal(panel.blocks['adjustments-line']?.hidden, true);
     assert.equal(panel.blocks['owner-note']?.hidden, false, 'there is an expense, so the owner note shows');
     assert.equal(panel.blocks.reconciled?.hidden, false);
+    assert.equal(panel.fields.voidedOut?.textContent, '1');
+    assert.equal(panel.blocks['voided-out']?.hidden, false, 'the fixture has one withdrawn expense');
+    assert.equal(panel.blocks['voided-adjustments']?.hidden, true, 'and no withdrawn adjustment');
   }
 });
 
@@ -178,6 +181,7 @@ test('a valid snapshot with nothing in it leaves the panel hidden and shows no s
     s.donations = [];
     s.out = [];
     s.balance = { calculatedCents: 0, reconciledOn: null };
+    s.voided = { out: 0, adjustments: 0 };
   });
   const panel = makePanel();
   await startPanel(panel.root, makeEnv(ok(empty)).env);

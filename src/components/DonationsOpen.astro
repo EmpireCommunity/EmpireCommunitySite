@@ -1,0 +1,95 @@
+---
+// The "open" block of the Support page (donations contract section 2, plan P2-09, Bússola's walkthrough of T-74): a plain
+// HTML form that posts to the donations service on the same origin, and nothing else. The donor chooses an amount (four
+// presets, or their own in reais), may type a public display name, and the service answers with a redirect to the payment
+// page, so no payment host, key or button for another service is written here (site-data section 10, the payment guard).
+// It works without JavaScript: one text field `amount` in reais, which the service parses (6.15). The preset buttons are
+// `hidden` until `src/scripts/donations-form.ts` runs and only fill that field. The form carries exactly the fields of the
+// contract: `amount`, `locale` and `display_name` (the service refuses any other or repeated key).
+// The page renders this component only when `donations.status` is `open` (support.astro). The words are placeholders until
+// the owner approves the copy (section 10): they live in `donations.open.*` and nowhere else.
+import Icon from './Icon.astro';
+import IndexSection from './IndexSection.astro';
+import { t } from '../i18n/index.ts';
+import type { MessageKey } from '../i18n/index.ts';
+import { CHECKOUT_PATH, PRESET_REAIS } from '../lib/donation-amount.ts';
+import type { Locale } from '../lib/routes.ts';
+import { formatBrl } from '../lib/support-rules.ts';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const text = (key: string): string => t(locale, `donations.open.${key}` as MessageKey);
+
+const chip =
+  'inline-flex min-h-[48px] min-w-[96px] cursor-pointer items-center justify-center rounded-botao border border-pauta-forte px-16 text-button text-papel hover:border-papel';
+const field = 'h-[48px] w-full rounded-botao border border-pauta-forte bg-transparent px-16 text-body text-papel placeholder:text-papel-apagado';
+const legend = 'font-display text-title text-papel';
+---
+
+<IndexSection title={text('title')} id="doar">
+  <div data-donations="open">
+    <p id="obrigado" role="status" class="thanks-note mb-24 border border-pauta-forte px-16 py-12 text-body font-medium text-papel">{text('thanks')}</p>
+
+    <form id="donation-form" method="post" action={CHECKOUT_PATH} class="flex max-w-[40rem] flex-col gap-32">
+      <input type="hidden" name="locale" value={locale} />
+
+      <div>
+        <label for="amount" class={legend}>{text('amount.legend')}</label>
+        <p id="amount-help" class="mt-4 max-w-[72ch] text-body-sm text-papel-suave">{text('amount.help')} {text('amount.format')}</p>
+        <div class="mt-12 flex items-center gap-8">
+          <span aria-hidden="true" class="text-body text-papel-suave">R$</span>
+          <input
+            id="amount"
+            name="amount"
+            type="text"
+            inputmode="decimal"
+            required
+            maxlength="14"
+            autocomplete="off"
+            placeholder={locale === 'pt-br' ? '25,00' : '25.00'}
+            aria-describedby="amount-help"
+            class={`${field} max-w-[10rem]`}
+          />
+        </div>
+        <div data-amount-presets hidden class="mt-16 flex flex-wrap gap-12">
+          {
+            PRESET_REAIS.map((reais) => (
+              <button type="button" data-amount={String(reais)} class={chip}>{formatBrl(reais * 100, locale)}</button>
+            ))
+          }
+        </div>
+      </div>
+
+      <div>
+        <label for="display-name" class={legend}>
+          {text('name.label')} <span class="font-sans text-body-sm text-papel-suave">{text('name.optional')}</span>
+        </label>
+        <p class="mt-4 text-body-sm text-papel-suave">{text('name.help')}</p>
+        <input id="display-name" name="display_name" class={`${field} mt-12 max-w-[24rem]`} maxlength="20" autocomplete="off" spellcheck="false" aria-describedby="name-notice" />
+        <div id="name-notice" class="mt-12 flex max-w-[72ch] flex-col gap-8 border-l-2 border-pauta-forte pl-16 text-body-sm text-papel-suave">
+          <p>{text('name.notice.public')}</p>
+          <p>{text('name.notice.amount')}</p>
+          <p>{text('name.notice.time')}</p>
+        </div>
+      </div>
+
+      <div>
+        <button
+          type="submit"
+          class="inline-flex h-[48px] items-center justify-center gap-12 rounded-botao bg-papel px-24 text-button text-violeta-ata hover:bg-papel-hover active:bg-papel-active motion-safe:transition-colors"
+        >
+          <span>{text('submit')}</span>
+          <Icon name="external-link" />
+        </button>
+        <p class="mt-12 max-w-[72ch] text-body-sm text-papel-suave">{text('submit.note')}</p>
+      </div>
+    </form>
+  </div>
+</IndexSection>
+
+<script>
+  import '../scripts/donations-form.ts';
+</script>

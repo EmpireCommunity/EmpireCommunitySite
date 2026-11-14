@@ -53,8 +53,8 @@ export interface PanelEnv {
 
 /** The labels sit in `data-label-*` attributes written by the server from the locale messages; one missing means no render. */
 function labelsOf(root: PanelNode): PanelLabels | undefined {
-  const { labelAnonymous, labelReceived, labelSpent, labelPerson, labelOwner } = root.dataset;
-  if (labelAnonymous === undefined || labelReceived === undefined || labelSpent === undefined || labelPerson === undefined || labelOwner === undefined) {
+  const { labelAnonymous, labelReceived, labelSpent, labelPerson, labelOwner, labelCorrected } = root.dataset;
+  if (labelAnonymous === undefined || labelReceived === undefined || labelSpent === undefined || labelPerson === undefined || labelOwner === undefined || labelCorrected === undefined) {
     return undefined;
   }
   const categories = {} as Record<(typeof EXPENSE_CATEGORIES)[number], string>;
@@ -63,7 +63,7 @@ function labelsOf(root: PanelNode): PanelLabels | undefined {
     if (label === undefined) return undefined;
     categories[category] = label;
   }
-  return { anonymous: labelAnonymous, received: labelReceived, spent: labelSpent, person: labelPerson, owner: labelOwner, categories };
+  return { anonymous: labelAnonymous, received: labelReceived, spent: labelSpent, person: labelPerson, owner: labelOwner, corrected: labelCorrected, categories };
 }
 
 function setHidden(root: PanelNode, selector: string, hidden: boolean): void {
@@ -85,6 +85,8 @@ function show(root: PanelNode, snapshot: Snapshot, labels: PanelLabels, env: Pan
   setHidden(root, '[data-block="adjustments-line"]', snapshot.adjustments.length === 0);
   setHidden(root, '[data-block="owner-note"]', snapshot.out.length === 0 && snapshot.adjustments.length === 0);
   setHidden(root, '[data-block="reconciled"]', snapshot.balance.reconciledOn === null);
+  setHidden(root, '[data-block="voided-out"]', snapshot.voided.out === 0);
+  setHidden(root, '[data-block="voided-adjustments"]', snapshot.voided.adjustments === 0);
   setHidden(root, '[data-panel-unavailable]', true);
   setHidden(root, '[data-panel-body]', false);
   root.hidden = false;

@@ -38,6 +38,7 @@ Locale path segments are `pt-br` and `en-us`; the `lang` attribute and `hreflang
 |---|---|---|
 | `/` | Cloudflare rules, origin fallback | 302 to a locale tree (section 3). Origin serves the chooser page with HTTP 200 if the rules are off. |
 | `/discord`, `/discord/` | Cloudflare rules R3 and R4, origin fallback (D-78) | The public address of the community entry. 302 to the gate page of the visitor's language (section 3). Origin serves the chooser with HTTP 200 if the rules are off. Used by links outside the site; the site's own buttons point at the gate pages. See "`/discord` and the gate pages" below. |
+| `/donations/` (everything under it) | Traefik router of the donations service (`Host` and `PathPrefix`, donations contract section 2) | Reserved at opening (P2-09). The site's nginx never sees these paths and the build writes nothing under `donations/` (`check-dist` fails on it); no page, redirect or rule of the site may use the prefix. The support form posts to `/donations/api/v1/checkout` and the panel reads `/donations/api/v1/transparency`, both same origin. |
 | `/data/members.json` | Worker, origin fallback | [members-json](members-json.md) |
 | `/sitemap-index.xml`, `/sitemap-0.xml` | build | section 5 |
 | `/robots.txt`, `/llms.txt` | build | section 5 |
@@ -206,7 +207,7 @@ on**, static target. The `/data/` custom and rate-limit rules of members-json 2.
   page, which is `noindex`). No WhatsApp.
 - **Cloudflare Web Analytics:** use the **manual JS snippet** in the layout (the token is public), never automatic
   injection, so the CSP can be tested before deploy. The snippet is **not included on the support pages**
-  (`/pt-br/support/`, `/en-us/support/`), which are the pages that will carry payment-related content once donations open (D-28); the strict setting applies from launch so opening them later loosens nothing. Never send `Cache-Control: ... no-transform`
+  (`/pt-br/support/`, `/en-us/support/`), which are the pages that will carry payment-related content once donations open (D-28); the strict setting applies from launch; opening them loosens only `form-action` (section 6). Never send `Cache-Control: ... no-transform`
   (it blocks automatic injection per Cloudflare's FAQ; harmless here but keep it out).
 - **Cloudflare features that rewrite HTML are off for the zone** (a required setup item, copied by Guindaste into the
   Ops Runbook with the date): **Email Address Obfuscation** (it replaces visible e-mail addresses in the HTML, which
@@ -296,13 +297,13 @@ add_header Cross-Origin-Opener-Policy "same-origin" always;
 | Paths | Content-Security-Policy |
 |---|---|
 | default | `default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com; img-src 'self'; style-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'` |
-| `^/(pt-br\|en-us)/support(/\|$)` | `default-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'` |
+| `^/(pt-br\|en-us)/support(/\|$)` | `default-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self' https://www.mercadopago.com.br; frame-ancestors 'none'` |
 
 - The support pattern also matches `/pt-br/support` and `/en-us/support` without the slash, so the 301 to the slash form
   already carries the support policy (the HTTP test asserts it).
 - The support pages have **no Cloudflare analytics hosts** in their CSP and carry no beacon. `data:` is **not** allowed
   in `img-src` anywhere; an inline `<svg>` element is markup, not an image request, and is not affected. The
-  support-page policy is the baseline for the later donation contract; any loosening belongs to that contract.
+  support-page policy is the baseline of the donation contract (P2-09): its only loosening is `form-action 'self' https://www.mercadopago.com.br`. The form posts to the donations service (`'self'`), which answers `303` to the one host of its allowlist, and browsers apply `form-action` to that redirect (T-56 m1); the directive is a header, so the HTML never names the payment host (payment guard, site-data section 10). The support pages also carry `<meta name="referrer" content="no-referrer">`, because the return from a payment carries identifiers in its address; `connect-src 'self'` already covers the panel's snapshot request.
 - The Cloudflare hosts in the default policy are what the Web Analytics beacon uses to load and report; Cloudflare's
   documentation checked here does not list them, so Ensaio verifies C-5 against the real snippet and adjusts.
 - The proxy layer in front of the origin adds `X-Content-Type-Options: nosniff`, `Referrer-Policy:

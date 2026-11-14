@@ -3,7 +3,7 @@ import { HTML_LANG, LOCALES, routePath, type Locale } from '../../src/lib/routes
 import ts from 'typescript';
 import { DEFAULT_CSP, SUPPORT_CSP, PERMISSIONS_POLICY } from './security-headers.ts';
 import { membersFromPayload } from '../../src/lib/members.ts';
-import { discordLinks, htmlLang, internalDiscordLinks, paymentGuard } from './dist-checks.ts';
+import { discordLinks, htmlLang, internalDiscordLinks, paymentGuard, donationsBlock, noReferrerMeta } from './dist-checks.ts';
 
 export const SITE_ORIGIN = 'https://empirecommunity.org';
 export const WORKER_CONFIG_URL = 'https://raw.githubusercontent.com/EmpireCommunity/EmpireCommunitySite-Worker/main/wrangler.jsonc';
@@ -92,8 +92,13 @@ export function noPayment(html: string, support: boolean): string[] {
   const allowed = new Set(['contact@empirecommunity.org', 'legal@empirecommunity.org']);
   const problems = paymentGuard(decoded(html), 'live page', allowed).length > 0 ? ['Payment guard failed'] : [];
   if (support) {
-    const blocks = [...html.matchAll(/<([a-z][a-z0-9]*)\b[^>]*\bdata-donations=["']not-open["'][^>]*>([\s\S]*?)<\/\1>/gi)];
-    if (blocks.length !== 1 || /</.test(blocks[0]?.[2] ?? '') || !blocks[0]?.[2]?.trim()) problems.push('Support needs one plain-text not-open block');
+    // The live page carries one donations block, `not-open` (plain text) or `open` (the one form that posts to the donations
+    // service, donations contract section 2); which of the two is the release's business, not the monitor's. The no-referrer
+    // meta is part of the delivered page (the return from a payment carries identifiers in its address).
+    const found = donationsBlock(html, 'live page');
+    problems.push(...found.findings.map((finding) => finding.message));
+    if (found.state === 'not-open' && !(/data-donations=["']not-open["'][^>]*>([\s\S]*?)</i.exec(html)?.[1] ?? '').trim()) problems.push('Support needs one plain-text not-open block');
+    problems.push(...noReferrerMeta(html, 'live page').map((finding) => finding.message));
   }
   if (!support && /data-donations\s*=/i.test(html)) problems.push('Donations block belongs only to support');
   return problems;
