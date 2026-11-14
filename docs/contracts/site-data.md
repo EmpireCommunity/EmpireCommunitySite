@@ -384,7 +384,7 @@ Rules:
   inside the open block an address attribute (`href`, `src`, `action` and the like, the decoded value) holds no `&` and no
   control or space character and starts with one slash that is not followed by a slash or a backslash, or with `#`; no `script`,
   `iframe`, `object`, `embed`, `base`, `meta`, `link` and no svg `animate`, `set`, `animateTransform` or `animateMotion` in the block;
-  `<meta charset="utf-8">` is the first element of `head` (nginx also sends `charset utf-8`). Other pages: the words
+  no `select` element anywhere on the page; the referrer meta and `<meta charset="utf-8">` (first element of `head`) are checked in both readings (nginx also sends `charset utf-8`). Other pages: the words
   `data-donations` and a `Donations*.js` script name must not appear at all (a raw text check).
   **Limits of the gate, written down so nobody reads more into it (P2-09 review):**
   - `PENDING.legalPages` is a **proxy** for "Privacy and Terms carry their new version": it turns false when the legal files
@@ -396,6 +396,10 @@ Rules:
   - The not-open build still emits two orphan script bundles, `DonationsOpen...js` and `DonationsPanel...js`, in `dist/_astro`
     (the bundler builds every component script; a conditional import did not remove them). No page references them: the build
     refuses any not-open page, and any page but Support, that loads a `Donations*` script or carries a panel marker.
+  - **P2-11 browser e2e list:** Sentinela's crafted pages (an unquoted value ending in a quote, a no-break space or a vertical tab after
+    a tag name, markup inside an svg `script` or `style`, a `noscript` or `template` holding a form-tied control, a protocol-relative
+    address spelled with a character reference or a tab, a second referrer meta inside a `noscript` in `head`) run in a real browser,
+    to confirm the tree the guard reads is the one the browser builds. The unit tests prove the guard on parse5 only.
   - **P2-11 checklist: the checkout host (`www.mercadopago.com.br`) is written in four places** that must stay equal, and equal
     to the service's `303` allowlist: `nginx/nginx.conf` (the support map line), `scripts/lib/security-headers.ts`
     (`SUPPORT_CSP`), the support row of the routing-locale CSP table, and `tests/integrity.test.ts`. The HTTP test and the

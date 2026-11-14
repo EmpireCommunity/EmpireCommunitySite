@@ -6,7 +6,8 @@
 // browser builds and never on a hand-made reading of the text. Two earlier hand-written scanners were each bypassed by a
 // stretch a browser reads differently (a quote, a no-break space, markup inside an svg script), and that is why none is left.
 // The page is parsed twice, with scripting on and off, because a `noscript` element holds text in one reading and markup in the
-// other; every rule applies to both trees and a finding in either counts. Any parse error the standard names is a finding too:
+// other; every rule applies to both trees and a finding in either counts. (A finding only the scripting-off reading makes: a second
+// referrer meta or a form-tied button inside a `noscript`; tests/donations-checks.test.ts pins both.) Any parse error the standard names is a finding too:
 // Astro writes clean HTML, and markup that needs error recovery to mean anything is markup to refuse. Attribute values are the
 // decoded ones the browser sees: `&#47;` is a slash here as it is there.
 import { parse } from 'parse5';
@@ -182,6 +183,8 @@ type State = 'not-open' | 'open' | 'invalid';
 function inspect(reading: Reading, file: string, locale: string | undefined): { state: State; findings: Finding[] } {
   const { items } = reading;
   const findings: Finding[] = [...new Set(reading.parseErrors)].map((code) => err(file, `the support page is not clean HTML: parse error ${code}`));
+  // A `select` posts a value the guard does not model, and the page has no use for one: refused anywhere on the page (Sentinela S8).
+  if (items.some((item) => item.name === 'select')) findings.push(err(file, 'the support page has no select element'));
   const marked = items.filter((item) => item.attrs.has('data-donations'));
   for (const item of marked) {
     if (!DONATIONS_STATES.includes(item.attrs.get('data-donations') ?? '')) findings.push(err(file, 'data-donations is "not-open", "open" or "soon"'));
@@ -241,24 +244,27 @@ export function notOpenText(html: string): string | undefined {
   return blocks.length !== 1 || block === undefined || insideOf(block.element).size > 0 ? undefined : textOf(block.element).trim();
 }
 
-/** Support pages send no Referer (donations contract section 2): the return from a payment carries identifiers in its address. */
+/** Support pages send no Referer (donations contract section 2): the return from a payment carries identifiers in its address. Both readings. */
 export function noReferrerMeta(html: string, file: string): Finding[] {
-  const items = readings(html)[0]?.items ?? [];
-  const metas = items.filter((item) => item.name === 'meta' && (item.attrs.get('name') ?? '').toLowerCase() === 'referrer');
-  return metas.length === 1 && (metas[0]?.attrs.get('content') ?? '').toLowerCase() === 'no-referrer' ? [] : [err(file, 'the support page needs exactly one <meta name="referrer" content="no-referrer">')];
+  const wrong = readings(html).some(({ items }) => {
+    const metas = items.filter((item) => item.name === 'meta' && (item.attrs.get('name') ?? '').toLowerCase() === 'referrer');
+    return !(metas.length === 1 && (metas[0]?.attrs.get('content') ?? '').toLowerCase() === 'no-referrer');
+  });
+  return wrong ? [err(file, 'the support page needs exactly one <meta name="referrer" content="no-referrer">')] : [];
 }
 
 /**
  * The page declares its encoding first: `<meta charset="utf-8">` is the first element of `head`, so a browser that is not told the
  * encoding by the server still reads the page as UTF-8 (the server also sends it, nginx `charset`). Without either, a browser may
- * guess another encoding and read markup differently from the way these checks do.
+ * guess another encoding and read markup differently from the way these checks do. Both readings.
  */
 export function charsetFirst(html: string, file: string): Finding[] {
-  const items = readings(html)[0]?.items ?? [];
-  const head = items.find((item) => item.name === 'head');
-  const first = head?.element.childNodes.find(isElement);
-  const declared = first !== undefined && first.tagName === 'meta' && (attrsOf(first).get('charset') ?? '').toLowerCase() === 'utf-8';
-  return declared ? [] : [err(file, 'the first element of <head> must be <meta charset="utf-8">')];
+  const wrong = readings(html).some(({ items }) => {
+    const head = items.find((item) => item.name === 'head');
+    const first = head?.element.childNodes.find(isElement);
+    return !(first !== undefined && first.tagName === 'meta' && (attrsOf(first).get('charset') ?? '').toLowerCase() === 'utf-8');
+  });
+  return wrong ? [err(file, 'the first element of <head> must be <meta charset="utf-8">')] : [];
 }
 
 /** The state the site data asks for (`support.donations.status`) and what the built page must then carry. */

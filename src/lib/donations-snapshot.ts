@@ -191,6 +191,9 @@ function singleScript(value: string): boolean {
 export function isDisplayName(value: unknown): value is string {
   if (typeof value !== 'string' || value.length === 0 || value.length > MAX_NAME_UNITS) return false;
   if (value.trim() !== value || value.trim().length === 0) return false;
+  // The service stores and publishes the NFKC form (contract section 2, rule 1): a name that is not equal to its own NFKC form did not come
+  // from the service, so the whole snapshot is refused (Sentinela S10).
+  if (value !== value.normalize('NFKC')) return false;
   if (!NAME_CHARS.test(value)) return false;
   if ((value.match(DIGIT) ?? []).length > MAX_NAME_DIGITS) return false; // a phone number is not a nickname
   if (!singleScript(value)) return false; // Latin mixed with look-alike Cyrillic is not one nickname

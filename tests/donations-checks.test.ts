@@ -50,6 +50,7 @@ test('support page, not open: one plain-text block, no form, no panel, no Donati
     ['the Donations panel script while not open', notOpenPage(NOT_OPEN, '<script type="module" src="/_astro/DonationsPanel.astro_astro_type_script_index_0_lang.D4MxFJQI.js"></script>')],
     ['the Donations form script while not open', notOpenPage(NOT_OPEN, '<script type="module" src="/_astro/DonationsOpen.astro_astro_type_script_index_0_lang.CbYV6ULh.js"></script>')],
     ['an unknown donations state', notOpenPage(NOT_OPEN, '<p data-donations="closed">x</p>')],
+    ['a nameless select while not open', notOpenPage(NOT_OPEN, '<select><option>1</option></select>')],
     ['no referrer meta', documentOf(NOT_OPEN, '<meta charset="utf-8">')],
     ['a referrer meta with another policy', documentOf(NOT_OPEN, '<meta charset="utf-8"><meta name="referrer" content="origin">')],
     ['two referrer metas', documentOf(NOT_OPEN, `<meta charset="utf-8">${REFERRER}${REFERRER}`)],
@@ -92,6 +93,10 @@ test('support page, open: one form that posts to the donations service and to no
     ['a named button that is no submit button', openPage(swap('<button type="button" data-amount="10">', '<button type="button" name="amount" data-amount="10">'))],
     ['the form closed before its controls (an empty form beside them)', openPage(openBlock(OPEN_FORM.replace('<input type="hidden" name="locale"', '</form><input type="hidden" name="locale"')))],
     ['a control of the block outside the form', openPage(swap('</form>', '</form><input name="amount" type="text">'))],
+    ['a select in the block', openPage(swap('<button type="submit">', '<select name="amount"><option value="1">1</option></select><button type="submit">'))],
+    ['a nameless select in the block', openPage(swap('<button type="submit">', '<select><option>1</option></select><button type="submit">'))],
+    ['a select outside the block', openPage(openBlock(), '<select name="x"><option>1</option></select>')],
+    ['a nameless select outside the block (only the select rule sees it)', openPage(openBlock(), '<select><option>1</option></select>')],
     ['a preset container that is not hidden', openPage(swap('data-amount-presets hidden', 'data-amount-presets'))],
     ['two submit buttons', openPage(swap('</form>', '<button type="submit">Again</button></form>'))],
     ['a script inside the block', openPage(swap('</form>', '</form><script>x()</script>'))],
@@ -143,7 +148,7 @@ test('every address in the open block is local: one slash that is not followed b
   // (A browser's URL parser drops a tab or newline and reads "/\t/evil.example" as "//evil.example": that is why the rule refuses
   // the character instead of trusting the local test on the raw value. The WHATWG URL algorithm is not re-run here.)
   for (const href of foreign) assert.ok(errors(supportPage(inBlock(href), 'p', OPEN)) >= 1, JSON.stringify(href));
-  for (const [attribute, tag] of [['src', 'img'], ['srcset', 'img'], ['poster', 'video'], ['data', 'span'], ['ping', 'a'], ['cite', 'blockquote']] as const) {
+  for (const [attribute, tag] of [['src', 'img'], ['srcset', 'img'], ['poster', 'video'], ['data', 'span'], ['ping', 'a'], ['cite', 'blockquote'], ['background', 'table'], ['manifest', 'span']] as const) {
     assert.ok(errors(supportPage(openPage(swap('</form>', `</form><${tag} ${attribute}="https://pay.example/x">x</${tag}>`)), 'p', OPEN)) >= 1, attribute);
   }
 });
@@ -267,6 +272,24 @@ test('the live monitor reads the same page: the open form passes with the path l
   assert.ok(donationsBlock(openPage(openBlock(), '<a title="a>b" formaction="https://x.test/">x</a>'), 'live', 'pt-br').findings.length > 0);
   assert.equal(donationsBlock(notOpenPage(), 'live', 'pt-br').state, 'not-open');
   assert.equal(donationsBlock(documentOf(''), 'live').state, 'invalid');
+});
+
+// Why the page is read twice: a `noscript` in `head` is text when scripting is on and markup when it is off, so a second referrer meta
+// inside it exists for a visitor without scripts and not for one with them. Only the scripting-off reading sees it (Sentinela G).
+test('the meta checks run on both readings: a referrer or charset meta that exists only when scripting is off is found (Sentinela S9)', () => {
+  const only = (inNoscript: string) => documentOf(NOT_OPEN, `<meta charset="utf-8">${REFERRER}<noscript>${inNoscript}</noscript>`);
+  assert.deepEqual(supportPage(only(''), 'p', MESSAGE), [], 'an empty noscript is harmless');
+  const hostile: [string, string][] = [
+    ['a second referrer meta with another policy', '<meta name="referrer" content="unsafe-url">'],
+    ['a second referrer meta with the same policy', REFERRER],
+  ];
+  for (const [label, inside] of hostile) {
+    assert.equal(noReferrerMeta(only(inside), 'p').length, 1, `referrer: ${label}`);
+    assert.ok(errors(supportPage(only(inside), 'p', MESSAGE)) >= 1, `page: ${label}`);
+  }
+  // The charset meta must be first in both readings: a noscript that opens the head breaks it in both.
+  assert.equal(charsetFirst(documentOf(NOT_OPEN, '<noscript><meta charset="utf-8"></noscript><meta charset="utf-8">'), 'p').length, 1);
+  assert.equal(charsetFirst(documentOf(NOT_OPEN, `<meta charset="utf-8">${REFERRER}`), 'p').length, 0);
 });
 
 test('the encoding and referrer metas are read from the parsed head', () => {

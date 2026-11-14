@@ -191,16 +191,27 @@ test('hostile or disallowed display names fail validation, on any donation row',
 });
 
 test('allowed display names pass: any script, digits, the allowed punctuation and graphemes counted not code units', () => {
-  const ok = ['\u0440\u0456\u0445', '\u03B1\u03B2\u03B3', '\u3055\u304F\u3089', '\u30AB\u30BF\u30AB\u30CA', '\u6851\u6821', 'Jo\u00E3o 10 Silva', 'Ana 2026 \u00C7a', 'Jos\u00E9 \u00C9mile', '1234', 'Ana 2026', '\u0661\u0662\u0663', 'Maria', 'João 10', 'Ana-Clara', "O'Neil", 'a_b', 'Привет', '李小龍', 'مرحبا', 'e\u0301'.repeat(20), 'x'.repeat(20), 'a\u0301\u0302'];
+  const ok = ['\u0440\u0456\u0445', '\u03B1\u03B2\u03B3', '\u3055\u304F\u3089', '\u30AB\u30BF\u30AB\u30CA', '\u6851\u6821', 'Jo\u00E3o 10 Silva', 'Ana 2026 \u00C7a', 'Jos\u00E9 \u00C9mile', '1234', 'Ana 2026', '\u0661\u0662\u0663', 'Maria', 'João 10', 'Ana-Clara', "O'Neil", 'a_b', 'Привет', '李小龍', 'مرحبا', 'x\u0301'.repeat(20), 'x'.repeat(20), 'x\u0301\u0302'];
   for (const name of ok) assert.equal(isDisplayName(name), true, name);
   // A letter of the Common script (a modifier letter) is ignored like a digit or a space, so it neither breaks nor joins a script (CodeRabbit).
   assert.equal(isDisplayName("O\u02B9Neil"), true, 'Latin letters around a Common modifier letter');
   assert.equal(isDisplayName('\u02B9\u02B9'), true, 'letters of no one script');
   assert.equal(isDisplayName('O\u02B9\u043D'), false, 'a Common letter does not hide a Latin and Cyrillic mix');
   assert.equal(isDisplayName('x'.repeat(21)), false);
-  assert.equal(isDisplayName('e\u0301'.repeat(21)), false);
-  assert.equal(isDisplayName('a\u0301\u0302\u0303'), false, 'three combining marks in one grapheme (contract G2)');
-  assert.equal(isDisplayName('a' + '\u0301'.repeat(160)), false, 'a stack of marks is refused by the marks rule, not by a code-unit cap');
+  assert.equal(isDisplayName('x\u0301'.repeat(21)), false);
+  assert.equal(isDisplayName('x\u0301\u0302\u0303'), false, 'three combining marks in one grapheme (contract G2)');
+  assert.equal(isDisplayName('x' + '\u0301'.repeat(160)), false, 'a stack of marks is refused by the marks rule, not by a code-unit cap');
+});
+
+test('a donor name must equal its own NFKC form, as the service publishes it (Sentinela S10)', () => {
+  assert.equal(isDisplayName('Jo\u00E3o'), true, 'composed');
+  assert.equal(isDisplayName('Jo\u0061\u0303o'), false, 'the same name decomposed: not the form the service publishes');
+  assert.equal(isDisplayName('\u0065\u0301'), false, 'e and a combining acute');
+  assert.equal(isDisplayName('\uFF21na'), false, 'a fullwidth letter, which NFKC folds to a plain one');
+  assert.equal(isDisplayName('\u1112\u1161\u11AB'), false, 'Hangul jamo, which NFKC composes');
+  assert.equal(isDisplayName('x\u0301'), true, 'a mark with no composed form is already NFKC');
+  assert.equal(parseSnapshot(withEdit((s) => { s.donations[1].name = 'Jo\u0061\u0303o'; })), undefined, 'one decomposed name refuses the whole snapshot');
+  assert.ok(parseSnapshot(withEdit((s) => { s.donations[1].name = 'Jo\u00E3o'; })));
 });
 
 test('without Intl.Segmenter (older browsers) names are still counted by base character, marks joined to the one before', () => {
@@ -208,9 +219,9 @@ test('without Intl.Segmenter (older browsers) names are still counted by base ch
   Reflect.deleteProperty(Intl, 'Segmenter');
   try {
     assert.equal(typeof Intl.Segmenter, 'undefined');
-    assert.equal(isDisplayName('e\u0301'.repeat(20)), true, '20 base characters with a mark each');
-    assert.equal(isDisplayName('e\u0301'.repeat(21)), false);
-    assert.equal(isDisplayName('a\u0301\u0302\u0303'), false);
+    assert.equal(isDisplayName('x\u0301'.repeat(20)), true, '20 base characters with a mark each');
+    assert.equal(isDisplayName('x\u0301'.repeat(21)), false);
+    assert.equal(isDisplayName('x\u0301\u0302\u0303'), false);
   } finally {
     Reflect.defineProperty(Intl, 'Segmenter', { value: original, configurable: true, writable: true });
   }
