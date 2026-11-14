@@ -2,115 +2,113 @@
 // shared by the build (`scripts/check-dist.ts`) and the live integrity monitor (`scripts/lib/integrity-rules.ts`). Pure:
 // HTML text in, findings out.
 //
-// The support page is read by a STRICT scanner, not a tolerant one. Every `<` must start a token this scanner accepts: a
-// doctype, or a tag whose attributes are each a bare name or `name="value"` with a double-quoted value, separated by white
-// space. Anything else on the page is itself a finding: a quote anywhere else (single-quoted or unquoted values), a comment,
-// a CDATA section, a `<` that starts nothing, and the elements whose content a browser reads as text instead of markup
-// (`noscript`, `template`, `textarea`, `xmp`, `plaintext`, `noembed`, `noframes`). The content of `script` and `style` is
-// skipped as the browser skips it. So the scanner and the browser cannot disagree about where a tag ends, and no control can
-// hide in a stretch the scanner read as a quoted value (Sentinela M1). Attribute values are compared as written, never
-// entity-decoded: a coded variant (`&#47;donations...`, `am&#111;unt`) is not the value the contract names and fails closed.
+// The page is read with parse5, a parser that implements the HTML Standard's tree construction, so the checks run on the tree a
+// browser builds and never on a hand-made reading of the text. Two earlier hand-written scanners were each bypassed by a
+// stretch a browser reads differently (a quote, a no-break space, markup inside an svg script), and that is why none is left.
+// The page is parsed twice, with scripting on and off, because a `noscript` element holds text in one reading and markup in the
+// other; every rule applies to both trees and a finding in either counts. Any parse error the standard names is a finding too:
+// Astro writes clean HTML, and markup that needs error recovery to mean anything is markup to refuse. Attribute values are the
+// decoded ones the browser sees: `&#47;` is a slash here as it is there.
+import { parse } from 'parse5';
+import type { DefaultTreeAdapterMap } from 'parse5';
 import { CHECKOUT_PATH } from '../../src/lib/donation-amount.ts';
-import { decodeEntities, err } from './dist-checks.ts';
+import { err } from './dist-checks.ts';
 import type { Finding } from './dist-checks.ts';
 
-interface Tag {
+type Node = DefaultTreeAdapterMap['node'];
+type Element = DefaultTreeAdapterMap['element'];
+
+interface Item {
+  element: Element;
+  /** Lower-case tag name. */
   name: string;
+  /** Attribute names lower-cased, values decoded; the first of a duplicate wins, as in a browser. */
   attrs: Map<string, string>;
-  closing: boolean;
-  /** Offset of `<`, and of the character after `>`. */
-  index: number;
-  end: number;
 }
 
-/** A doctype, or one tag: `<name`, then attributes that are a bare name or `name="value"`, each after white space, then `>`. */
-const TOKEN = /<(?:!doctype[^>]*>|(\/?)([a-z][a-z0-9-]*)((?:\s+[a-z_:@][a-z0-9_:.@-]*(?:="[^"]*")?)*)\s*\/?>)/iy;
-const ATTRIBUTE = /([^\s=]+)(?:="([^"]*)")?/g;
-const RAW_TEXT: ReadonlySet<string> = new Set(['script', 'style']);
-const TEXT_ONLY: ReadonlySet<string> = new Set(['noscript', 'template', 'textarea', 'xmp', 'plaintext', 'noembed', 'noframes']);
+interface Reading {
+  /** Every element of the tree in document order. */
+  items: Item[];
+  parseErrors: string[];
+}
 
-function attributesOf(text: string): Map<string, string> {
+const isElement = (node: Node): node is Element => 'tagName' in node;
+
+function attrsOf(element: Element): Map<string, string> {
   const attrs = new Map<string, string>();
-  for (const match of text.matchAll(ATTRIBUTE)) {
-    const name = (match[1] ?? '').toLowerCase();
-    if (!attrs.has(name)) attrs.set(name, match[2] ?? ''); // browsers keep the FIRST of a duplicate attribute
+  for (const attribute of element.attrs) {
+    const name = attribute.name.toLowerCase();
+    if (!attrs.has(name)) attrs.set(name, attribute.value);
   }
   return attrs;
 }
 
-/** The tags of a page, and a finding for every stretch the strict grammar does not accept. */
-function scan(html: string): { tags: Tag[]; problems: string[] } {
-  const tags: Tag[] = [];
-  const problems: string[] = [];
-  let position = 0;
-  for (;;) {
-    const start = html.indexOf('<', position);
-    if (start < 0) break;
-    TOKEN.lastIndex = start;
-    const match = TOKEN.exec(html);
-    if (match === null) {
-      problems.push(`markup outside the strict grammar (a comment, a quote that is not a double-quoted attribute value, or a "<" that starts no tag) at offset ${start}: ${JSON.stringify(html.slice(start, start + 40))}`);
-      position = start + 1;
-      continue;
-    }
-    position = start + match[0].length;
-    if (match[2] === undefined) continue; // the doctype
-    const tag: Tag = { name: match[2].toLowerCase(), attrs: attributesOf(match[3] ?? ''), closing: match[1] === '/', index: start, end: position };
-    tags.push(tag);
-    if (!tag.closing && TEXT_ONLY.has(tag.name)) problems.push(`<${tag.name}> is not allowed on the support page: a browser reads its content as text, a scanner reads it as markup`);
-    if (!tag.closing && RAW_TEXT.has(tag.name)) {
-      const close = new RegExp(`</${tag.name}(?=[\\s/>])`, 'i').exec(html.slice(position));
-      if (close === null) {
-        problems.push(`<${tag.name}> is never closed`);
-        break;
-      }
-      position += close.index;
-    }
-  }
-  return { tags, problems };
+const childrenOf = (node: Node): Node[] => ('childNodes' in node ? node.childNodes : []);
+const contentOf = (node: Node): Node | undefined => (node as { content?: Node }).content;
+
+/** Every element of a tree in document order, the content of `template` elements included. */
+function elementsOf(root: Node): Item[] {
+  const items: Item[] = [];
+  const visit = (node: Node): void => {
+    if (isElement(node)) items.push({ element: node, name: node.tagName.toLowerCase(), attrs: attrsOf(node) });
+    const content = contentOf(node);
+    if (content !== undefined) visit(content);
+    for (const child of childrenOf(node)) visit(child);
+  };
+  visit(root);
+  return items;
 }
 
-const tagsOf = (html: string): Tag[] => scan(html).tags;
+/** The elements inside one element, itself excluded. */
+const insideOf = (element: Element): Set<Element> => new Set(elementsOf(element).map((item) => item.element).filter((other) => other !== element));
 
-/** The tags between an opening tag and its matching close tag (same name, nested ones counted), and the text span between them. */
-function elementOf(tags: readonly Tag[], position: number, html: string): { inner: string; within: Tag[]; start: number; end: number } | undefined {
-  const opening = tags[position];
-  if (opening === undefined) return undefined;
-  let depth = 1;
-  for (let i = position + 1; i < tags.length; i += 1) {
-    const tag = tags[i];
-    if (tag === undefined || tag.name !== opening.name) continue;
-    depth += tag.closing ? -1 : 1;
-    if (depth === 0) return { inner: html.slice(opening.end, tag.index), within: tags.slice(position + 1, i), start: opening.end, end: tag.index };
-  }
-  return undefined;
+function textOf(node: Node): string {
+  if (node.nodeName === '#text') return (node as { value: string }).value;
+  const content = contentOf(node);
+  return [...(content === undefined ? [] : [content]), ...childrenOf(node)].map(textOf).join('');
+}
+
+/** The two readings of a page: scripting on and off (what a `noscript` element means differs between them). */
+function readings(html: string): Reading[] {
+  return [true, false].map((scriptingEnabled) => {
+    const parseErrors: string[] = [];
+    const document = parse(html, { scriptingEnabled, onParseError: (error) => parseErrors.push(error.code) });
+    return { items: elementsOf(document), parseErrors };
+  });
 }
 
 /** The one address the donation form may post to (donations contract section 2): the service, on the same origin. */
 export const CHECKOUT_ACTION = CHECKOUT_PATH;
 const CHECKOUT_FIELDS: ReadonlySet<string> = new Set(['amount', 'locale', 'display_name']);
-const CONTROLS: ReadonlySet<string> = new Set(['input', 'select', 'textarea', 'button', 'output', 'object']);
+const CONTROLS: ReadonlySet<string> = new Set(['input', 'select', 'textarea', 'button', 'output', 'object', 'fieldset']);
 const FORM_OVERRIDES = ['formaction', 'formmethod', 'formtarget', 'formenctype', 'formnovalidate'] as const;
-const FORBIDDEN_IN_BLOCK: ReadonlySet<string> = new Set(['script', 'iframe', 'object', 'embed', 'base', 'meta', 'link', 'frame', 'frameset', 'applet']);
-const URL_ATTRIBUTES = ['href', 'src', 'action', 'poster', 'data', 'srcset', 'xlink:href', 'background', 'cite', 'ping'] as const;
+/** Elements the open block never holds: the ones that load, redirect or script, and the svg animations that can rewrite an address. */
+const FORBIDDEN_IN_BLOCK: ReadonlySet<string> = new Set([
+  'script', 'iframe', 'object', 'embed', 'base', 'meta', 'link', 'frame', 'frameset', 'applet',
+  'animate', 'set', 'animatetransform', 'animatemotion',
+]);
+const URL_ATTRIBUTES: ReadonlySet<string> = new Set(['href', 'src', 'action', 'poster', 'data', 'srcset', 'background', 'cite', 'ping', 'manifest']);
 /** A local address: one slash that is not followed by a slash or a backslash (a protocol-relative address), or a fragment. */
 const LOCAL_ADDRESS = /^(?:\/(?![/\\])|#)/;
-/** `&`, a space or a control character (C0, DEL, C1): by code point, so the check holds no control character in a pattern. */
+/** `&`, a space or a control character (C0, DEL, C1), by code point, so the check holds no control character in a pattern. */
 const hasUnsafeAddressCharacter = (value: string): boolean =>
   [...value].some((char) => {
     const code = char.codePointAt(0) ?? 0;
     return char === '&' || code <= 0x20 || (code >= 0x7f && code <= 0x9f);
   });
 
+const DONATIONS_SCRIPT = /(?:^|[/\\])Donations[^/\\]*\.js(?:$|[?#])/i;
+const DONATIONS_STATES = ['not-open', 'open', 'soon'];
+
 /**
  * The `open` block (donations contract section 2, P2-09): exactly one form, posting by POST to the donations service on the
  * same origin and nowhere else. It posts only `amount`, `locale` and `display_name`, has one submit button, optional nameless
- * `type="button"` quick-fill buttons in a container that stays `hidden` until the script runs, no pattern on the amount,
- * and every address in it is a local one. No payment host is ever written in the page (that is a header, the CSP).
+ * `type="button"` quick-fill buttons in a container that stays `hidden` until the script runs, no pattern on the amount, and
+ * every address in it is a plain local one. No payment host is ever written in the page (that is a header, the CSP).
  */
-function openBlockFindings(tags: readonly Tag[], file: string, locale: string | undefined): Finding[] {
+function openBlockFindings(inside: readonly Item[], file: string, locale: string | undefined): Finding[] {
   const findings: Finding[] = [];
-  const forms = tags.filter((tag) => tag.name === 'form' && !tag.closing);
+  const forms = inside.filter((item) => item.name === 'form');
   if (forms.length !== 1) return [err(file, `the open block needs exactly one form, found ${forms.length}`)];
   const form = forms[0]?.attrs ?? new Map<string, string>();
   if ((form.get('method') ?? '').toLowerCase() !== 'post') findings.push(err(file, 'the donation form must use method="post"'));
@@ -118,29 +116,30 @@ function openBlockFindings(tags: readonly Tag[], file: string, locale: string | 
   const enctype = form.get('enctype');
   if (enctype !== undefined && enctype.toLowerCase() !== 'application/x-www-form-urlencoded') findings.push(err(file, 'the donation form takes the default encoding only'));
   if (form.has('target')) findings.push(err(file, 'the donation form has no target'));
-  for (const tag of tags) {
-    if (tag.closing) continue;
-    if (FORBIDDEN_IN_BLOCK.has(tag.name)) findings.push(err(file, `the open block holds no <${tag.name}>`));
-    for (const attribute of URL_ATTRIBUTES) {
-      const value = tag.attrs.get(attribute);
-      // `&` (a character reference could spell a second slash) and any control or space character (a browser drops a tab or a
-      // newline inside an address) are refused before the local test, so the raw value is what the browser resolves (Sentinela M2).
-      if (value !== undefined && (hasUnsafeAddressCharacter(value) || !LOCAL_ADDRESS.test(value))) findings.push(err(file, `the open block holds only plain local addresses: ${attribute}=${JSON.stringify(value)}`));
+  for (const item of inside) {
+    if (FORBIDDEN_IN_BLOCK.has(item.name)) findings.push(err(file, `the open block holds no <${item.name}>`));
+    for (const attribute of item.element.attrs) {
+      const name = attribute.name.toLowerCase();
+      if (!URL_ATTRIBUTES.has(name)) continue;
+      // `&` and any control or space character are refused before the local test: the value here is the decoded one the browser resolves.
+      if (hasUnsafeAddressCharacter(attribute.value) || !LOCAL_ADDRESS.test(attribute.value)) {
+        findings.push(err(file, `the open block holds only plain local addresses: ${name}=${JSON.stringify(attribute.value)}`));
+      }
     }
   }
   const named = new Map<string, Map<string, string>[]>();
   let submits = 0;
-  for (const tag of tags) {
-    if (tag.closing || !CONTROLS.has(tag.name)) continue;
-    const attrs = tag.attrs;
-    const type = (attrs.get('type') ?? (tag.name === 'button' ? 'submit' : 'text')).toLowerCase();
-    if (tag.name === 'button') {
+  for (const item of inside) {
+    if (!CONTROLS.has(item.name)) continue;
+    const attrs = item.attrs;
+    const type = (attrs.get('type') ?? (item.name === 'button' ? 'submit' : 'text')).toLowerCase();
+    if (item.name === 'button') {
       // One submit button; any other button is a script quick-fill: `type="button"`, so it never submits, and no name, so it is never posted.
       if (type === 'submit') submits += 1;
       else if (type !== 'button' || attrs.has('name')) findings.push(err(file, 'a button of the donation form is the submit button or a nameless type="button"'));
       continue;
     }
-    if (tag.name !== 'input') findings.push(err(file, `the donation form has no ${tag.name}`));
+    if (item.name !== 'input') findings.push(err(file, `the donation form has no ${item.name}`));
     if (['radio', 'checkbox', 'file', 'image', 'submit', 'reset'].includes(type)) findings.push(err(file, `the donation form has no ${type} input`));
     const name = attrs.get('name');
     if (name === undefined) continue;
@@ -165,74 +164,93 @@ function openBlockFindings(tags: readonly Tag[], file: string, locale: string | 
     findings.push(err(file, 'the donation form needs one amount text field: inputmode="decimal", required, maxlength="14"'));
   }
   if (amount?.has('pattern') === true) findings.push(err(file, 'the amount field has no pattern: the service is the only parser (donations contract 6.15)'));
-  const presets = tags.filter((tag) => !tag.closing && tag.attrs.has('data-amount-presets'));
-  if (presets.some((tag) => !tag.attrs.has('hidden'))) findings.push(err(file, 'the preset buttons container stays hidden until the script runs'));
+  if (inside.some((item) => item.attrs.has('data-amount-presets') && !item.attrs.has('hidden'))) findings.push(err(file, 'the preset buttons container stays hidden until the script runs'));
   return findings;
 }
 
-const DONATIONS_SCRIPT = /(?:^|[/\\])Donations[^/\\]*\.js(?:$|[?#])/i;
+type State = 'not-open' | 'open' | 'invalid';
 
-/**
- * What a support page says about donations: exactly one block, either `not-open` (plain text, no markup) or `open` (the
- * form above). Whole-page rules, in both states: no `form` attribute, no form override attribute (`formaction`, `formmethod`,
- * `formtarget`, `formenctype`, `formnovalidate`) on any element, no named control outside the block, and no form outside it.
- * Not open: no form, no panel marker and no Donations script at all. Returns the state it found, so the build and the live
- * monitor can each compare it with what they expect. `locale` is the page locale when the caller knows it.
- */
-export function donationsBlock(html: string, file: string, locale?: string): { state: 'not-open' | 'open' | 'invalid'; findings: Finding[] } {
-  const { tags, problems } = scan(html);
-  const findings: Finding[] = problems.map((problem) => err(file, problem));
-  const marked = tags.map((tag, position) => ({ tag, position })).filter(({ tag }) => !tag.closing && tag.attrs.has('data-donations'));
-  for (const { tag } of marked) {
-    if (!['not-open', 'open', 'soon'].includes(tag.attrs.get('data-donations') ?? '')) findings.push(err(file, 'data-donations is "not-open", "open" or "soon"'));
+/** One reading of a page: its donations findings and the state of its one block. */
+function inspect(reading: Reading, file: string, locale: string | undefined): { state: State; findings: Finding[] } {
+  const { items } = reading;
+  const findings: Finding[] = [...new Set(reading.parseErrors)].map((code) => err(file, `the support page is not clean HTML: parse error ${code}`));
+  const marked = items.filter((item) => item.attrs.has('data-donations'));
+  for (const item of marked) {
+    if (!DONATIONS_STATES.includes(item.attrs.get('data-donations') ?? '')) findings.push(err(file, 'data-donations is "not-open", "open" or "soon"'));
   }
-  const blocks = marked.filter(({ tag }) => ['not-open', 'open'].includes(tag.attrs.get('data-donations') ?? ''));
-  for (const tag of tags) {
-    if (tag.closing) continue;
-    if (tag.attrs.has('form')) findings.push(err(file, `the support page has no form attribute: <${tag.name} form="${tag.attrs.get('form')}">`));
-    for (const override of FORM_OVERRIDES) if (tag.attrs.has(override)) findings.push(err(file, `no element may override the form action, method, target or encoding: ${override}`));
+  const blocks = marked.filter((item) => ['not-open', 'open'].includes(item.attrs.get('data-donations') ?? ''));
+  for (const item of items) {
+    if (item.attrs.has('form')) findings.push(err(file, `the support page has no form attribute: <${item.name} form="${item.attrs.get('form')}">`));
+    for (const override of FORM_OVERRIDES) if (item.attrs.has(override)) findings.push(err(file, `no element may override the form action, method, target or encoding: ${override}`));
   }
-  if (blocks.length !== 1) {
+  const block = blocks[0];
+  if (blocks.length !== 1 || block === undefined) {
     findings.push(err(file, `expected exactly one data-donations block ("not-open" or "open"), found ${blocks.length}`));
     return { state: 'invalid', findings };
   }
-  const block = blocks[0];
-  const element = elementOf(tags, block?.position ?? 0, html);
-  if (block === undefined || element === undefined) {
-    findings.push(err(file, `the data-donations="${block?.tag.attrs.get('data-donations')}" block is not closed`));
-    return { state: 'invalid', findings };
+  const within = insideOf(block.element);
+  const inside = items.filter((item) => within.has(item.element));
+  for (const item of items) {
+    if (item === block || within.has(item.element)) continue;
+    if (CONTROLS.has(item.name) && item.attrs.has('name')) findings.push(err(file, `a named control outside the donations block: <${item.name} name="${item.attrs.get('name')}">`));
+    if (item.name === 'form') findings.push(err(file, 'the support page carries no form outside the open block'));
   }
-  const outside = tags.filter((tag) => !tag.closing && (tag.index < element.start || tag.index >= element.end));
-  for (const tag of outside) {
-    if (CONTROLS.has(tag.name) && tag.attrs.has('name')) findings.push(err(file, `a named control outside the donations block: <${tag.name} name="${tag.attrs.get('name')}">`));
-    if (tag.name === 'form') findings.push(err(file, 'the support page carries no form outside the open block'));
-  }
-  if (block.tag.attrs.get('data-donations') === 'not-open') {
-    if (element.within.length > 0 || /</.test(element.inner)) findings.push(err(file, 'the data-donations="not-open" block must be plain text: no link, form, button or other markup'));
-    for (const tag of tags) {
-      if (tag.closing) continue;
-      if (tag.name === 'form') findings.push(err(file, 'a page with donations not open carries no form'));
-      if (tag.attrs.has('data-donations-panel')) findings.push(err(file, 'a page with donations not open carries no transparency panel marker'));
-      if (tag.name === 'script' && DONATIONS_SCRIPT.test(tag.attrs.get('src') ?? '')) findings.push(err(file, `a page with donations not open loads no Donations script: ${tag.attrs.get('src')}`));
+  if (block.attrs.get('data-donations') === 'not-open') {
+    if (inside.length > 0) findings.push(err(file, 'the data-donations="not-open" block must be plain text: no link, form, button or other markup'));
+    for (const item of items) {
+      if (item.name === 'form') findings.push(err(file, 'a page with donations not open carries no form'));
+      if (item.attrs.has('data-donations-panel')) findings.push(err(file, 'a page with donations not open carries no transparency panel marker'));
+      if (item.name === 'script' && DONATIONS_SCRIPT.test(item.attrs.get('src') ?? '')) findings.push(err(file, `a page with donations not open loads no Donations script: ${item.attrs.get('src')}`));
     }
     return { state: 'not-open', findings };
   }
-  findings.push(...openBlockFindings(element.within, file, locale));
+  findings.push(...openBlockFindings(inside, file, locale));
   return { state: 'open', findings };
 }
 
-/** The not-open sentence, as the page wrote it, or `undefined` when the block is not a plain-text one. */
-function notOpenText(html: string): string | undefined {
-  const tags = tagsOf(html);
-  const position = tags.findIndex((tag) => !tag.closing && tag.attrs.get('data-donations') === 'not-open');
-  const element = position < 0 ? undefined : elementOf(tags, position, html);
-  return element === undefined || element.within.length > 0 ? undefined : decodeEntities(element.inner).trim();
+/**
+ * What a support page says about donations: exactly one block, either `not-open` (plain text, no markup) or `open` (the
+ * form above). Whole-page rules, in both states and in both readings of the page: no `form` attribute, no form override
+ * attribute (`formaction`, `formmethod`, `formtarget`, `formenctype`, `formnovalidate`) on any element, no named control
+ * outside the block, no form outside it, and no parse error. Not open: no form, no panel marker and no Donations script at all.
+ * Returns the state it found, so the build and the live monitor can each compare it with what they expect. `locale` is the
+ * page locale when the caller knows it.
+ */
+export function donationsBlock(html: string, file: string, locale?: string): { state: State; findings: Finding[] } {
+  const results = readings(html).map((reading) => inspect(reading, file, locale));
+  const seen = new Set<string>();
+  const findings = results.flatMap((result) => result.findings).filter((finding) => !seen.has(finding.message) && seen.add(finding.message));
+  const states = new Set(results.map((result) => result.state));
+  if (states.size !== 1) return { state: 'invalid', findings: [...findings, err(file, 'the two readings of the page disagree about its donations block')] };
+  return { state: results[0]?.state ?? 'invalid', findings };
+}
+
+/** The not-open sentence, as the page wrote it, or `undefined` when there is not exactly one plain-text block. */
+export function notOpenText(html: string): string | undefined {
+  const items = readings(html)[0]?.items ?? [];
+  const blocks = items.filter((item) => item.attrs.get('data-donations') === 'not-open');
+  const block = blocks[0];
+  return blocks.length !== 1 || block === undefined || insideOf(block.element).size > 0 ? undefined : textOf(block.element).trim();
 }
 
 /** Support pages send no Referer (donations contract section 2): the return from a payment carries identifiers in its address. */
 export function noReferrerMeta(html: string, file: string): Finding[] {
-  const metas = tagsOf(html).filter((tag) => !tag.closing && tag.name === 'meta' && (tag.attrs.get('name') ?? '').toLowerCase() === 'referrer');
+  const items = readings(html)[0]?.items ?? [];
+  const metas = items.filter((item) => item.name === 'meta' && (item.attrs.get('name') ?? '').toLowerCase() === 'referrer');
   return metas.length === 1 && (metas[0]?.attrs.get('content') ?? '').toLowerCase() === 'no-referrer' ? [] : [err(file, 'the support page needs exactly one <meta name="referrer" content="no-referrer">')];
+}
+
+/**
+ * The page declares its encoding first: `<meta charset="utf-8">` is the first element of `head`, so a browser that is not told the
+ * encoding by the server still reads the page as UTF-8 (the server also sends it, nginx `charset`). Without either, a browser may
+ * guess another encoding and read markup differently from the way these checks do.
+ */
+export function charsetFirst(html: string, file: string): Finding[] {
+  const items = readings(html)[0]?.items ?? [];
+  const head = items.find((item) => item.name === 'head');
+  const first = head?.element.childNodes.find(isElement);
+  const declared = first !== undefined && first.tagName === 'meta' && (attrsOf(first).get('charset') ?? '').toLowerCase() === 'utf-8';
+  return declared ? [] : [err(file, 'the first element of <head> must be <meta charset="utf-8">')];
 }
 
 /** The state the site data asks for (`support.donations.status`) and what the built page must then carry. */
@@ -247,7 +265,8 @@ export interface SupportExpectation {
 /**
  * A support page carries exactly one donations block, in the state the site data asks for (site-data section 10, D-28,
  * donations contract section 2). Not open: the required sentence as plain text and nothing else. Open: the form, the "soon"
- * notice absent. Either way: the no-referrer meta, and no analytics beacon (the strict baseline of the support pages).
+ * notice absent. Either way: the encoding meta first, the no-referrer meta, and no analytics beacon (the strict baseline of the
+ * support pages).
  */
 export function supportPage(html: string, file: string, expectation: string | SupportExpectation): Finding[] {
   const wanted: SupportExpectation = typeof expectation === 'string' ? { status: 'not-open', notOpenMessage: expectation } : expectation;
@@ -258,8 +277,8 @@ export function supportPage(html: string, file: string, expectation: string | Su
     const text = notOpenText(html);
     if (text !== undefined && text !== wanted.notOpenMessage) findings.push(err(file, 'the data-donations="not-open" block does not carry support.donations.notOpen'));
   }
-  if (found.state === 'open' && tagsOf(html).some((tag) => !tag.closing && tag.attrs.get('data-donations') === 'soon')) findings.push(err(file, 'the "soon" notice must go when donations are open'));
-  findings.push(...noReferrerMeta(html, file));
+  if (found.state === 'open' && (readings(html)[0]?.items ?? []).some((item) => item.attrs.get('data-donations') === 'soon')) findings.push(err(file, 'the "soon" notice must go when donations are open'));
+  findings.push(...noReferrerMeta(html, file), ...charsetFirst(html, file));
   if (/cloudflareinsights|data-cf-beacon/i.test(html)) findings.push(err(file, 'the support pages carry no analytics beacon (site-data section 10)'));
   return findings;
 }
@@ -288,7 +307,7 @@ export function reservedDonationsPath(files: readonly string[]): Finding[] {
  * Donations script, so no other page states or suggests that a donation can be made.
  */
 export function donationsBlockElsewhere(html: string, file: string): Finding[] {
-  // Raw text, not tags: nothing to hide behind a quote or a comment. `data-donations` (and the panel marker) and a `Donations*.js`
+  // Raw text, not a tree: nothing to hide behind a quote or a comment. `data-donations` (and the panel marker) and a `Donations*.js`
   // script name are not words any other page has a reason to contain.
   const findings: Finding[] = [];
   if (/data-donations/i.test(html)) findings.push(err(file, 'data-donations belongs to the support pages only'));

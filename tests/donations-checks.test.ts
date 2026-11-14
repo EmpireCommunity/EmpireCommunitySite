@@ -1,15 +1,19 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  donationsBlock, donationsBlockElsewhere, noReferrerMeta, reservedDonationsPath, supportPage, supportStatus,
+  charsetFirst, donationsBlock, donationsBlockElsewhere, noReferrerMeta, reservedDonationsPath, supportPage, supportStatus,
 } from '../scripts/lib/donations-checks.ts';
 
 const errors = (findings: { level?: string }[]) => findings.filter((f) => f.level === 'error').length;
 
 const MESSAGE = 'Money donations are not open yet.';
 const REFERRER = '<meta name="referrer" content="no-referrer">';
+// A whole document, because the guard reads the page with a real HTML parser and a fragment is a parse error (no doctype).
+const documentOf = (main: string, head = `<meta charset="utf-8">${REFERRER}`) =>
+  `<!doctype html><html lang="pt-BR"><head>${head}<title>t</title></head><body><main>${main}</main></body></html>`;
+
 const NOT_OPEN = `<p data-donations="not-open" class="x">${MESSAGE}</p>`;
-const notOpenPage = (block = NOT_OPEN, extra = '') => `<head>${REFERRER}</head><main>${block}${extra}</main>`;
+const notOpenPage = (block = NOT_OPEN, extra = '') => documentOf(`${block}${extra}`);
 
 const OPEN_FORM = [
   '<form id="donation-form" method="post" action="/donations/api/v1/checkout" class="x">',
@@ -21,15 +25,19 @@ const OPEN_FORM = [
   '</form>',
 ].join('');
 const openBlock = (form = OPEN_FORM) => `<div data-donations="open"><p id="obrigado">Obrigado</p>${form}</div>`;
-const openPage = (block = openBlock(), extra = '') => `<head>${REFERRER}</head><main>${block}${extra}</main>`;
+const openPage = (block = openBlock(), extra = '') => documentOf(`${block}${extra}`);
 const OPEN = { status: 'open', notOpenMessage: MESSAGE, locale: 'pt-br' } as const;
 const swap = (from: string, to: string) => {
   assert.ok(OPEN_FORM.includes(from), `the fixture has "${from}"`);
   return openBlock(OPEN_FORM.replace(from, to));
 };
 
-test('support page, not open: one plain-text block, no form, no panel, no Donations script, the no-referrer meta, no beacon (D-28, P2-09)', () => {
-  assert.equal(supportPage(notOpenPage(), 'p', MESSAGE).length, 0);
+test('the fixtures themselves are clean: a valid open page and a valid not-open page pass with no finding', () => {
+  assert.deepEqual(supportPage(openPage(), 'p', OPEN), []);
+  assert.deepEqual(supportPage(notOpenPage(), 'p', MESSAGE), []);
+});
+
+test('support page, not open: one plain-text block, no form, no panel, no Donations script, the meta tags, no beacon (D-28, P2-09)', () => {
   assert.equal(supportPage(notOpenPage(), 'p', { status: 'not-open', notOpenMessage: MESSAGE, locale: 'pt-br' }).length, 0);
   const bad: [string, string][] = [
     ['no block', notOpenPage('')],
@@ -42,16 +50,18 @@ test('support page, not open: one plain-text block, no form, no panel, no Donati
     ['the Donations panel script while not open', notOpenPage(NOT_OPEN, '<script type="module" src="/_astro/DonationsPanel.astro_astro_type_script_index_0_lang.D4MxFJQI.js"></script>')],
     ['the Donations form script while not open', notOpenPage(NOT_OPEN, '<script type="module" src="/_astro/DonationsOpen.astro_astro_type_script_index_0_lang.CbYV6ULh.js"></script>')],
     ['an unknown donations state', notOpenPage(NOT_OPEN, '<p data-donations="closed">x</p>')],
-    ['no referrer meta', `<main>${NOT_OPEN}</main>`],
-    ['a referrer meta with another policy', `<head><meta name="referrer" content="origin"></head><main>${NOT_OPEN}</main>`],
-    ['two referrer metas', `<head>${REFERRER}${REFERRER}</head><main>${NOT_OPEN}</main>`],
+    ['no referrer meta', documentOf(NOT_OPEN, '<meta charset="utf-8">')],
+    ['a referrer meta with another policy', documentOf(NOT_OPEN, '<meta charset="utf-8"><meta name="referrer" content="origin">')],
+    ['two referrer metas', documentOf(NOT_OPEN, `<meta charset="utf-8">${REFERRER}${REFERRER}`)],
+    ['no charset meta', documentOf(NOT_OPEN, REFERRER)],
+    ['the charset meta not first in head', documentOf(NOT_OPEN, `${REFERRER}<meta charset="utf-8">`)],
+    ['another charset', documentOf(NOT_OPEN, `<meta charset="windows-1252">${REFERRER}`)],
   ];
   for (const [label, html] of bad) assert.ok(errors(supportPage(html, 'p', MESSAGE)) >= 1, label);
   assert.equal(supportPage(notOpenPage(NOT_OPEN, '<p data-donations="soon">soon</p>'), 'p', MESSAGE).length, 0, 'the soon notice belongs to the not-open page');
 });
 
 test('support page, open: one form that posts to the donations service and to nothing else (P2-09)', () => {
-  assert.equal(supportPage(openPage(), 'p', OPEN).length, 0);
   const bad: [string, string][] = [
     ['a get form', openPage(swap('method="post"', 'method="get"'))],
     ['another action', openPage(swap('/donations/api/v1/checkout', '/donations/api/v1/other'))],
@@ -66,6 +76,8 @@ test('support page, open: one form that posts to the donations service and to no
     ['an amount without maxlength 14', openPage(swap('maxlength="14"', 'maxlength="30"'))],
     ['an amount that is not required', openPage(swap(' required', ''))],
     ['an amount with a pattern attribute', openPage(swap('maxlength="14"', 'maxlength="14" pattern="[0-9]+"'))],
+    ['an amount without inputmode decimal', openPage(swap(' inputmode="decimal"', ''))],
+    ['an amount with another inputmode', openPage(swap('inputmode="decimal"', 'inputmode="numeric"'))],
     ['a name without maxlength 20', openPage(swap('maxlength="20"', ''))],
     ['no hidden locale', openPage(swap('<input type="hidden" name="locale" value="pt-br">', ''))],
     ['the other locale', openPage(swap('value="pt-br"', 'value="en-us"'))],
@@ -76,22 +88,19 @@ test('support page, open: one form that posts to the donations service and to no
     ['an image input', openPage(swap('<button type="submit">', '<input type="image" src="/x.png"><button type="submit">'))],
     ['a submit input beside the button', openPage(swap('<button type="submit">', '<input type="submit"><button type="submit">'))],
     ['a reset input', openPage(swap('<button type="submit">', '<input type="reset"><button type="submit">'))],
-    ['an iframe in the block', openPage(swap('</form>', '</form><iframe src="/x"></iframe>'))],
-    ['an embed in the block', openPage(swap('</form>', '</form><embed src="/x">'))],
-    ['a base in the block', openPage(swap('</form>', '</form><base href="/">'))],
-    ['an amount without inputmode decimal', openPage(swap(' inputmode="decimal"', ''))],
-    ['an amount with another inputmode', openPage(swap('inputmode="decimal"', 'inputmode="numeric"'))],
     ['a preset container that is not hidden', openPage(swap('data-amount-presets hidden', 'data-amount-presets'))],
     ['two submit buttons', openPage(swap('</form>', '<button type="submit">Again</button></form>'))],
     ['a script inside the block', openPage(swap('</form>', '</form><script>x()</script>'))],
     ['a meta inside the block', openPage(swap('</form>', '</form><meta http-equiv="refresh" content="0;url=https://x.test">'))],
     ['a link element inside the block', openPage(swap('</form>', '</form><link rel="prefetch" href="/x">'))],
+    ['an iframe in the block', openPage(swap('</form>', '</form><iframe src="/x"></iframe>'))],
+    ['an embed in the block', openPage(swap('</form>', '</form><embed src="/x">'))],
+    ['a base in the block', openPage(swap('</form>', '</form><base href="/">'))],
     ['a second form outside the block', openPage(openBlock(), '<form action="/x"></form>')],
     ['the soon notice beside the open block', openPage(openBlock(), '<p data-donations="soon">soon</p>')],
     ['both blocks', openPage(openBlock(), '<p data-donations="not-open">x</p>')],
     ['no block', openPage('')],
-    ['an unclosed block', openPage('<div data-donations="open"><form></form>')],
-    ['no referrer meta', `<main>${openBlock()}</main>`],
+    ['no referrer meta', documentOf(openBlock(), '<meta charset="utf-8">')],
   ];
   for (const [label, html] of bad) assert.ok(errors(supportPage(html, 'p', OPEN)) >= 1, label);
   // The state must be the one the site data asks for, either way round.
@@ -99,39 +108,63 @@ test('support page, open: one form that posts to the donations service and to no
   assert.equal(errors(supportPage(openPage('<p data-donations="not-open">x</p>'), 'p', OPEN)), 1);
 });
 
-test('every address in the open block is local: one slash that is not followed by a slash or a backslash, or a fragment (Sentinela S1)', () => {
-  const local = ['/pt-br/terms-of-service/', '/pt-br/privacy-policy/#donations', '#obrigado', '/x?y=1'];
-  for (const href of local) assert.equal(errors(supportPage(openPage(swap('</form>', `</form><a href="${href}">x</a>`)), 'p', OPEN)), 0, href);
+test('svg in the block: an animation that can rewrite an address is refused, an svg address is judged like any other (Sentinela S6)', () => {
+  const svg = (inner: string) => openPage(swap('</form>', `</form><svg viewBox="0 0 1 1">${inner}</svg>`));
+  assert.equal(errors(supportPage(svg('<path d="M0 0"/>'), 'p', OPEN)), 0, 'an honest svg passes');
+  const bad: [string, string][] = [
+    ['animate', '<a href="/x"><animate attributeName="href" values="//evil.example/"/></a>'],
+    ['set', '<a href="/x"><set attributeName="href" to="https://evil.example/"/></a>'],
+    ['animateTransform', '<animateTransform attributeName="transform" type="rotate" to="1"/>'],
+    ['animateMotion', '<animateMotion path="M0 0"/>'],
+    ['an external xlink:href', '<a xlink:href="https://evil.example/"><text>x</text></a>'],
+    ['an external svg href', '<a href="//evil.example/"><text>x</text></a>'],
+    ['use with an external href', '<use href="https://evil.example/x.svg#a"/>'],
+  ];
+  for (const [label, inner] of bad) assert.ok(errors(supportPage(svg(inner), 'p', OPEN)) >= 1, label);
+});
+
+test('every address in the open block is local: one slash that is not followed by a slash or a backslash, or a fragment (Sentinela S1, M2)', () => {
+  const inBlock = (href: string) => openPage(swap('</form>', `</form><a href="${href}">x</a>`));
+  for (const href of ['/pt-br/terms-of-service/', '/pt-br/privacy-policy/#donations', '#obrigado', '/x?y=1']) assert.equal(errors(supportPage(inBlock(href), 'p', OPEN)), 0, href);
   const foreign = [
     'https://pay.example/', 'http://pay.example/', '//pay.example/', '/\\pay.example/', '\\\\pay.example/', ' /x', '\t/x', 'javascript:alert(1)',
-    'data:text/html,x', 'mailto:a@b.c', 'x/y', '', '&#47;&#47;pay.example/', '&#x2F;pay.example', 'java&#115;cript:x',
+    'data:text/html,x', 'mailto:a@b.c', 'x/y', '',
+    // Character references are decoded by the parser, so these ARE the protocol-relative address a browser resolves (Sentinela C1).
+    '&#47;&#47;pay.example/', '/&#47;evil.example/pay', '/&#x2F;evil.example/pay', '/&sol;evil.example', 'java&#115;cript:x',
+    // A control or space character inside the address (Sentinela C2): a browser drops a tab or a newline before it resolves.
+    '/\t/evil.example/pay', '/\n/evil.example/pay', '/\r/evil.example', '/ /evil.example', '/\u0000/x', '/\u0085/x', '/x y',
+    // An `&` that is still an `&` after decoding.
+    '/x?a=1&amp;b=2',
   ];
-  for (const href of foreign) assert.ok(errors(supportPage(openPage(swap('</form>', `</form><a href="${href}">x</a>`)), 'p', OPEN)) >= 1, JSON.stringify(href));
-  for (const [attribute, tag] of [['src', 'img'], ['srcset', 'img'], ['poster', 'video'], ['data', 'span'], ['xlink:href', 'a'], ['ping', 'a']] as const) {
+  // (A browser's URL parser drops a tab or newline and reads "/\t/evil.example" as "//evil.example": that is why the rule refuses
+  // the character instead of trusting the local test on the raw value. The WHATWG URL algorithm is not re-run here.)
+  for (const href of foreign) assert.ok(errors(supportPage(inBlock(href), 'p', OPEN)) >= 1, JSON.stringify(href));
+  for (const [attribute, tag] of [['src', 'img'], ['srcset', 'img'], ['poster', 'video'], ['data', 'span'], ['ping', 'a'], ['cite', 'blockquote']] as const) {
     assert.ok(errors(supportPage(openPage(swap('</form>', `</form><${tag} ${attribute}="https://pay.example/x">x</${tag}>`)), 'p', OPEN)) >= 1, attribute);
   }
 });
 
-// One table pins what the checks read as the contract's value and what they refuse as a coded variant (Ensaio s2): case and
-// spacing of the markup are free, but quoting other than double quotes, an entity, a suffix, a duplicate or a different case
-// of a NAME is not the value the contract names, because the grammar is strict and attribute values are compared as written.
-test('coded variants: case and spacing of the markup are free, a coded or altered value, or any quoting but double quotes, fails closed', () => {
+// What the parser decodes is what the browser sees, so a coded spelling that decodes to the contract's value IS the contract's
+// value and passes; any spelling that decodes to something else fails. Quoting, case and spacing are free for the same reason.
+test('spellings: markup spelling that reads as the contract value passes, any value that reads differently fails (Ensaio s2)', () => {
   const variants: [string, string, boolean][] = [
-    ['single quotes (the strict grammar takes double-quoted values only)', OPEN_FORM.replace('method="post" action="/donations/api/v1/checkout"', "method='post' action='/donations/api/v1/checkout'"), false],
-    ['unquoted values (same)', OPEN_FORM.replace('method="post" action="/donations/api/v1/checkout"', 'method=post action=/donations/api/v1/checkout'), false],
+    ['single quotes', OPEN_FORM.replace('method="post" action="/donations/api/v1/checkout"', "method='post' action='/donations/api/v1/checkout'"), true],
+    ['unquoted values', OPEN_FORM.replace('method="post" action="/donations/api/v1/checkout"', 'method=post action=/donations/api/v1/checkout'), true],
     ['upper-case tag and attribute names', OPEN_FORM.replace('<form id="donation-form" method="post"', '<FORM ID="donation-form" METHOD="post"').replace('</form>', '</FORM>'), true],
     ['upper-case method and type values', OPEN_FORM.replace('method="post"', 'method="POST"').replace('type="hidden"', 'type="HIDDEN"'), true],
     ['line breaks and tabs inside the tag', OPEN_FORM.replace('method="post" action', 'method="post"\n\t action'), true],
     ['attributes in another order', OPEN_FORM.replace('type="text" inputmode="decimal" required maxlength="14"', 'maxlength="14" required inputmode="decimal" type="text"'), true],
-    ['an entity in the action', OPEN_FORM.replace('action="/donations', 'action="&#47;donations'), false],
+    ['an entity that decodes to the action', OPEN_FORM.replace('action="/donations', 'action="&#47;donations'), true],
+    ['an entity that decodes to the field name', OPEN_FORM.replace('name="amount"', 'name="am&#111;unt"'), true],
+    ['an entity that decodes to the method', OPEN_FORM.replace('method="post"', 'method="po&#115;t"'), true],
+    ['an entity that decodes to the locale', OPEN_FORM.replace('value="pt-br"', 'value="pt&#45;br"'), true],
+    ['an entity that decodes to the maxlength', OPEN_FORM.replace('maxlength="14"', 'maxlength="&#49;4"'), true],
     ['a query string on the action', OPEN_FORM.replace('checkout"', 'checkout?x=1"'), false],
     ['a trailing space in the action', OPEN_FORM.replace('checkout"', 'checkout "'), false],
     ['a duplicated action (the first one wins)', OPEN_FORM.replace('action="/donations/api/v1/checkout"', 'action="/elsewhere" action="/donations/api/v1/checkout"'), false],
-    ['an entity in a field name', OPEN_FORM.replace('name="amount"', 'name="am&#111;unt"'), false],
     ['a capital in a field name', OPEN_FORM.replace('name="amount"', 'name="Amount"'), false],
-    ['an entity in the method', OPEN_FORM.replace('method="post"', 'method="po&#115;t"'), false],
-    ['an entity in the locale value', OPEN_FORM.replace('value="pt-br"', 'value="pt&#45;br"'), false],
-    ['an entity in a number', OPEN_FORM.replace('maxlength="14"', 'maxlength="&#49;4"'), false],
+    ['an entity that decodes to another name', OPEN_FORM.replace('name="amount"', 'name="amount&#95;cents"'), false],
+    ['an entity that decodes to another locale', OPEN_FORM.replace('value="pt-br"', 'value="en&#45;us"'), false],
     ['a quoted greater-than hiding an override', OPEN_FORM.replace('<button type="submit">', '<input type="text" value="a>b" formaction="https://pay.example/"><button type="submit">'), false],
   ];
   for (const [label, form, accepted] of variants) {
@@ -140,7 +173,65 @@ test('coded variants: case and spacing of the markup are free, a coded or altere
   }
 });
 
-test('the whole support page is scanned, not only the block: no form attribute, no override, no named control outside, even behind a quoted greater-than (Sentinela S2)', () => {
+// Sentinela's proofs of concept (re-checks of P2-09, confirmed in Chromium): each one hides a control or a form from a
+// hand-written scanner while a browser builds it. The parser builds it too, so each is found. `evil` is a button tied to the form.
+const EVIL = '<button form=donation-form formaction=/x name=evil value=1>go</button>';
+const POCS: [string, string][] = [
+  ['A: an unquoted value ending in a quote', '<button form=donation-form formaction=/x name=evil value=a">go</button>'],
+  ['B: a second form whose unquoted value ends in a quote', '<form method=post action=//evil.example/ id=a"><input name=amount></form>'],
+  ['D1: a no-break space after the tag name, the button inside a quoted value', `<p\u00a0x=">${EVIL}">`],
+  ['D2: a vertical tab after the tag name, same', `<p\u000Bx=">${EVIL}">`],
+  ['E1: an svg script with src and markup inside it', `<svg><script src="/_astro/x.js"><p>${EVIL}</p></script></svg>`],
+  ['E2: an svg script of type ld+json and markup inside it', `<svg><script type="application/ld+json"><p>${EVIL}</p></script></svg>`],
+  ['E3: an svg style and markup inside it', `<svg><style><p>${EVIL}</p></style></svg>`],
+  ['a noscript holding the form-tied button (markup when scripting is off)', `<noscript>${EVIL}</noscript>`],
+  ['a template holding the form-tied button', `<template>${EVIL}</template>`],
+  ['the plain control', EVIL],
+];
+
+test('Sentinela proofs of concept: every one is refused after the block, in the open page and in the not-open page', () => {
+  for (const [label, extra] of POCS) {
+    assert.ok(errors(supportPage(openPage(openBlock(), extra), 'p', OPEN)) >= 1, `open: ${label}`);
+    assert.ok(errors(supportPage(notOpenPage(NOT_OPEN, extra), 'p', MESSAGE)) >= 1, `not open: ${label}`);
+    assert.ok(donationsBlock(openPage(openBlock(), extra), 'live', 'pt-br').findings.length > 0, `monitor: ${label}`);
+  }
+  // The same tags inside the block.
+  for (const [label, extra] of POCS) assert.ok(errors(supportPage(openPage(swap('</form>', `${extra}</form>`)), 'p', OPEN)) >= 1, `in the block: ${label}`);
+});
+
+test('markup the standard calls an error is refused, whatever it would mean after recovery', () => {
+  const broken: [string, string][] = [
+    ['a stray "<"', '<p>1 < 2</p>'],
+    ['a "<" before a space', '< form action="/x">'],
+    ['a CDATA section in html', '<![CDATA[ x ]]>'],
+    ['a processing instruction', '<?php x ?>'],
+    ['a missing space between attributes', '<a href="/x"title="y">x</a>'],
+    ['a duplicated attribute', '<a href="/x" href="//evil.example/">x</a>'],
+    ['a quote in an attribute name', '<a x"y="z">x</a>'],
+    ['an unexpected character in an unquoted value', '<a href=/x"y>x</a>'],
+    ['an end tag with attributes', '<p>x</p a="b">'],
+  ];
+  for (const [label, extra] of broken) {
+    assert.ok(errors(supportPage(openPage(openBlock(), extra), 'p', OPEN)) >= 1, `open: ${label}`);
+    assert.ok(errors(supportPage(notOpenPage(NOT_OPEN, extra), 'p', MESSAGE)) >= 1, `not open: ${label}`);
+  }
+  assert.ok(errors(supportPage(`<main>${NOT_OPEN}</main>`, 'p', MESSAGE)) >= 1, 'a fragment with no doctype');
+});
+
+test('what a browser reads as plain text is not a finding: honest markup passes, and inert text is not mistaken for a control', () => {
+  const honest = [
+    '<a href="/pt-br/" title="a>b" data-x="it\'s" hidden>x</a><br/>',
+    '<script type="application/ld+json">{"a":"<b>"}</script>',
+    '<style>a > b { c: "d" }</style>',
+    '<textarea><form action="/x"></textarea>',
+    '<xmp><form action="/x"></xmp>',
+    '<!-- <form action="/x"> -->',
+    '<p>5 &lt; 6 and a &amp; b</p>',
+  ];
+  for (const extra of honest) assert.equal(errors(supportPage(openPage(openBlock(), extra), 'p', OPEN)), 0, extra);
+});
+
+test('the whole support page is scanned, not only the block: no form attribute, no override, no named control outside (Sentinela S2)', () => {
   const stray: [string, string][] = [
     ['a form attribute on a control outside', '<input name="amount" form="donation-form">'],
     ['a form attribute on a button outside', '<button type="submit" form="donation-form">Doar</button>'],
@@ -153,6 +244,7 @@ test('the whole support page is scanned, not only the block: no form attribute, 
     ['formnovalidate on a button outside', '<button formnovalidate>x</button>'],
     ['a named control outside, no form attribute', '<input name="display_name">'],
     ['a named select outside', '<select name="amount"></select>'],
+    ['a named fieldset outside', '<fieldset name="amount"></fieldset>'],
     ['a quoted greater-than before a form attribute', '<input title="a>b" form="donation-form">'],
     ['a quoted greater-than before formaction', '<a title=\'x>y\' formaction="https://pay.example/">x</a>'],
   ];
@@ -160,56 +252,7 @@ test('the whole support page is scanned, not only the block: no form attribute, 
     assert.ok(errors(supportPage(openPage(openBlock(), extra), 'p', OPEN)) >= 1, `open: ${label}`);
     assert.ok(errors(supportPage(notOpenPage(NOT_OPEN, extra), 'p', MESSAGE)) >= 1, `not open: ${label}`);
   }
-  // The same tags INSIDE the block are found too, behind a quoted greater-than.
-  assert.ok(errors(supportPage(openPage(swap('<button type="submit">', '<input type="text" title="a>b" formaction="https://pay.example/"><button type="submit">')), 'p', OPEN)) >= 1);
-  assert.ok(errors(supportPage(openPage(swap('<button type="submit">', '<input type="text" title="a>b" name="email"><button type="submit">')), 'p', OPEN)) >= 1);
   assert.equal(errors(supportPage(openPage(openBlock(), '<a href="/pt-br/" title="a>b">ok</a>'), 'p', OPEN)), 0, 'a quoted greater-than in an honest attribute is fine');
-});
-
-// Sentinela's proof of concept (P2-09 re-check M1 and M2): the page is read by the strict grammar, so nothing hides in a
-// stretch a tolerant scanner would read as one quoted value, and an address is judged as the browser resolves it.
-test('strict grammar: a quote that is not a double-quoted value, a comment or a stray "<" is a finding, so nothing hides behind it (Sentinela M1)', () => {
-  const after: [string, string][] = [
-    ['A: a form-tied button whose unquoted value ends in a quote', '<button form=donation-form formaction=/x name=evil value=a">go</button>'],
-    ['B: a second form whose unquoted value ends in a quote', '<form method=post action=//evil.example/ id=a"><input name=amount></form>'],
-    ['a single-quoted value', "<a title='x' href='/pt-br/'>x</a>"],
-    ['an unquoted value', '<a href=/pt-br/>x</a>'],
-    ['a quote inside a bare attribute name', '<a x"y="z">x</a>'],
-    ['a comment', '<!-- <form action="/x"> -->'],
-    ['a comment that hides a quote', '<!-- " --><p>x</p>'],
-    ['a CDATA section', '<![CDATA[ x ]]>'],
-    ['a processing instruction', '<?php x ?>'],
-    ['a stray "<"', '<p>1 < 2</p>'],
-    ['a "<" before a space', '< form action="/x">'],
-    ['a noscript element', '<noscript><form action="/x"></form></noscript>'],
-    ['a template element', '<template><input name="amount" form="donation-form"></template>'],
-    ['a textarea element', '<textarea><form action="/x"></textarea>'],
-    ['an xmp element', '<xmp><form action="/x"></xmp>'],
-    ['an unclosed script', '<script>var x = 1;'],
-    ['an empty noscript (the element itself)', '<noscript></noscript>'],
-    ['an empty template (the element itself)', '<template></template>'],
-    ['an empty textarea (the element itself)', '<textarea></textarea>'],
-  ];
-  for (const [label, extra] of after) {
-    assert.ok(errors(supportPage(openPage(openBlock(), extra), 'p', OPEN)) >= 1, `open: ${label}`);
-    assert.ok(errors(supportPage(notOpenPage(NOT_OPEN, extra), 'p', MESSAGE)) >= 1, `not open: ${label}`);
-    assert.ok(donationsBlock(openPage(openBlock(), extra), 'live', 'pt-br').findings.length > 0, `monitor: ${label}`);
-  }
-  // What the strict grammar does accept: the doctype, double-quoted values with a ">" or a single quote inside, bare attributes,
-  // self-closing tags, and the text of a script or a style (read as the browser reads it, not as markup).
-  const honest = '<!doctype html><a href="/pt-br/" title="a>b" data-x="it\'s" hidden>x</a><br/><script type="application/ld+json">{"a":"<b>"}</script><style>a > b { c: "d" }</style>';
-  assert.equal(errors(supportPage(openPage(openBlock(), honest), 'p', OPEN)), 0);
-});
-
-test('addresses in the block are judged as the browser resolves them: no "&", no control or space character, then the local rule (Sentinela M2)', () => {
-  const inBlock = (href: string) => openPage(swap('</form>', `</form><a href="${href}">x</a>`));
-  const refused = ['/&#47;evil.example/pay', '/&#x2F;evil.example/pay', '/&sol;evil.example', '/\t/evil.example/pay', '/\n/evil.example/pay', '/\r/evil.example', '/ /evil.example', '/\u0000/x', '/\u0085/x', '/x?a=1&b=2', '/x y'];
-  for (const href of refused) assert.ok(errors(supportPage(inBlock(href), 'p', OPEN)) >= 1, JSON.stringify(href));
-  for (const href of ['/pt-br/terms-of-service/#donations', '#obrigado', '/x?a=1']) assert.equal(errors(supportPage(inBlock(href), 'p', OPEN)), 0, href);
-  // The two PoC hosts: these resolve outside the site once the browser has dropped the tab or read the reference.
-  for (const href of ['/&#47;evil.example/pay', '/\t/evil.example/pay']) {
-    assert.equal(new URL(href.replace('&#47;', '/'), 'https://empirecommunity.org/pt-br/support/').host, 'evil.example', href);
-  }
 });
 
 test('the live monitor reads the same page: the open form passes with the path locale, a stray override or the wrong locale fails (Alicerce S2)', () => {
@@ -219,13 +262,18 @@ test('the live monitor reads the same page: the open form passes with the path l
   assert.deepEqual(donationsBlock(openPage(), 'live').findings, [], 'without a path locale it accepts either');
   assert.ok(donationsBlock(openPage(openBlock(), '<a title="a>b" formaction="https://x.test/">x</a>'), 'live', 'pt-br').findings.length > 0);
   assert.equal(donationsBlock(notOpenPage(), 'live', 'pt-br').state, 'not-open');
-  assert.equal(donationsBlock('<main></main>', 'live').state, 'invalid');
+  assert.equal(donationsBlock(documentOf(''), 'live').state, 'invalid');
 });
 
-test('the no-referrer meta is read from real tags', () => {
-  assert.equal(noReferrerMeta(REFERRER, 'p').length, 0);
-  assert.equal(noReferrerMeta('<META NAME="Referrer" CONTENT="No-Referrer">', 'p').length, 0);
-  assert.equal(noReferrerMeta('<p title="<meta name=referrer content=no-referrer>">x</p>', 'p').length, 1, 'inside an attribute is not a tag');
+test('the encoding and referrer metas are read from the parsed head', () => {
+  assert.equal(noReferrerMeta(documentOf('', `<meta charset="utf-8">${REFERRER}`), 'p').length, 0);
+  assert.equal(noReferrerMeta(documentOf('', '<META NAME="Referrer" CONTENT="No-Referrer">'), 'p').length, 0);
+  assert.equal(noReferrerMeta(documentOf('<p title="<meta name=referrer content=no-referrer>">x</p>', '<meta charset="utf-8">'), 'p').length, 1, 'inside an attribute is not a tag');
+  assert.equal(charsetFirst(documentOf(''), 'p').length, 0);
+  assert.equal(charsetFirst(documentOf('', '<META CHARSET="UTF-8">'), 'p').length, 0);
+  for (const head of ['', REFERRER, `<meta http-equiv="content-type" content="text/html; charset=utf-8">${REFERRER}`, `<title>x</title><meta charset="utf-8">`, '<meta charset="utf-16">']) {
+    assert.equal(charsetFirst(documentOf('', head), 'p').length, 1, head);
+  }
 });
 
 test('donations.status and the legal gate: the build refuses open while the legal texts are pending (m4)', () => {

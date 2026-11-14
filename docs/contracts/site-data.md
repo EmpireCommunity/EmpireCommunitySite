@@ -375,14 +375,17 @@ Rules:
   phrase that the community "runs on voluntary donations" (D-33, D-44) is allowed on Home, Join, Organization and
   Support, because it describes how the community is funded and not a way to give; `home.funding.body` states in the
   same text that money donations are not open yet.
-  The support page is read by a **strict scanner** (`scripts/lib/donations-checks.ts`) in the build and in the live monitor: each
-  `<` must start a doctype or a tag whose attributes are a bare name or `name="double-quoted value"`; a comment, a CDATA section,
-  a single-quoted or unquoted value, a stray `<` and the elements whose content a browser reads as text (`noscript`, `template`,
-  `textarea`, `xmp`, `plaintext`, `noembed`, `noframes`) are findings. Astro writes exactly this grammar, so the rule costs
-  nothing today and a future component that breaks it fails the build instead of blinding the guard. Inside the open block an
-  address attribute (`href`, `src`, `action` and the like) holds no `&` and no control or space character, and starts with one
-  slash that is not followed by a slash or a backslash, or with `#`. Other pages: the words `data-donations` and a `Donations*.js`
-  script name must not appear at all.
+  The support page is read with **parse5** (`scripts/lib/donations-checks.ts`, a pinned devDependency: MIT, the HTML Standard's tree
+  construction) in the build and in the live monitor, so every rule applies to the tree a browser builds, never to a hand-made
+  reading of the text (two hand-written scanners were bypassed one after the other, which is why none is kept). The page is parsed
+  twice, scripting on and off, because a `noscript` element is text in one reading and markup in the other; a finding in either
+  counts. Any parse error named by the standard is a finding. The rules, on the tree: no `form` attribute and no `formaction`,
+  `formmethod`, `formtarget`, `formenctype` or `formnovalidate` on any element; no named control and no form outside the block;
+  inside the open block an address attribute (`href`, `src`, `action` and the like, the decoded value) holds no `&` and no
+  control or space character and starts with one slash that is not followed by a slash or a backslash, or with `#`; no `script`,
+  `iframe`, `object`, `embed`, `base`, `meta`, `link` and no svg `animate`, `set`, `animateTransform` or `animateMotion` in the block;
+  `<meta charset="utf-8">` is the first element of `head` (nginx also sends `charset utf-8`). Other pages: the words
+  `data-donations` and a `Donations*.js` script name must not appear at all (a raw text check).
   **Limits of the gate, written down so nobody reads more into it (P2-09 review):**
   - `PENDING.legalPages` is a **proxy** for "Privacy and Terms carry their new version": it turns false when the legal files
     have an `effectiveDate`, not when their text covers donations. The text that covers donations (donations contract

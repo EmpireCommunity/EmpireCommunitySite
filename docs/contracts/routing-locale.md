@@ -299,6 +299,9 @@ add_header Cross-Origin-Opener-Policy "same-origin" always;
 | default | `default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com; img-src 'self'; style-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'` |
 | `^/(pt-br\|en-us)/support(/\|$)` | `default-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self' https://www.mercadopago.com.br; frame-ancestors 'none'` |
 
+- nginx sends `charset utf-8` (the `charset` directive, default `charset_types`), so every HTML answer is `text/html; charset=utf-8`, and every page also
+  starts its `head` with `<meta charset="utf-8">`. The HTTP test checks the header; `check-dist` and the integrity monitor check the meta on the support
+  pages (the guard of site-data section 10 reads them as UTF-8, and a browser that guessed another encoding could read the markup differently).
 - The support pattern also matches `/pt-br/support` and `/en-us/support` without the slash, so the 301 to the slash form
   already carries the support policy (the HTTP test asserts it).
 - The support pages have **no Cloudflare analytics hosts** in their CSP and carry no beacon. `data:` is **not** allowed

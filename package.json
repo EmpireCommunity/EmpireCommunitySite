@@ -28,6 +28,7 @@
     "astro": "^7.4.7",
     "eslint": "^10.14.0",
     "eslint-plugin-astro": "^3.2.1",
+    "parse5": "8.0.1",
     "tailwindcss": "^4.3.4",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.72.1",

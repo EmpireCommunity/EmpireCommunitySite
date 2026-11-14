@@ -4,7 +4,7 @@ import ts from 'typescript';
 import { DEFAULT_CSP, SUPPORT_CSP, PERMISSIONS_POLICY } from './security-headers.ts';
 import { membersFromPayload } from '../../src/lib/members.ts';
 import { discordLinks, htmlLang, internalDiscordLinks, paymentGuard } from './dist-checks.ts';
-import { donationsBlock, noReferrerMeta } from './donations-checks.ts';
+import { charsetFirst, donationsBlock, donationsBlockElsewhere, noReferrerMeta, notOpenText } from './donations-checks.ts';
 
 export const SITE_ORIGIN = 'https://empirecommunity.org';
 export const WORKER_CONFIG_URL = 'https://raw.githubusercontent.com/EmpireCommunity/EmpireCommunitySite-Worker/main/wrangler.jsonc';
@@ -98,10 +98,10 @@ export function noPayment(html: string, support: boolean, locale?: string): stri
     // meta is part of the delivered page (the return from a payment carries identifiers in its address).
     const found = donationsBlock(html, 'live page', locale);
     problems.push(...found.findings.map((finding) => finding.message));
-    if (found.state === 'not-open' && !(/data-donations=["']not-open["'][^>]*>([\s\S]*?)</i.exec(html)?.[1] ?? '').trim()) problems.push('Support needs one plain-text not-open block');
-    problems.push(...noReferrerMeta(html, 'live page').map((finding) => finding.message));
+    if (found.state === 'not-open' && notOpenText(html) === '') problems.push('Support needs one plain-text not-open block');
+    problems.push(...noReferrerMeta(html, 'live page').map((finding) => finding.message), ...charsetFirst(html, 'live page').map((finding) => finding.message));
   }
-  if (!support && /data-donations\s*=/i.test(html)) problems.push('Donations block belongs only to support');
+  if (!support) problems.push(...donationsBlockElsewhere(html, 'live page').map((finding) => finding.message));
   return problems;
 }
 
