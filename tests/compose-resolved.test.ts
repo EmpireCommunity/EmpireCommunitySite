@@ -39,7 +39,7 @@ const cases: Array<[string, (text: string) => string, Record<string, string>?]> 
   ['post_start', (t) => after(t, '    read_only: true', '    post_start:\n      - command: touch /x')],
   ['a privileged service hidden behind a profile', (t) => `${t.replace(/\nnetworks:/, `\n  hidden:\n    image: alpine\n    profiles: [x]\n    privileged: true\n${SOCKET}\n\nnetworks:`)}`],
   ['an image written as a variable with a valid default', (t) => t.replace(/image: .*/, (m) => `image: \${IMG:-${m.slice(7)}}`)],
-  ['a network alias', (t) => t.replace(/networks:\n      - proxy/, 'networks:\n      proxy:\n        aliases: [x]')],
+  ['a network alias', (t) => t.replace(/networks:\n {6}- proxy/, 'networks:\n      proxy:\n        aliases: [x]')],
   ['a top-level network renamed', (t) => t.replace('  proxy:\n    external: true', '  proxy:\n    external: true\n    name: other')],
   ['a CMD-SHELL healthcheck chaining a command', (t) => t.replace(/test: \[[^\n]*\]/, 'test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/healthz && touch /x"]')],
 ];
