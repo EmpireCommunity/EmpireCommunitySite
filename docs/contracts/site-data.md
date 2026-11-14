@@ -375,6 +375,20 @@ Rules:
   phrase that the community "runs on voluntary donations" (D-33, D-44) is allowed on Home, Join, Organization and
   Support, because it describes how the community is funded and not a way to give; `home.funding.body` states in the
   same text that money donations are not open yet.
+  **Limits of the gate, written down so nobody reads more into it (P2-09 review):**
+  - `PENDING.legalPages` is a **proxy** for "Privacy and Terms carry their new version": it turns false when the legal files
+    have an `effectiveDate`, not when their text covers donations. The text that covers donations (donations contract
+    section 10) is a **human gate at P2-12**; the owner approves it before the flip.
+  - CI builds the not-open state only. The open markup is checked by unit tests on HTML strings (`tests/donations-checks.test.ts`),
+    never on a real open build, so a **build and `check-dist` run with `status: open` (and a legal-texts flag set for the
+    test) belongs to P2-11**, together with the browser test of the form.
+  - The not-open build still emits two orphan script bundles, `DonationsOpen...js` and `DonationsPanel...js`, in `dist/_astro`
+    (the bundler builds every component script; a conditional import did not remove them). No page references them: the build
+    refuses any not-open page, and any page but Support, that loads a `Donations*` script or carries a panel marker.
+  - **P2-11 checklist: the checkout host (`www.mercadopago.com.br`) is written in four places** that must stay equal, and equal
+    to the service's `303` allowlist: `nginx/nginx.conf` (the support map line), `scripts/lib/security-headers.ts`
+    (`SUPPORT_CSP`), the support row of the routing-locale CSP table, and `tests/integrity.test.ts`. The HTTP test and the
+    live monitor compare the first two with the header; the tests compare the rest by hand, so P2-11 checks all four.
 - **Goal is a milestone, not an end (D-22).** Reaching it (`remainingCents` is 0) switches the progress text to the
   required message `support.goal.reached`; nothing is hidden, closed or marked as complete. Ongoing community costs
   (power, upgrades, hosting, domains) are part of the same later donation contract.

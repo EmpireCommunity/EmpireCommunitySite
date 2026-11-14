@@ -82,6 +82,17 @@ test('the live support page may carry the open block: one form to the donations 
   assert.ok(noPayment(meta + form('/donations/api/v1/checkout'), false).length > 0, 'the block belongs to support only');
 });
 
+test('the live support page is scanned whole: a form attribute, an override or a named control outside the block fails, even behind a quoted greater-than (P2-09 m2)', () => {
+  const meta = '<meta name="referrer" content="no-referrer">';
+  const open = '<div data-donations="open"><form method="post" action="/donations/api/v1/checkout"><input type="hidden" name="locale" value="pt-br"><input name="amount" type="text" inputmode="decimal" required maxlength="14"><input name="display_name" type="text" maxlength="20"><button type="submit">Doar</button></form></div>';
+  assert.deepEqual(noPayment(meta + open, true, 'pt-br'), []);
+  assert.ok(noPayment(meta + open, true, 'en-us').length > 0, 'the pt-br form on the en-us path');
+  for (const stray of ['<input name="amount" form="x">', '<a href="/x" formaction="https://x.test/">x</a>', '<input title="a>b" form="x">', '<a title="a>b" formaction="https://x.test/">x</a>', '<input name="display_name">']) {
+    assert.ok(noPayment(meta + open + stray, true, 'pt-br').length > 0, stray);
+  }
+  assert.ok(noPayment(meta + '<p data-donations="not-open">Donations are not open.</p><div data-donations-panel hidden></div>', true, 'pt-br').length > 0, 'a panel marker while not open');
+});
+
 test('support rewriting markers fail while ordinary HTML passes', () => {
   assert.deepEqual(rewriting('<p>Public support text.</p>'), []);
   for (const marker of ['data-cfemail', '/cdn-cgi/l/email-protection', 'rocket-loader', 'text/rocketscript', 'data-cf-beacon']) assert.ok(rewriting(marker).length > 0);

@@ -1,5 +1,5 @@
 // The transparency snapshot of the donations service (EmpireCommunitySite-Donations, docs/contracts/donations.md section 6,
-// version 6.1, snapshot schema 2). The panel reads ONE same-origin JSON and trusts nothing in it: `parseSnapshot` checks
+// version 6.15, snapshot schema 2). The panel reads ONE same-origin JSON and trusts nothing in it: `parseSnapshot` checks
 // the whole shape and refuses (returns `undefined`) on the first thing that is wrong, so a wrong or hostile file renders
 // nothing instead of something invented. No DOM here: the same function runs in the browser script and in the tests.
 // Display names are the one free-text field of the service, so they get the contract's own allowed set (section 2,

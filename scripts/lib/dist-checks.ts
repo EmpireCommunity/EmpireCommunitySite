@@ -5,11 +5,11 @@ import { HTML_LANG, LOCALES, routePath, type Locale } from '../../src/lib/routes
 
 export type Finding = { level: 'error' | 'warning'; file: string; message: string };
 
-const err = (file: string, message: string): Finding => ({ level: 'error', file, message });
+export const err = (file: string, message: string): Finding => ({ level: 'error', file, message });
 const warn = (file: string, message: string): Finding => ({ level: 'warning', file, message });
 
 /** Attribute names (lower-cased, exact) and values of one tag's attribute text: `data-src` is not `src`; the first duplicate wins. */
-function attributesOf(text: string): Map<string, string> {
+export function attributesOf(text: string): Map<string, string> {
   const attrs = new Map<string, string>();
   for (const m of text.matchAll(/([^\s"'<>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g)) {
     const name = (m[1] ?? '').toLowerCase();
@@ -326,165 +326,8 @@ export function paymentGuard(text: string, file: string, allowedEmails: Readonly
   return findings;
 }
 
-const decodeEntities = (text: string) =>
+export const decodeEntities = (text: string) =>
   text.replace(/&#(\d+);/g, (_, code: string) => String.fromCodePoint(Number(code))).replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
-
-/** The content of the element whose opening tag starts at `from`, through its matching close tag (same tag name, nested ones counted). */
-function elementInner(html: string, from: number, tag: string): string | undefined {
-  const open = new RegExp(`<${tag}\\b`, 'gi');
-  const close = new RegExp(`</${tag}\\s*>`, 'gi');
-  const startTagEnd = html.indexOf('>', from) + 1;
-  let depth = 1;
-  let position = startTagEnd;
-  while (depth > 0) {
-    open.lastIndex = position;
-    close.lastIndex = position;
-    const nextOpen = open.exec(html);
-    const nextClose = close.exec(html);
-    if (nextClose === null) return undefined;
-    if (nextOpen !== null && nextOpen.index < nextClose.index) {
-      depth += 1;
-      position = nextOpen.index + nextOpen[0].length;
-    } else {
-      depth -= 1;
-      if (depth === 0) return html.slice(startTagEnd, nextClose.index);
-      position = nextClose.index + nextClose[0].length;
-    }
-  }
-  return undefined;
-}
-
-/** The one address the donation form may post to (donations contract section 2): the service, on the same origin. */
-export const CHECKOUT_ACTION = '/donations/api/v1/checkout';
-const CHECKOUT_FIELDS: ReadonlySet<string> = new Set(['amount', 'locale', 'display_name']);
-
-/**
- * The `open` block of a support page (donations contract section 2, P2-09): exactly one form, posting by POST to the
- * donations service on the same origin and to nothing else. It has no `formaction`, `target`, other enctype or external
- * address, posts only the contract's fields (`amount`, `locale`, `display_name`), and carries the page locale in its
- * one hidden field. No payment host is ever written in the page (that is a header, the CSP `form-action`).
- */
-function openBlockFindings(inner: string, file: string, locale: string | undefined): Finding[] {
-  const findings: Finding[] = [];
-  const forms = [...inner.matchAll(/<form\b([^>]*)>/gi)];
-  if (forms.length !== 1) return [err(file, `the open block needs exactly one form, found ${forms.length}`)];
-  const form = attributesOf(forms[0]?.[1] ?? '');
-  if ((form.get('method') ?? '').toLowerCase() !== 'post') findings.push(err(file, 'the donation form must use method="post"'));
-  if (form.get('action') !== CHECKOUT_ACTION) findings.push(err(file, `the donation form action must be exactly ${CHECKOUT_ACTION}`));
-  const enctype = form.get('enctype');
-  if (enctype !== undefined && enctype.toLowerCase() !== 'application/x-www-form-urlencoded') findings.push(err(file, 'the donation form takes the default encoding only'));
-  if (form.has('target')) findings.push(err(file, 'the donation form has no target'));
-  if (/\bformaction\s*=|\bformmethod\s*=|\bformtarget\s*=|\bformenctype\s*=/i.test(inner)) findings.push(err(file, 'no control may override the form action, method, target or encoding'));
-  if (/<(?:script|iframe|object|embed|base)\b/i.test(inner)) findings.push(err(file, 'the open block holds no script, frame, object, embed or base'));
-  if (/\b(?:href|src|action)\s*=\s*["']?\s*(?:https?:)?\/\//i.test(inner)) findings.push(err(file, 'the open block holds no external address'));
-  const named = new Map<string, Map<string, string>[]>();
-  let submits = 0;
-  for (const control of inner.matchAll(/<(input|select|textarea|button)\b([^>]*)>/gi)) {
-    const kind = (control[1] ?? '').toLowerCase();
-    const attrs = attributesOf(control[2] ?? '');
-    const type = (attrs.get('type') ?? (kind === 'button' ? 'submit' : 'text')).toLowerCase();
-    if (kind === 'button') {
-      // One submit button; any other button is a script quick-fill: `type="button"`, so it never submits, and no name, so it is never posted.
-      if (type === 'submit') submits += 1;
-      else if (type !== 'button' || attrs.has('name')) findings.push(err(file, 'a button of the donation form is the submit button or a nameless type="button"'));
-      continue;
-    }
-    if (kind !== 'input') findings.push(err(file, `the donation form has no ${kind}`));
-    if (type === 'radio' || type === 'checkbox' || type === 'file' || type === 'image' || type === 'submit') findings.push(err(file, `the donation form has no ${type} input`));
-    const name = attrs.get('name');
-    if (name === undefined) continue;
-    if (!CHECKOUT_FIELDS.has(name)) findings.push(err(file, `the donation form posts an unknown field: ${name}`));
-    attrs.set('type', type);
-    named.set(name, [...(named.get(name) ?? []), attrs]);
-  }
-  if (submits !== 1) findings.push(err(file, `the donation form needs exactly one submit button, found ${submits}`));
-  const locales = named.get('locale') ?? [];
-  const holder = locales[0];
-  if (locales.length !== 1 || holder?.get('type') !== 'hidden' || (locale === undefined ? !/^(?:pt-br|en-us)$/.test(holder.get('value') ?? '') : holder.get('value') !== locale)) {
-    findings.push(err(file, 'the donation form needs one hidden locale field holding the page locale'));
-  }
-  const names = named.get('display_name') ?? [];
-  if (names.length !== 1 || names[0]?.get('type') !== 'text' || names[0]?.get('maxlength') !== '20') {
-    findings.push(err(file, 'the donation form needs one display_name text field with maxlength="20"'));
-  }
-  const amounts = named.get('amount') ?? [];
-  const amount = amounts[0];
-  if (amounts.length !== 1 || amount?.get('type') !== 'text' || amount.get('maxlength') !== '14' || !amount.has('required') || (amount.get('inputmode') ?? '').toLowerCase() !== 'decimal') {
-    findings.push(err(file, 'the donation form needs one amount text field: inputmode="decimal", required, maxlength="14"'));
-  }
-  return findings;
-}
-
-/**
- * What a support page says about donations: exactly one block, either `not-open` (plain text, no markup) or `open` (the
- * form above). Returns the state it found, so the build and the live monitor can each compare it with what they expect.
- */
-export function donationsBlock(html: string, file: string, locale?: string): { state: 'not-open' | 'open' | 'invalid'; findings: Finding[] } {
-  const notOpen = [...html.matchAll(/<([a-z][a-z0-9]*)\b[^>]*\bdata-donations=["']?not-open["']?[^>]*>([\s\S]*?)<\/\1>/gi)];
-  const openStarts = [...html.matchAll(/<([a-z][a-z0-9]*)\b[^>]*\bdata-donations=["']?open["']?[^>]*>/gi)];
-  const formCount = (html.match(/<form\b/gi) ?? []).length;
-  if (notOpen.length + openStarts.length !== 1) {
-    return { state: 'invalid', findings: [err(file, `expected exactly one data-donations block ("not-open" or "open"), found ${notOpen.length + openStarts.length}`)] };
-  }
-  if (openStarts.length === 0) {
-    const inner = notOpen[0]?.[2] ?? '';
-    const findings: Finding[] = [];
-    if (/</.test(inner)) findings.push(err(file, 'the data-donations="not-open" block must be plain text: no link, form, button or other markup'));
-    if (formCount > 0) findings.push(err(file, 'a page with donations not open carries no form'));
-    return { state: 'not-open', findings };
-  }
-  const start = openStarts[0];
-  const inner = elementInner(html, start?.index ?? 0, start?.[1] ?? 'div');
-  if (inner === undefined) return { state: 'invalid', findings: [err(file, 'the data-donations="open" block is not closed')] };
-  const findings = openBlockFindings(inner, file, locale);
-  if (formCount !== 1) findings.push(err(file, 'the support page carries exactly one form, inside the open block'));
-  return { state: 'open', findings };
-}
-
-/** Support pages send no Referer (donations contract section 2): the return from a payment carries identifiers in its address. */
-export function noReferrerMeta(html: string, file: string): Finding[] {
-  const metas = [...html.matchAll(/<meta\b([^>]*)>/gi)].map((match) => attributesOf(match[1] ?? '')).filter((attrs) => (attrs.get('name') ?? '').toLowerCase() === 'referrer');
-  return metas.length === 1 && (metas[0]?.get('content') ?? '').toLowerCase() === 'no-referrer' ? [] : [err(file, 'the support page needs exactly one <meta name="referrer" content="no-referrer">')];
-}
-
-/** The state the site data asks for (`support.donations.status`) and what the built page must then carry. */
-export interface SupportExpectation {
-  status: 'not-open' | 'open';
-  /** `support.donations.notOpen`, the one sentence of the not-open block. */
-  notOpenMessage: string;
-  /** The page locale (`pt-br` or `en-us`): the form's hidden `locale` field must equal it. */
-  locale?: string;
-}
-
-/**
- * A support page carries exactly one donations block, in the state the site data asks for (site-data section 10, D-28,
- * donations contract section 2). Not open: the required sentence as plain text and nothing else, no form. Open: the form, the
- * "soon" notice absent. Either way: the no-referrer meta, and no analytics beacon (the strict baseline of the support pages).
- */
-export function supportPage(html: string, file: string, expectation: string | SupportExpectation): Finding[] {
-  const wanted: SupportExpectation = typeof expectation === 'string' ? { status: 'not-open', notOpenMessage: expectation } : expectation;
-  const found = donationsBlock(html, file, wanted.locale);
-  const findings = [...found.findings];
-  if (found.state !== 'invalid' && found.state !== wanted.status) findings.push(err(file, `the site data says donations are ${wanted.status}, the page carries the ${found.state} block`));
-  if (found.state === 'not-open' && wanted.status === 'not-open') {
-    const inner = /<([a-z][a-z0-9]*)\b[^>]*\bdata-donations=["']?not-open["']?[^>]*>([\s\S]*?)<\/\1>/i.exec(html)?.[2] ?? '';
-    if (!/</.test(inner) && decodeEntities(inner).trim() !== wanted.notOpenMessage) findings.push(err(file, 'the data-donations="not-open" block does not carry support.donations.notOpen'));
-  }
-  if (found.state === 'open' && /data-donations=["']?soon["']?/i.test(html)) findings.push(err(file, 'the "soon" notice must go when donations are open'));
-  findings.push(...noReferrerMeta(html, file));
-  if (/cloudflareinsights|data-cf-beacon/i.test(html)) findings.push(err(file, 'the support pages carry no analytics beacon (site-data section 10)'));
-  return findings;
-}
-
-/** Donations cannot open before Privacy and Terms carry their new version (donations contract section 10; `PENDING.legalPages`). */
-export function openNeedsLegalTexts(open: boolean, legalPending: boolean): Finding[] {
-  return open && legalPending ? [err('src/data/support.yaml', 'donations.status "open" waits for the new Privacy and Terms (PENDING.legalPages is not false)')] : [];
-}
-
-/** `/donations/` is reserved for the donations service (routing-locale, reserved paths): no built file may sit under it. */
-export function reservedDonationsPath(files: readonly string[]): Finding[] {
-  return files.filter((file) => /^donations(?:\/|$)/.test(file)).map((file) => err(file, 'the path /donations/ is reserved for the donations service; the site builds nothing under it'));
-}
 
 export const BEACON_SRC = 'https://static.cloudflareinsights.com/beacon.min.js';
 
@@ -514,11 +357,6 @@ export function analyticsBeacon(html: string, file: string, expected: boolean, t
     findings.push(err(file, 'data-cf-beacon must hold only the site token from site.yaml'));
   }
   return findings;
-}
-
-/** The donations block belongs to the support pages only: no other page states or suggests that a donation can be made. */
-export function donationsBlockElsewhere(html: string, file: string): Finding[] {
-  return /data-donations\s*=/i.test(html) ? [err(file, 'data-donations belongs to the support pages only')] : [];
 }
 
 /** "Pix" and "Mercado Pago" in page text are a warning for the PR reviewer, not a failure. */

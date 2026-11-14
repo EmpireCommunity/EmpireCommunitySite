@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import {
-  analyticsBeacon, staleDates, discordLinks, gateCss, hasEffectiveDate, openNeedsLegalTexts, reservedDonationsPath, legalMarkdownHtml, hreflangReciprocity, headerLogoLink, htmlLang, mainContent, inlineExecutable, languageSelector, membersFallback, paymentGuard, personData, supportPage, donationsBlockElsewhere, whatsappAbsent, whatsappInviteLink,
+  analyticsBeacon, staleDates, discordLinks, gateCss, hasEffectiveDate, legalMarkdownHtml, hreflangReciprocity, headerLogoLink, htmlLang, mainContent, inlineExecutable, languageSelector, membersFallback, paymentGuard, personData, whatsappAbsent, whatsappInviteLink,
 } from '../scripts/lib/dist-checks.ts';
 import { checkWorkflow } from '../scripts/lib/workflow-rules.ts';
 
@@ -251,88 +251,6 @@ test('team data: a marker without an entry fails, and a name outside its person 
   assert.equal(personData(`${block}<footer>Ana Souza</footer>`, 'x.html', people).length, 1, 'name outside the block');
   assert.equal(personData('<p>Aninhas</p>', 'x.html', people).length, 0, 'whole words only');
   assert.equal(personData('<main>no team</main>', 'x.html', []).length, 0);
-});
-
-const REFERRER = '<meta name="referrer" content="no-referrer">';
-
-test('support page, not open: one plain-text not-open block, the no-referrer meta, no beacon, and the block nowhere else (D-28)', () => {
-  const message = 'Money donations are not open yet.';
-  const page = (block: string, extra = '') => `<head>${REFERRER}</head><main>${block}${extra}</main>`;
-  const ok = '<p data-donations="not-open" class="x">Money donations are not open yet.</p>';
-  assert.equal(supportPage(page(ok), 'p', message).length, 0);
-  assert.equal(supportPage(page(ok), 'p', { status: 'not-open', notOpenMessage: message, locale: 'pt-br' }).length, 0);
-  const bad: [string, string][] = [
-    ['no block', page('')],
-    ['two blocks', page(ok, ok)],
-    ['a link inside the block', page('<p data-donations="not-open">Money donations are not open yet. <a href="https://x.test">Send</a></p>')],
-    ['another message', page('<p data-donations="not-open">Donate now</p>')],
-    ['an analytics beacon', page(ok, '<script defer src="https://static.cloudflareinsights.com/beacon.min.js"></script>')],
-    ['a form while not open', page(ok, '<form method="post" action="/donations/api/v1/checkout"></form>')],
-    ['no referrer meta', `<main>${ok}</main>`],
-    ['a referrer meta with another policy', `<head><meta name="referrer" content="origin"></head><main>${ok}</main>`],
-    ['two referrer metas', `<head>${REFERRER}${REFERRER}</head><main>${ok}</main>`],
-  ];
-  for (const [label, html] of bad) assert.equal(errors(supportPage(html, 'p', message)), 1, label);
-  assert.equal(errors(donationsBlockElsewhere('<p data-donations="not-open">x</p>', 'q')), 1);
-  assert.equal(donationsBlockElsewhere('<p>x</p>', 'q').length, 0);
-});
-
-const OPEN_FORM = [
-  '<form id="donation-form" method="post" action="/donations/api/v1/checkout" class="x">',
-  '<input type="hidden" name="locale" value="pt-br">',
-  '<label for="amount">Valor</label><input id="amount" name="amount" type="text" inputmode="decimal" required maxlength="14" autocomplete="off">',
-  '<div data-amount-presets hidden><button type="button" data-amount="10">R$ 10</button></div>',
-  '<input id="display-name" name="display_name" maxlength="20" autocomplete="off">',
-  '<button type="submit">Doar</button>',
-  '</form>',
-].join('');
-const openBlock = (form = OPEN_FORM) => `<div data-donations="open"><p id="obrigado">Obrigado</p>${form}</div>`;
-const openPage = (block = openBlock(), extra = '') => `<head>${REFERRER}</head><main>${block}${extra}</main>`;
-const openWanted = { status: 'open', notOpenMessage: 'x', locale: 'pt-br' } as const;
-
-test('support page, open: one form that posts to the donations service and to nothing else (P2-09)', () => {
-  assert.equal(supportPage(openPage(), 'p', openWanted).length, 0);
-  const swap = (from: string, to: string) => openBlock(OPEN_FORM.replace(from, to));
-  const bad: [string, string][] = [
-    ['a get form', openPage(swap('method="post"', 'method="get"'))],
-    ['another action', openPage(swap('/donations/api/v1/checkout', '/donations/api/v1/other'))],
-    ['an external action', openPage(swap('/donations/api/v1/checkout', 'https://pay.example/checkout'))],
-    ['a payment host as action', openPage(swap('/donations/api/v1/checkout', 'https://www.mercadopago.com.br/checkout'))],
-    ['a target', openPage(swap('class="x"', 'class="x" target="_blank"'))],
-    ['a multipart form', openPage(swap('class="x"', 'class="x" enctype="multipart/form-data"'))],
-    ['a formaction override', openPage(swap('<button type="submit">', '<button type="submit" formaction="https://x.test">'))],
-    ['the old amount_cents name', openPage(swap('name="amount"', 'name="amount_cents"'))],
-    ['an unknown field', openPage(swap('<button type="submit">', '<input name="email"><button type="submit">'))],
-    ['a radio for the amount', openPage(swap('<button type="submit">', '<input type="radio" name="amount" value="10"><button type="submit">'))],
-    ['a second amount control', openPage(swap('<button type="submit">', '<input name="amount" type="text"><button type="submit">'))],
-    ['an amount without maxlength 14', openPage(swap('maxlength="14"', 'maxlength="30"'))],
-    ['an amount that is not required', openPage(swap(' required', ''))],
-    ['a name without maxlength 20', openPage(swap('maxlength="20"', ''))],
-    ['no hidden locale', openPage(swap('<input type="hidden" name="locale" value="pt-br">', ''))],
-    ['the other locale', openPage(swap('value="pt-br"', 'value="en-us"'))],
-    ['a visible locale field', openPage(swap('type="hidden"', 'type="text"'))],
-    ['a quick-fill that submits', openPage(swap('<button type="button" data-amount="10">', '<button data-amount="10" name="amount">'))],
-    ['two submit buttons', openPage(swap('</form>', '<button type="submit">Again</button></form>'))],
-    ['a script inside the block', openPage(swap('</form>', '</form><script>x()</script>'))],
-    ['a link out of the block', openPage(swap('</form>', '</form><a href="https://pay.example/">pay</a>'))],
-    ['a second form outside the block', openPage(openBlock(), '<form action="/x"></form>')],
-    ['the soon notice beside the open block', openPage(openBlock(), '<p data-donations="soon">soon</p>')],
-    ['both blocks', openPage(openBlock(), '<p data-donations="not-open">x</p>')],
-    ['no block', openPage('')],
-    ['an unclosed block', openPage('<div data-donations="open"><form></form>')],
-    ['no referrer meta', `<main>${openBlock()}</main>`],
-  ];
-  for (const [label, html] of bad) assert.ok(errors(supportPage(html, 'p', openWanted)) >= 1, label);
-  // The state must be the one the site data asks for, either way round.
-  assert.equal(errors(supportPage(openPage(), 'p', { status: 'not-open', notOpenMessage: 'x', locale: 'pt-br' })), 1);
-  assert.equal(errors(supportPage(openPage('<p data-donations="not-open">x</p>'), 'p', openWanted)), 1);
-});
-
-test('opening waits for the legal texts, and /donations/ is reserved (P2-09)', () => {
-  assert.equal(openNeedsLegalTexts(true, true).length, 1);
-  assert.equal(openNeedsLegalTexts(true, false).length, 0);
-  assert.equal(openNeedsLegalTexts(false, true).length, 0);
-  assert.equal(reservedDonationsPath(['pt-br/support/index.html', 'donations', 'donations/healthz', 'donationsx/a']).length, 2);
 });
 
 test('the gate hides the join links only inside @supports selector(:has(*))', () => {

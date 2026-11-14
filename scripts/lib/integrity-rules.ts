@@ -3,7 +3,8 @@ import { HTML_LANG, LOCALES, routePath, type Locale } from '../../src/lib/routes
 import ts from 'typescript';
 import { DEFAULT_CSP, SUPPORT_CSP, PERMISSIONS_POLICY } from './security-headers.ts';
 import { membersFromPayload } from '../../src/lib/members.ts';
-import { discordLinks, htmlLang, internalDiscordLinks, paymentGuard, donationsBlock, noReferrerMeta } from './dist-checks.ts';
+import { discordLinks, htmlLang, internalDiscordLinks, paymentGuard } from './dist-checks.ts';
+import { donationsBlock, noReferrerMeta } from './donations-checks.ts';
 
 export const SITE_ORIGIN = 'https://empirecommunity.org';
 export const WORKER_CONFIG_URL = 'https://raw.githubusercontent.com/EmpireCommunity/EmpireCommunitySite-Worker/main/wrangler.jsonc';
@@ -87,7 +88,7 @@ export function discordRedirect(response: PublicResponse): string[] {
   } catch { return ['Invalid Discord redirect location']; }
 }
 
-export function noPayment(html: string, support: boolean): string[] {
+export function noPayment(html: string, support: boolean, locale?: string): string[] {
   // Contract addresses, not release-dependent page copy from main.
   const allowed = new Set(['contact@empirecommunity.org', 'legal@empirecommunity.org']);
   const problems = paymentGuard(decoded(html), 'live page', allowed).length > 0 ? ['Payment guard failed'] : [];
@@ -95,7 +96,7 @@ export function noPayment(html: string, support: boolean): string[] {
     // The live page carries one donations block, `not-open` (plain text) or `open` (the one form that posts to the donations
     // service, donations contract section 2); which of the two is the release's business, not the monitor's. The no-referrer
     // meta is part of the delivered page (the return from a payment carries identifiers in its address).
-    const found = donationsBlock(html, 'live page');
+    const found = donationsBlock(html, 'live page', locale);
     problems.push(...found.findings.map((finding) => finding.message));
     if (found.state === 'not-open' && !(/data-donations=["']not-open["'][^>]*>([\s\S]*?)</i.exec(html)?.[1] ?? '').trim()) problems.push('Support needs one plain-text not-open block');
     problems.push(...noReferrerMeta(html, 'live page').map((finding) => finding.message));

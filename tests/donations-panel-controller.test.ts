@@ -257,3 +257,35 @@ test('a body exactly at the limit is still parsed (and refused only if it is not
   await startPanel(panel.root, makeEnv(reply(padded)).env);
   assert.equal(shown(panel), JSON.stringify(SHOWN));
 });
+
+// The withdrawn counts (contract 6.13, drawn by P2-09): each line shows only when its own count is above 0, and a count above 0
+// is public trace of real activity, so it keeps the section even when nothing else is listed.
+const nothingListed = (s: Record<string, any>): void => { // eslint-disable-line @typescript-eslint/no-explicit-any
+  s.received = { totalCents: 0, count: 0, feesCents: 0 };
+  s.donations = [];
+  s.out = [];
+  s.adjustments = [];
+  s.balance = { calculatedCents: 0, reconciledOn: null };
+};
+
+test('the withdrawn counts: each line follows its own count, and a count alone keeps the section', async () => {
+  const cases: [string, Record<string, any>, { out: boolean; adjustments: boolean; section: boolean }, [string, string]][] = [ // eslint-disable-line @typescript-eslint/no-explicit-any
+    ['out 0, adjustments above 0', edited((s) => { s.voided = { out: 0, adjustments: 3 }; }), { out: false, adjustments: true, section: true }, ['0', '3']],
+    ['both above 0', edited((s) => { s.voided = { out: 2, adjustments: 1200 }; }), { out: true, adjustments: true, section: true }, ['2', '1.200']],
+    ['only out above 0, nothing else listed', edited((s) => { nothingListed(s); s.voided = { out: 4, adjustments: 0 }; }), { out: true, adjustments: false, section: true }, ['4', '0']],
+    ['only adjustments above 0, nothing else listed', edited((s) => { nothingListed(s); s.voided = { out: 0, adjustments: 1 }; }), { out: false, adjustments: true, section: true }, ['0', '1']],
+    ['both 0 on a listed history', edited((s) => { s.voided = { out: 0, adjustments: 0 }; }), { out: false, adjustments: false, section: true }, ['0', '0']],
+    ['both 0 and nothing listed', edited((s) => { nothingListed(s); s.voided = { out: 0, adjustments: 0 }; }), { out: false, adjustments: false, section: false }, ['', '']],
+  ];
+  for (const [label, snapshot, expected, [voidedOut, voidedAdjustments]] of cases) {
+    const panel = makePanel();
+    await startPanel(panel.root, makeEnv(ok(snapshot)).env);
+    assert.equal(shown(panel), JSON.stringify(expected.section ? SHOWN : EMPTY), `${label}: section`);
+    assert.equal(panel.blocks['voided-out']?.hidden, !expected.out, `${label}: expenses line`);
+    assert.equal(panel.blocks['voided-adjustments']?.hidden, !expected.adjustments, `${label}: adjustments line`);
+    if (expected.section) {
+      assert.equal(panel.fields.voidedOut?.textContent, voidedOut, `${label}: expenses count`);
+      assert.equal(panel.fields.voidedAdjustments?.textContent, voidedAdjustments, `${label}: adjustments count`);
+    }
+  }
+});
