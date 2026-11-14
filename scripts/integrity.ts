@@ -6,7 +6,7 @@ import { parse } from 'yaml';
 import { INTEGRITY_PENDING } from './lib/integrity-pending.ts';
 import {
   SITE_ORIGIN, WORKER_CONFIG_URL, SITEMAP_LIMIT, discordEntry, discordRedirect, discordRetryDelay, findingLevel,
-  inviteLookup, inviteLinks, liveMembers, noPayment, publicDestination, publicHeaders, rewriting, rootRedirect, sitemapUrls, siteUrl,
+  inviteLookup, inviteLinks, liveMembers, memberAgreement, noPayment, publicDestination, publicHeaders, rewriting, rootRedirect, sitemapUrls, siteUrl,
   workerCopies, type PublicResponse, type Level,
 } from './lib/integrity-rules.ts';
 
@@ -100,6 +100,7 @@ for (const path of ['/pt-br/', '/en-us/support/']) {
 }
 
 let deployedCode: string | undefined;
+let inviteAnswer: PublicResponse | undefined;
 await check('Discord entry', INTEGRITY_PENDING.site, async () => {
   const results = await Promise.all(LOCALES.flatMap((locale) => [routePath(locale, 'discord'), `${routePath(locale, 'discord')}?utm_source=ci`]
     .map(async (path) => discordEntry(await once(path), locale))));
@@ -123,8 +124,12 @@ await check('Discord invite guild', INTEGRITY_PENDING.site, async () => {
     await new Promise((resolve) => setTimeout(resolve, delay));
     response = await attempt();
   }
+  inviteAnswer = response;
   return inviteLookup(response, deployedCode, guild);
 });
+
+// B-WK1: reuses the answer above (one Discord call per run); never prints it. Warns when the lookup is refused or missing.
+await check('Member count agrees with Discord', false, async () => memberAgreement((await once('/data/members.json')).text, inviteAnswer, guild));
 
 await check('Site-wide Discord links', INTEGRITY_PENDING.site, async () => {
   if (deployedCode === undefined) return ['No deployed invite to verify'];

@@ -47,7 +47,8 @@ com worktrees e o mapa de risco, em [`AGENTS.md`](AGENTS.md).
   Tags finais exigem essas flags em `false`; prereleases mantêm as regras existentes.
 - A imagem (`Dockerfile`, `nginx/`) serve só o `dist/` em nginx-unprivileged, porta 8080, sem log de acesso.
 - Release por tag `vX.Y.Z` na `main`, decidida pelo dono: [`docs/runbook/release.md`](docs/runbook/release.md).
-  O template de deploy está em `deploy/compose.yml`.
+  O template de deploy está em `deploy/compose.yml`. O relay da contagem de membros (B-WK1) é uma segunda imagem do mesmo release, com tag
+  `X.Y.Z-members-relay`; seu template está em `deploy/members-source/compose.yml` e as regras em `docs/contracts/deploy.md` seção 13.
 
 ## Entrada na comunidade
 

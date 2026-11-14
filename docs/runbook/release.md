@@ -7,16 +7,17 @@ Account and platform settings that exist today live in the private runbook, not 
 
 1. Merges collect under `[Unreleased]` in `CHANGELOG.md`. A merge to `main` never builds an image.
 2. Release PR `chore/release-X.Y.Z`: move `[Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD` and set the tag part of the
-   `image:` line in `deploy/compose.yml` to `X.Y.Z` (the digest stays a placeholder; the real one is filled on the host).
-   Never straight to `main`.
+   `image:` lines in `deploy/compose.yml` (to `X.Y.Z`) and `deploy/members-source/compose.yml` (to `X.Y.Z-members-relay`); the digests stay
+   placeholders and the real ones are filled on the host. Never straight to `main`.
 3. After the merge and a green `CI` run on `main`, with **no other merge in between**, the owner creates an
    **annotated** tag on that commit, which must be the tip of `main` (if another merge landed first, tag the newest
    commit or ship the next patch version):
    `git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z`. `-rc.N` tags are for a rehearsal only.
 4. `release.yml` runs the guards (tag format, annotated, commit is the tip of `origin/main`, push `CI` run succeeded on that commit,
-   CHANGELOG section dated and non-empty, compose names the version, no flag in `scripts/lib/pending.ts` is true (an `-rc.N` tag ignores `legalPages` only), image for the version does not exist), then
-   builds, pushes `docker.io/empirecommunity/empirecommunity-site-org:X.Y.Z` (SBOM and provenance attached), attests the
-   digest and creates the GitHub Release with the CHANGELOG notes and `image-digest.txt`. The digest is also in the
+   CHANGELOG section dated and non-empty, both compose templates name the version, the relay `Dockerfile` and compose exist, no flag in `scripts/lib/pending.ts` is true (an `-rc.N` tag ignores `legalPages` only), neither image tag exists), then
+   builds **both** images and checks both (image rules and the relay's answers) **before either is pushed**, pushes
+   `docker.io/empirecommunity/empirecommunity-site-org:X.Y.Z` and `...:X.Y.Z-members-relay` (SBOM and provenance attached), attests
+   each digest and creates the GitHub Release with the CHANGELOG notes, `image-digest.txt` and `relay-image-digest.txt`. The digests are also in the
    run summary.
 5. A failed guard publishes nothing: fix the cause and push a new tag name only if the old tag never produced an image.
    If the image was published but a later step failed, **do not re-run**: ship the next patch version.
@@ -61,6 +62,10 @@ may change the setting nor whether existing tags become mutable again: check a t
 2. Verify before pulling (on the owner's machine if the host should not hold a GitHub credential):
    `gh attestation verify oci://docker.io/empirecommunity/empirecommunity-site-org@sha256:<digest> --repo EmpireCommunity/EmpireCommunitySite --cert-identity https://github.com/EmpireCommunity/EmpireCommunitySite/.github/workflows/release.yml@refs/tags/vX.Y.Z --cert-oidc-issuer https://token.actions.githubusercontent.com`.
    Any failure aborts.
+A deploy of the member-count relay is a separate procedure with its own compose project, `relay-image-digest.txt` and the checks a to d
+of `docs/contracts/deploy.md` section 13 (owner OK for each deploy); both attestations share one identity, so check the digest is the
+relay's (step 3a) and not the site's.
+
 3. On the host: dated backup of the compose file beside it, set `image:` to `...:X.Y.Z@sha256:<digest>`,
    `docker compose up -d --wait`, then run the HTTP header test against the public URL
    (`BASE_URL=https://empirecommunity.org PUBLIC=1 node scripts/http-test.ts`) and check the site.

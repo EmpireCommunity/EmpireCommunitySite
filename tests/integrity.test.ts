@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   SITE_ORIGIN, WORKER_CONFIG_URL, discordEntry, discordRedirect, discordRetryDelay, findingLevel, inviteLookup, inviteGuild, inviteLinks,
-  liveMembers, noPayment, publicDestination, publicHeaders, rewriting, rootRedirect, sitemapUrls, siteUrl,
+  liveMembers, memberAgreement, noPayment, publicDestination, publicHeaders, rewriting, rootRedirect, sitemapUrls, siteUrl,
   workerCopies, type PublicResponse,
 } from '../scripts/lib/integrity-rules.ts';
 
@@ -156,4 +156,27 @@ test('Discord rate limiting after the allowed retry warns; other invalid respons
     assert.ok(result.problems.length > 0);
   }
   assert.deepEqual(inviteLookup(snapshot(JSON.stringify({ code: invite, guild: { id: guild } })), invite, guild).problems, []);
+});
+
+test('member count agreement: only the count and guild are read, a refused lookup only warns', () => {
+  const members = (count: unknown, source = 'discord-invite') => JSON.stringify({ schema: 1, discord: { members: count, source, updatedAt: '2026-11-12T00:00:00Z' } });
+  const lookup = (count: unknown, id = guild, status = 200) => snapshot(JSON.stringify({ code: invite, guild: { id }, approximate_member_count: count, inviter: { username: 'secret-name' } }), status);
+  const outcome = (published: unknown, discord: PublicResponse | undefined, source?: string) => memberAgreement(members(published, source), discord, guild);
+  // Inside the band, and the small-count rule (a difference of at most 50 below 50).
+  for (const [published, count] of [[887, 890], [100, 200], [200, 100], [10, 55], [55, 10], [49, 99]]) assert.deepEqual(outcome(published, lookup(count)).problems, [], `${published} ${count}`);
+  // Outside it, as an error.
+  for (const [published, count] of [[400, 888], [888, 400], [10, 61], [61, 10], [100, 201]]) assert.deepEqual(outcome(published, lookup(count)), { problems: ['Published member count and the Discord count disagree'], level: 'error' }, `${published} ${count}`);
+  // Lookup refused, missing, redirected, of another guild or malformed: a warning, never an error.
+  for (const answer of [undefined, snapshot('', 403), snapshot('', 429), lookup(888, '999'), snapshot('not json'), lookup('888'), lookup(0), snapshot(lookup(888).text, 200, { location: 'https://x.test/' })]) {
+    assert.equal(outcome(888, answer).level, 'warning');
+    assert.equal(outcome(888, answer).problems.length, 1);
+  }
+  // Other sources are not checked at all; a bad payload still fails.
+  assert.deepEqual(outcome(5, lookup(888), 'built-in').problems, []);
+  assert.deepEqual(outcome(5, lookup(888), 'empirebot').problems, []);
+  assert.equal(memberAgreement('not json', lookup(888), guild).level, 'error');
+  assert.deepEqual(memberAgreement(members('888'), lookup(888), guild), { problems: ['Invalid members count'], level: 'error' });
+  // The message never carries any part of Discord's answer.
+  const text = JSON.stringify(outcome(400, lookup(888)));
+  assert.ok(!text.includes('secret-name'));
 });
