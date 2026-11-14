@@ -32,13 +32,32 @@ ports="$(inspect '{{range $p, $_ := .Config.ExposedPorts}}{{$p}} {{end}}')"
 volumes="$(inspect '{{json .Config.Volumes}}')"
 case "$volumes" in null|'{}') ;; *) fail "the image declares a VOLUME: $volumes" ;; esac
 
-# Content: the base image plus exactly one file (the relay script). Files are compared with their hashes, so a changed
-# base file (for example /etc/passwd edited by an added user) counts as an addition too. The three files Docker
-# mounts into every container at run time are not part of the image.
-listing() { docker run --rm --network none --entrypoint sh "$1" -c 'find / -xdev -type f -exec sha256sum {} + 2>/dev/null' | sort; }
-added="$(comm -13 <(listing "$base") <(listing "$image") | awk '{print $2}' | grep -vxE '/etc/(hostname|hosts|resolv\.conf)' || true)"
+# Process settings: only Cmd differs from the base (the script it runs). Entrypoint, Env and WorkingDir are compared with the
+# base as inspected, not with literals (NODE_VERSION moves with base bumps); Cmd is the one literal, so no flag such as
+# `node --import data:...` or `-e` can enter through it without a file.
+for field in Entrypoint Env WorkingDir; do
+  [ "$(inspect "{{json .Config.${field}}}")" = "$(docker image inspect "$base" --format "{{json .Config.${field}}}")" ] \
+    || fail "Config.${field} differs from the base image"
+done
+[ "$(inspect '{{json .Config.Cmd}}')" = '["node","/opt/members-source/relay.mjs"]' ] \
+  || fail "Config.Cmd must be exactly [node, /opt/members-source/relay.mjs], got: $(inspect '{{json .Config.Cmd}}')"
+
+# Content: the base image plus exactly one file (the relay script). Every file and symlink is listed with its hash (H),
+# mode and owner (S) or link target (L), so a changed base file, a changed mode or owner, or a new symlink counts as an
+# addition too. The three files Docker mounts into every container at run time are not part of the image.
+listing() {
+  docker run --rm --network none --entrypoint sh "$1" -c '
+    find / -xdev -type f -exec sha256sum {} + 2>/dev/null | sed "s/^/H /"
+    find / -xdev \( -type f -o -type l \) -exec stat -c "S %a %u:%g %n" {} + 2>/dev/null
+    find / -xdev -type l -exec sh -c '\''for f; do echo "L $f -> $(readlink "$f")"; done'\'' sh {} + 2>/dev/null' | sort
+}
+pathof() { awk '{ if ($1 == "H") { sub(/^H [0-9a-f]+  /, "") } else if ($1 == "S") { sub(/^S [0-7]+ [0-9]+:[0-9]+ /, "") } else { sub(/^L /, ""); sub(/ -> .*$/, "") } print }'; }
+changes="$(comm -13 <(listing "$base") <(listing "$image"))"
+added="$(pathof <<< "$changes" | sort -u | grep -vxE '/etc/(hostname|hosts|resolv\.conf)' || true)"
 count="$(grep -c . <<< "$added" || true)"
 if [ "$count" -ne 1 ]; then fail "the image must add exactly one file, found ${count}: $(tr '\n' ' ' <<< "$added")"
-elif ! [[ "$added" =~ \.(mjs|js)$ ]] || [[ "$added" =~ (package\.json|node_modules|\.ya?ml|\.ts|\.astro)$ ]]; then fail "the added file is not the relay script: $added"; fi
+elif ! [[ "$added" =~ \.(mjs|js)$ ]] || [[ "$added" =~ (package\.json|node_modules|\.ya?ml|\.ts|\.astro)$ ]]; then fail "the added file is not the relay script: $added"
+elif grep -q '^L ' <<< "$changes"; then fail "the relay script must be a regular file, not a symlink: $added"
+elif ! grep -qE "^S (644|444) 0:0 ${added//./\\.}$" <<< "$changes"; then fail "the relay script must be owned by root with mode 644 or 444: $(grep "^S .* ${added}$" <<< "$changes")"; fi
 
 exit "$status"

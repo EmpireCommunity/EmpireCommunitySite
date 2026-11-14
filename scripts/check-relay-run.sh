@@ -8,7 +8,7 @@ set -euo pipefail
 
 image="${1:?usage: check-relay-run.sh <image-ref>}"
 name="empirecommunity-relay-ci"
-code="$(sed -n 's/^  inviteCode: //p' src/data/site.yaml | tr -d '"')"
+code="$(sed -n 's/^[[:space:]]*inviteCode:[[:space:]]*//p' src/data/site.yaml | tr -d '"')"
 status=0
 trap 'docker rm -f "$name" > /dev/null 2>&1 || true' EXIT
 

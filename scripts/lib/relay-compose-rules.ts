@@ -1,9 +1,15 @@
 // Pure rules for the member-count relay compose template (docs/contracts/deploy.md section 13). The script reads the
 // files; this module only decides, so each rule has a test. Every rule is a requirement of the contract, none is optional.
+import { foldLabels } from './compose-resolve.ts';
+
 export const RELAY_IMAGE = /^docker\.io\/empirecommunity\/empirecommunity-site-org:\d+\.\d+\.\d+(?:-rc\.\d+)?-members-relay@sha256:[0-9a-f]{64}$/;
 export const RELAY_ROUTER_RULE = 'Host(`empirecommunity.org`) && Path(`/data/members-source.json`)';
 // Traefik gives the site's host-only rule a priority equal to its length; the relay router must be explicitly above it.
 export const SITE_ROUTER_RULE = 'Host(`empirecommunity.org`)';
+// Keys a service may carry, in the form written in the template and in the form `docker compose config` resolves.
+const SERVICE_KEYS = new Set(['image', 'user', 'read_only', 'cap_drop', 'security_opt', 'mem_limit', 'pids_limit', 'restart', 'healthcheck',
+  'environment', 'networks', 'logging', 'labels', 'command', 'entrypoint']);
+export const HEALTHCHECK = ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:8080/healthz'];
 const INVITE_CODE = /^[A-Za-z0-9-]{2,32}$/;
 
 type Service = Record<string, unknown> & { labels?: string[] | Record<string, string> };
@@ -11,12 +17,6 @@ export interface RelayCompose {
   name?: unknown;
   services?: Record<string, Service>;
   networks?: Record<string, { external?: boolean }>;
-}
-
-function labelMap(raw: Service['labels']): Record<string, string> {
-  if (raw === undefined) return {};
-  if (!Array.isArray(raw)) return Object.fromEntries(Object.entries(raw).map(([key, value]) => [key, String(value)]));
-  return Object.fromEntries(raw.map((item) => [item.slice(0, item.indexOf('=')), item.slice(item.indexOf('=') + 1)]));
 }
 
 /** Problems of the relay template against the contract, or an empty list. `siteInviteCode` is `discord.inviteCode` of site.yaml. */
@@ -30,7 +30,9 @@ export function relayComposeProblems(compose: RelayCompose, siteInviteCode: stri
 
   if (typeof service.image !== 'string' || !RELAY_IMAGE.test(service.image)) fail('image must be docker.io/empirecommunity/empirecommunity-site-org:<X.Y.Z>-members-relay@sha256:<64 hex>');
 
-  const labels = labelMap(service.labels);
+  const { labels, duplicates } = foldLabels(service.labels);
+  for (const key of duplicates) fail(`label ${key} appears twice (keys are compared in lower case)`);
+  for (const key of Object.keys(labels)) if (!key.startsWith('traefik.')) fail(`unexpected label ${key}`);
   const traefik = Object.entries(labels).filter(([key]) => key.startsWith('traefik.'));
   const rules = traefik.filter(([key]) => /^traefik\.http\.routers\.[^.]+\.rule$/.test(key));
   const router = /^traefik\.http\.routers\.([^.]+)\.rule$/.exec(rules[0]?.[0] ?? '')?.[1];
@@ -53,21 +55,22 @@ export function relayComposeProblems(compose: RelayCompose, siteInviteCode: stri
   if (service.read_only !== true) fail('read_only must be true');
   if (JSON.stringify(service.cap_drop) !== '["ALL"]') fail('cap_drop must be [ALL]');
   if (Array.isArray(service.cap_add) ? service.cap_add.length > 0 : service.cap_add !== undefined) fail('cap_add must be empty or absent');
-  if (!Array.isArray(service.security_opt) || !service.security_opt.includes('no-new-privileges:true')) fail('security_opt must include no-new-privileges:true');
-  if (service.mem_limit !== '64m') fail('mem_limit must be 64m');
+  if (JSON.stringify(service.security_opt) !== '["no-new-privileges:true"]') fail('security_opt must be exactly [no-new-privileges:true]');
+  if (!['64m', '67108864'].includes(String(service.mem_limit))) fail('mem_limit must be 64m');
   if (service.pids_limit !== 64) fail('pids_limit must be 64');
   if (service.restart !== 'unless-stopped') fail('restart must be unless-stopped');
 
   const health = service.healthcheck as { test?: unknown; disable?: unknown } | undefined;
-  const command = Array.isArray(health?.test) ? health.test.map(String) : [String(health?.test ?? '')];
   if (health === undefined) fail('healthcheck is required');
-  else if (health.disable === true || command[0]?.trim().startsWith('NONE') === true) fail('the healthcheck must not be disabled');
-  else if (!/https?:\/\/[^\s"']+\/healthz(?![\w/-])/.test(command.join(' '))) fail('the healthcheck must probe /healthz');
+  else if (health.disable === true) fail('the healthcheck must not be disabled');
+  else if (JSON.stringify(health.test) !== JSON.stringify(HEALTHCHECK)) fail(`the healthcheck command must be exactly ${JSON.stringify(HEALTHCHECK)}`);
 
-  // No mount of any kind, no secret, no second environment key, no published port, no privilege-widening key.
-  for (const forbidden of ['ports', 'volumes', 'tmpfs', 'secrets', 'configs', 'env_file', 'privileged', 'network_mode', 'devices', 'pid', 'ipc', 'extra_hosts', 'dns', 'sysctls', 'build', 'command', 'entrypoint']) {
-    if (service[forbidden] !== undefined) fail(`${forbidden} is not allowed in the relay template`);
+  // Allowlist of service keys: anything else (ports, volumes, privileged, network_mode, a YAML merge key `<<`, ...) is refused,
+  // so a key the contract never named cannot widen the container. `command` and `entrypoint` may only be null (the image decides).
+  for (const key of Object.keys(service)) {
+    if (!SERVICE_KEYS.has(key)) fail(`${key} is not allowed in the relay template`);
   }
+  if (service.command != null || service.entrypoint != null) fail('command and entrypoint are not allowed in the relay template');
   const environment = service.environment;
   const environmentKeys = Array.isArray(environment) ? environment.map((item) => String(item).split('=')[0]) : Object.keys((environment ?? {}) as object);
   if (environmentKeys.length !== 1 || environmentKeys[0] !== 'DISCORD_INVITE_CODE') fail('environment must hold exactly one key, DISCORD_INVITE_CODE');
@@ -76,7 +79,8 @@ export function relayComposeProblems(compose: RelayCompose, siteInviteCode: stri
   if (!INVITE_CODE.test(code)) fail('DISCORD_INVITE_CODE must be a public invite code');
   else if (code !== siteInviteCode) fail('DISCORD_INVITE_CODE must equal discord.inviteCode in src/data/site.yaml (members-json 2.6)');
 
-  if (JSON.stringify(service.networks) !== '["proxy"]') fail('the service joins only the proxy network');
+  const serviceNetworks = Array.isArray(service.networks) ? service.networks : Object.keys((service.networks ?? {}) as object);
+  if (JSON.stringify(serviceNetworks) !== '["proxy"]') fail('the service joins only the proxy network');
   const logging = service.logging as { driver?: string; options?: Record<string, string> } | undefined;
   if (logging?.driver !== 'json-file' || logging.options?.['max-size'] !== '1m' || String(logging.options['max-file']) !== '2') {
     fail('logging must be json-file with max-size 1m and max-file 2 (D-20)');

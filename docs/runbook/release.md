@@ -15,12 +15,13 @@ Account and platform settings that exist today live in the private runbook, not 
    `git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z`. `-rc.N` tags are for a rehearsal only.
 4. `release.yml` runs the guards (tag format, annotated, commit is the tip of `origin/main`, push `CI` run succeeded on that commit,
    CHANGELOG section dated and non-empty, both compose templates name the version, the relay `Dockerfile` and compose exist, no flag in `scripts/lib/pending.ts` is true (an `-rc.N` tag ignores `legalPages` only), neither image tag exists), then
-   builds **both** images and checks both (image rules and the relay's answers) **before either is pushed**, pushes
-   `docker.io/empirecommunity/empirecommunity-site-org:X.Y.Z` and `...:X.Y.Z-members-relay` (SBOM and provenance attached), attests
+   builds **both** images and checks both (image rules and the relay's answers) **before either is pushed**, logs in to Docker Hub only then, pushes
+   `docker.io/empirecommunity/empirecommunity-site-org:X.Y.Z` and `...:X.Y.Z-members-relay` (SBOM and provenance attached), compares the layers and config behind each pushed digest with the checked image, attests
    each digest and creates the GitHub Release with the CHANGELOG notes, `image-digest.txt` and `relay-image-digest.txt`. The digests are also in the
    run summary.
 5. A failed guard publishes nothing: fix the cause and push a new tag name only if the old tag never produced an image.
-   If the image was published but a later step failed, **do not re-run**: ship the next patch version.
+   If the image was published but a later step failed, **do not re-run**: ship the next patch version. This includes a
+   relay push that fails after the site image was pushed: the site tag now exists, so the guard refuses the same version.
 
 ## Docker Hub organization secrets (D-76)
 
