@@ -67,7 +67,6 @@ const NAME_CHARS = /^[\p{L}\p{M}\p{Nd} _'-]+$/u;
 const DIGIT = /\p{Nd}/gu;
 const MAX_NAME_DIGITS = 4;
 // Control and format characters (bidirectional overrides, zero-width, joiners): never in text the page prints.
-const FORBIDDEN_TEXT = /[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Cn}\u2028\u2029]/u;
 
 function isObject(value: unknown): value is Obj {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -104,8 +103,21 @@ function isInstant(value: unknown): value is string {
   return match !== null && isDay(match[1]);
 }
 
+// Owner text (payee, justification, reason): the contract counts it in grapheme clusters, like the display name, so a text
+// with combining accents or an emoji sequence is not refused for its UTF-16 length. A hard unit stop comes first, so no
+// absurd string reaches the segmenter. The joiners U+200C and U+200D stay allowed (emoji sequences, Persian); every other
+// format character, bidi controls included, is still refused.
+const MAX_TEXT_UNITS_PER_GRAPHEME = 16;
+const FORBIDDEN_OWNER_TEXT = /[\p{Cc}\p{Cs}\p{Co}\p{Cn}\u2028\u2029]|(?![\u200C\u200D])\p{Cf}/u;
+
+function graphemeCount(value: string): number {
+  if (typeof Intl.Segmenter !== 'function') return withoutSegmenter(value).length;
+  return [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(value)].length;
+}
+
 function isPlainText(value: unknown, max: number): value is string {
-  return typeof value === 'string' && value.length >= 1 && value.length <= max && value.trim() === value && !FORBIDDEN_TEXT.test(value);
+  if (typeof value !== 'string' || value.length < 1 || value.length > max * MAX_TEXT_UNITS_PER_GRAPHEME) return false;
+  return value.trim() === value && !FORBIDDEN_OWNER_TEXT.test(value) && graphemeCount(value) <= max;
 }
 
 const MAX_MARKS_PER_GRAPHEME = 2;
