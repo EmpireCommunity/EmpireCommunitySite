@@ -140,15 +140,17 @@ test('the optional corrected marker (contract 6.13) is accepted only as true on 
   assert.ok(parseSnapshot(withEdit((s) => { s.out[0].justification['pt-br'] = 'a'.repeat(280); })), 'exactly 280 is fine');
 });
 
-test('owner text is counted in graphemes, not UTF-16 units, and allows joiners but no bidi controls', () => {
-  const family = '\u{1F468}\u200D\u{1F469}\u200D\u{1F467}'; // one grapheme, 8 UTF-16 units
-  assert.ok(parseSnapshot(withEdit((s) => { s.out[0].justification['pt-br'] = family.repeat(100); })), '100 clusters of 8 units');
+test('owner text is counted in graphemes, not UTF-16 units, and refuses every format character', () => {
+  const emoji = '\u{1F600}'; // one grapheme, 2 UTF-16 units
+  assert.ok(parseSnapshot(withEdit((s) => { s.out[0].justification['pt-br'] = emoji.repeat(280); })), '280 clusters of 2 units');
   assert.ok(parseSnapshot(withEdit((s) => { s.out[0].justification['en-us'] = 'e\u0301'.repeat(200); })), '200 accented letters of 2 units');
   assert.ok(parseSnapshot(withEdit((s) => { s.out[0].payee = 'e\u0301'.repeat(80); })), 'payee: 80 clusters');
   assert.equal(parseSnapshot(withEdit((s) => { s.out[0].payee = 'e\u0301'.repeat(81); })), undefined, 'payee: 81 clusters');
-  assert.equal(parseSnapshot(withEdit((s) => { s.out[0].justification['pt-br'] = family.repeat(281); })), undefined, '281 clusters');
+  assert.equal(parseSnapshot(withEdit((s) => { s.out[0].justification['pt-br'] = emoji.repeat(281); })), undefined, '281 clusters');
   assert.equal(parseSnapshot(withEdit((s) => { s.out[0].justification['pt-br'] = 'a\u202Eb'; })), undefined, 'a bidi override');
   assert.equal(parseSnapshot(withEdit((s) => { s.out[0].justification['pt-br'] = 'a\u200Bb'; })), undefined, 'a zero-width space');
+  assert.equal(parseSnapshot(withEdit((s) => { s.out[0].justification['pt-br'] = '\u{1F468}\u200D\u{1F469}'; })), undefined, 'a zero-width joiner, as in the builder');
+  assert.equal(parseSnapshot(withEdit((s) => { s.out[0].payee = 'a\u200Cb'; })), undefined, 'a zero-width non-joiner');
 });
 
 test('a gap in seq (a refund) is fine and a list longer than it shows (count above the rows) is fine', () => {

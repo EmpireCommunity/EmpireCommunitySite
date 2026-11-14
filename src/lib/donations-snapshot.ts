@@ -68,7 +68,6 @@ const HEX = /^[0-9a-f]{16,128}$/;
 const NAME_CHARS = /^[\p{L}\p{M}\p{Nd} _'-]+$/u;
 const DIGIT = /\p{Nd}/gu;
 const MAX_NAME_DIGITS = 4;
-// Control and format characters (bidirectional overrides, zero-width, joiners): never in text the page prints.
 
 function isObject(value: unknown): value is Obj {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -106,20 +105,27 @@ function isInstant(value: unknown): value is string {
 }
 
 // Owner text (payee, justification, reason): the contract counts it in grapheme clusters, like the display name, so a text
-// with combining accents or an emoji sequence is not refused for its UTF-16 length. A hard unit stop comes first, so no
-// absurd string reaches the segmenter. The joiners U+200C and U+200D stay allowed (emoji sequences, Persian); every other
-// format character, bidi controls included, is still refused.
+// with combining accents or an emoji is not refused for its UTF-16 length. A hard unit stop comes first, so no absurd
+// string reaches the segmenter. One rule on both sides (contract 6.13): control and every format character (bidirectional
+// overrides, zero-width characters, the joiners U+200C and U+200D) are refused, as the builder never emits them.
 const MAX_TEXT_UNITS_PER_GRAPHEME = 16;
-const FORBIDDEN_OWNER_TEXT = /[\p{Cc}\p{Cs}\p{Co}\p{Cn}\u2028\u2029]|(?![\u200C\u200D])\p{Cf}/u;
+const FORBIDDEN_OWNER_TEXT = /[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Cn}\u2028\u2029]/u;
 
-function graphemeCount(value: string): number {
-  if (typeof Intl.Segmenter !== 'function') return withoutSegmenter(value).length;
-  return [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(value)].length;
+// One segmenter for every check (it is costly to build). It is looked up through `Intl` on each call, and rebuilt only if the
+// constructor changed, so a browser without `Intl.Segmenter` (and the test that removes it) takes the fallback below.
+let cachedSegmenter: { ctor: typeof Intl.Segmenter; instance: Intl.Segmenter } | undefined;
+
+/** Grapheme clusters of `value`: by `Intl.Segmenter`, or by `withoutSegmenter` when the browser has none. */
+function segments(value: string): string[] {
+  const ctor = Intl.Segmenter;
+  if (typeof ctor !== 'function') return withoutSegmenter(value);
+  if (cachedSegmenter?.ctor !== ctor) cachedSegmenter = { ctor, instance: new ctor(undefined, { granularity: 'grapheme' }) };
+  return [...cachedSegmenter.instance.segment(value)].map((part) => part.segment);
 }
 
 function isPlainText(value: unknown, max: number): value is string {
   if (typeof value !== 'string' || value.length < 1 || value.length > max * MAX_TEXT_UNITS_PER_GRAPHEME) return false;
-  return value.trim() === value && !FORBIDDEN_OWNER_TEXT.test(value) && graphemeCount(value) <= max;
+  return value.trim() === value && !FORBIDDEN_OWNER_TEXT.test(value) && segments(value).length <= max;
 }
 
 const MAX_MARKS_PER_GRAPHEME = 2;
@@ -137,7 +143,11 @@ const SCRIPTS = [
 ].map((script) => ({ script, test: new RegExp(`^\\p{Script_Extensions=${script}}$`, 'u') }));
 const UNLISTED = 'Unlisted';
 
-/** Without `Intl.Segmenter`: one cluster per base character, each combining mark joined to the character before it. */
+/**
+ * Fallback without `Intl.Segmenter`: one cluster per base character, each combining mark joined to the character before it.
+ * It does not join emoji sequences or regional-indicator pairs, so it counts those higher than the segmenter would; the
+ * counts only ever grow, which can refuse a long valid text and never accepts one the segmenter would refuse.
+ */
 function withoutSegmenter(value: string): string[] {
   const parts: string[] = [];
   for (const char of value) {
@@ -150,10 +160,7 @@ function withoutSegmenter(value: string): string[] {
 
 /** Grapheme clusters of a name, or `undefined` when one carries more combining marks than the contract allows. */
 function graphemes(value: string): string[] | undefined {
-  const parts =
-    typeof Intl.Segmenter === 'function'
-      ? [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(value)].map((part) => part.segment)
-      : withoutSegmenter(value);
+  const parts = segments(value);
   return parts.every((part) => (part.match(MARK) ?? []).length <= MAX_MARKS_PER_GRAPHEME) ? parts : undefined;
 }
 
