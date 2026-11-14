@@ -1,0 +1,44 @@
+# Compose TEMPLATE of the member-count relay on the host (docs/contracts/deploy.md section 13; members-json 2.11).
+# Same chain of custody as the site: the image line is the only thing edited per deploy, by Guindaste and only with the
+# owner's OK for that deploy, with the digest of relay-image-digest.txt verified by `gh attestation verify` before pulling.
+# The tag and digest below are placeholders and are never deployed. Routing labels exist only here, never in the image.
+# The relay holds no secret: DISCORD_INVITE_CODE is public and must equal discord.inviteCode in src/data/site.yaml (CI).
+name: empirecommunity-members
+
+services:
+  relay:
+    image: docker.io/empirecommunity/empirecommunity-site-org:0.0.0-members-relay@sha256:0000000000000000000000000000000000000000000000000000000000000000
+    user: "1000:1000"
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 64m
+    pids_limit: 64
+    networks:
+      - proxy
+    environment:
+      DISCORD_INVITE_CODE: 7Pxg3gyr8n
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: "2"
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.empirecommunity-members-relay.rule=Host(`empirecommunity.org`) && Path(`/data/members-source.json`)
+      - traefik.http.routers.empirecommunity-members-relay.priority=100
+      - traefik.http.services.empirecommunity-members-relay.loadbalancer.server.port=8080
+
+networks:
+  proxy:
+    external: true

@@ -85,6 +85,7 @@ jobs:
     env:
       IMAGE: empirecommunity-site:ci
       CONTAINER: empirecommunity-site-ci
+      RELAY_IMAGE: empirecommunity-relay:ci
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -105,6 +106,11 @@ jobs:
         run: |
           node scripts/check-compose.ts deploy/compose.yml
           docker compose -f deploy/compose.yml config -q
+
+      - name: Relay compose template follows the deploy contract (exact labels, no mount, one public key equal to site.yaml)
+        run: |
+          node scripts/check-relay-compose.ts deploy/members-source/compose.yml
+          docker compose -f deploy/members-source/compose.yml config -q
 
       - name: Build the image (the build runs the dist checks inside)
         run: docker build --build-arg REVISION="$GITHUB_SHA" -t "$IMAGE" .
@@ -138,11 +144,25 @@ jobs:
             exit 1
           fi
 
+      # The relay image exists once Forja's Dockerfile lands (B-WK1); release.yml refuses to publish without it.
+      - name: Build the relay image
+        if: hashFiles('deploy/members-source/Dockerfile') != ''
+        run: docker build -t "$RELAY_IMAGE" -f deploy/members-source/Dockerfile deploy/members-source
+
+      - name: Relay image rules (base by digest, no traefik label, non-root, 8080 only, no VOLUME, one added file)
+        if: hashFiles('deploy/members-source/Dockerfile') != ''
+        run: scripts/check-relay-image.sh "$RELAY_IMAGE"
+
+      - name: Relay answers with the production hardening and no network (503, 404, 405, fixed headers, no access log)
+        if: hashFiles('deploy/members-source/Dockerfile') != ''
+        run: scripts/check-relay-run.sh "$RELAY_IMAGE"
+
       - name: Clean up
         if: always()
         run: |
           docker rm -f "$CONTAINER" || true
           docker image rm -f "$IMAGE" || true
+          docker image rm -f "$RELAY_IMAGE" || true
 
   workflows:
     name: Workflow lint

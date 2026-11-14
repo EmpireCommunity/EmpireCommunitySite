@@ -187,3 +187,39 @@ export function inviteLookup(response: PublicResponse, code: string, guild: stri
     level: 'error',
   };
 }
+
+const AGREEMENT_FLOOR = 50;
+const COUNT_LIMIT = 1_000_000;
+const isCount = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= COUNT_LIMIT;
+
+/**
+ * B-WK1 row "Member count agrees with Discord": the published count against `approximate_member_count` of the invite
+ * lookup the Discord entry row already made. Only the count and the guild id are read; the answer carries the inviter's
+ * user object and is never returned or printed. A lookup that is missing, not 200 or not for the configured guild only
+ * warns, so a refused runner address never turns the monitor red by itself. Inside the band of members-json 2.4 the
+ * counts agree: neither below half nor above double the other; below 50 that band does not apply and they may differ by 50.
+ */
+export function memberAgreement(membersText: string, lookup: PublicResponse | undefined, guild: string): { problems: string[]; level: Level } {
+  let published: unknown;
+  let source: unknown;
+  try {
+    const discord = (JSON.parse(membersText) as { discord?: { members?: unknown; source?: unknown } }).discord;
+    published = discord?.members;
+    source = discord?.source;
+  } catch { return { problems: ['Invalid members JSON'], level: 'error' }; }
+  if (source !== 'discord-invite') return { problems: [], level: 'error' };
+  if (!isCount(published)) return { problems: ['Invalid members count'], level: 'error' };
+  const unavailable = { problems: ['Discord invite lookup unavailable; member count agreement not checked'], level: 'warning' as const };
+  if (lookup === undefined || lookup.status !== 200 || lookup.headers.has('location')) return unavailable;
+  let count: unknown;
+  try {
+    const answer = JSON.parse(lookup.text) as { guild?: { id?: unknown }; approximate_member_count?: unknown } | null;
+    if (answer?.guild?.id !== guild) return unavailable;
+    count = answer.approximate_member_count;
+  } catch { return unavailable; }
+  if (!isCount(count)) return unavailable;
+  const agree = published < AGREEMENT_FLOOR || count < AGREEMENT_FLOOR
+    ? Math.abs(published - count) <= AGREEMENT_FLOOR
+    : published >= count / 2 && published <= count * 2;
+  return { problems: agree ? [] : ['Published member count and the Discord count disagree'], level: 'error' };
+}

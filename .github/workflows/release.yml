@@ -3,7 +3,8 @@ name: Release
 # Release process: docs/runbook/release.md (D-24). A merge to main never builds. The owner tags vX.Y.Z on the merge
 # commit after green CI; this workflow then guards the tag, publishes the image to Docker Hub (public project, public
 # image), attests it and creates the GitHub Release. The host pulls by digest after verifying the attestation
-# (docs/contracts/deploy.md section 6). Nothing here holds a credential for the host. The only secrets are the org
+# (docs/contracts/deploy.md section 6). The same run builds, checks, publishes and attests the member-count relay image
+# as a second tag of the same repository (section 13). Nothing here holds a credential for the host. The only secrets are the org
 # secrets DOCKERHUB_USERNAME and DOCKERHUB_TOKEN, used by the login step of the publish job and nowhere else.
 on:
   push:
@@ -19,6 +20,8 @@ concurrency:
 
 env:
   IMAGE: docker.io/empirecommunity/empirecommunity-site-org
+  # Same repository, tag X.Y.Z-members-relay (deploy 13): no new registry repository or credential.
+  RELAY_TAG_SUFFIX: -members-relay
 
 jobs:
   verify:
@@ -95,6 +98,15 @@ jobs:
             node scripts/check-pending.ts
           fi
 
+      - name: The relay image sources exist (both images ship with every tag, deploy 13)
+        run: |
+          for file in deploy/members-source/Dockerfile deploy/members-source/compose.yml; do
+            if [ ! -f "$file" ]; then
+              echo "::error::$file is missing; a release builds both images and publishes neither without it."
+              exit 1
+            fi
+          done
+
       - name: CHANGELOG has a dated, non-empty section (final releases) and the compose template names the version
         env:
           VERSION: ${{ steps.tag.outputs.version }}
@@ -110,6 +122,10 @@ jobs:
             echo "::error::deploy/compose.yml does not carry ${IMAGE}:${VERSION}; the release PR updates it."
             exit 1
           fi
+          if ! grep -qE "^[[:space:]]+image: ${IMAGE}:${VERSION//./\\.}${RELAY_TAG_SUFFIX}@sha256:" deploy/members-source/compose.yml; then
+            echo "::error::deploy/members-source/compose.yml does not carry ${IMAGE}:${VERSION}${RELAY_TAG_SUFFIX}; the release PR updates it."
+            exit 1
+          fi
 
   publish:
     name: Publish image
@@ -122,6 +138,7 @@ jobs:
       attestations: write
     outputs:
       digest: ${{ steps.digest.outputs.value }}
+      relay-digest: ${{ steps.relay-digest.outputs.value }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -131,26 +148,64 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Refuse a version whose image already exists
+      - name: Refuse a version whose image already exists (site tag and relay tag)
         env:
           VERSION: ${{ needs.verify.outputs.version }}
         run: |
           # A published version is never rebuilt: a re-run would produce another digest under the same tag.
           # Docker Hub answers "repository does not exist" until the first push creates the repository.
-          if out="$(docker buildx imagetools inspect "${IMAGE}:${VERSION}" 2>&1)"; then
-            echo "::error::${IMAGE}:${VERSION} already exists; ship the next patch version instead."
-            exit 1
-          fi
-          if ! grep -qiE 'not found|manifest unknown|name unknown|no such manifest|repository does not exist' <<< "$out"; then
-            echo "::error::Could not confirm the tag is free: $out"
-            exit 1
-          fi
+          for tag in "${VERSION}" "${VERSION}${RELAY_TAG_SUFFIX}"; do
+            if out="$(docker buildx imagetools inspect "${IMAGE}:${tag}" 2>&1)"; then
+              echo "::error::${IMAGE}:${tag} already exists; ship the next patch version instead."
+              exit 1
+            fi
+            if ! grep -qiE 'not found|manifest unknown|name unknown|no such manifest|repository does not exist' <<< "$out"; then
+              echo "::error::Could not confirm the tag ${tag} is free: $out"
+              exit 1
+            fi
+          done
+
+      # Both images are built and checked here, before either is pushed (deploy 13). The push steps below rebuild from
+      # the same BuildKit cache, so the layers that ship are the layers that were checked; only the SBOM and the
+      # provenance are added at push time.
+      - name: Build the site image locally for the checks (nothing is pushed)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: release-check-site:local
+          provenance: false
+          sbom: false
+          build-args: |
+            VERSION=${{ needs.verify.outputs.version }}
+            REVISION=${{ github.sha }}
+
+      - name: Build the relay image locally for the checks
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: deploy/members-source
+          file: deploy/members-source/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: release-check-relay:local
+          provenance: false
+          sbom: false
+
+      - name: Check both images (the image rules of deploy 4 and 13, and the relay answers) before any push
+        run: |
+          scripts/check-image.sh release-check-site:local
+          scripts/check-relay-image.sh release-check-relay:local
+          scripts/check-relay-run.sh release-check-relay:local
+
+      # The credential exists only from here on: the tag check, the builds and every check above run without it.
+      - name: Log in to Docker Hub
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push (SBOM and provenance attached)
         id: build
@@ -177,6 +232,9 @@ jobs:
           fi
           echo "value=$DIGEST" >> "$GITHUB_OUTPUT"
 
+      - name: Compare the pushed site image with the checked one
+        run: scripts/check-pushed-image.sh release-check-site:local "${IMAGE}@${{ steps.digest.outputs.value }}"
+
       - name: Attest build provenance
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
@@ -186,15 +244,54 @@ jobs:
           # Storage records describe GHCR packages and would need the artifact-metadata permission; Docker Hub has none.
           create-storage-record: false
 
+      - name: Build and push the relay image (SBOM and provenance attached)
+        id: relay-build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: deploy/members-source
+          file: deploy/members-source/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.IMAGE }}:${{ needs.verify.outputs.version }}${{ env.RELAY_TAG_SUFFIX }}
+          sbom: true
+          provenance: mode=max
+
+      - name: Validate the relay digest
+        id: relay-digest
+        env:
+          DIGEST: ${{ steps.relay-build.outputs.digest }}
+        run: |
+          if ! [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::Invalid relay digest returned by the build."
+            exit 1
+          fi
+          echo "value=$DIGEST" >> "$GITHUB_OUTPUT"
+
+      - name: Compare the pushed relay image with the checked one
+        run: scripts/check-pushed-image.sh release-check-relay:local "${IMAGE}@${{ steps.relay-digest.outputs.value }}"
+
+      - name: Attest build provenance of the relay image
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          # Same repository and subject name as the site image: the attestation proves the workflow and the tag, not
+          # which of the two images a digest is (deploy 13, host procedure step 3a is that identity check).
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.relay-digest.outputs.value }}
+          push-to-registry: true
+          create-storage-record: false
+
       - name: Print the deploy reference
         env:
           DIGEST: ${{ steps.digest.outputs.value }}
+          RELAY_DIGEST: ${{ steps.relay-digest.outputs.value }}
           VERSION: ${{ needs.verify.outputs.version }}
         run: |
           {
-            echo "### Image published"
+            echo "### Images published"
             echo ""
-            echo "Deploy reference (verify the attestation before pulling): \`${IMAGE}:${VERSION}@${DIGEST}\`"
+            echo "Site deploy reference (verify the attestation before pulling): \`${IMAGE}:${VERSION}@${DIGEST}\`"
+            echo ""
+            echo "Relay deploy reference (verify the attestation, then the identity check of deploy 13 step 3a): \`${IMAGE}:${VERSION}${RELAY_TAG_SUFFIX}@${RELAY_DIGEST}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
   github-release:
@@ -210,7 +307,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Create the release with notes and image-digest.txt
+      - name: Create the release with notes, image-digest.txt and relay-image-digest.txt
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -218,9 +315,10 @@ jobs:
           VERSION: ${{ needs.verify.outputs.version }}
           PRERELEASE: ${{ needs.verify.outputs.prerelease }}
           DIGEST: ${{ needs.publish.outputs.digest }}
+          RELAY_DIGEST: ${{ needs.publish.outputs.relay-digest }}
         run: |
-          if ! [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
-            echo "::error::Digest missing or invalid."
+          if ! [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]] || ! [[ "$RELAY_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::A digest is missing or invalid."
             exit 1
           fi
           flags=()
@@ -231,4 +329,5 @@ jobs:
             scripts/release-notes.sh "$VERSION" > notes.md
           fi
           printf '%s\n' "$DIGEST" > image-digest.txt
-          gh release create "$TAG" image-digest.txt --verify-tag --title "$TAG" --notes-file notes.md "${flags[@]}"
+          printf '%s\n' "$RELAY_DIGEST" > relay-image-digest.txt
+          gh release create "$TAG" image-digest.txt relay-image-digest.txt --verify-tag --title "$TAG" --notes-file notes.md "${flags[@]}"
