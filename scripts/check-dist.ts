@@ -189,7 +189,10 @@ for (const file of htmlFiles) {
 
 // D-28, P2-09: support pages carry one donations block in the state the site data asks for (`not-open` until the opening,
 // P2-12; `open` is the form that posts to the donations service); the payment guard runs on dist/ and on the content sources.
-const supportStatusResult = supportStatus(parse(read('src/data', 'support.yaml')), PENDING.legalPages !== false);
+// A pending flag counts unless it is exactly false (the same reading as the release guard); the parameter type is widened so the
+// flag is not narrowed to its current literal.
+const stillPending = (flag: boolean): boolean => flag !== false;
+const supportStatusResult = supportStatus(parse(read('src/data', 'support.yaml')), stillPending(PENDING.legalPages));
 add(...supportStatusResult.findings);
 const donationsStatus = supportStatusResult.status;
 const supportFiles = new Set<string>();
