@@ -70,7 +70,7 @@ test('rows hold only tr, td and span, set no attribute from data and put every s
 // The validator already refuses these (donations-snapshot.test.ts); this proves the render does not rely on that.
 test('a hostile name reaches the page as text only, in a direction-isolated, clipped cell', () => {
   const hostile = [
-    '<img src=x onerror=alert(1)>', '<script>alert(1)</script>', '"><svg/onload=alert(1)>', '&lt;b&gt;', '‮evil‬', 'javascript:alert(1)',
+    '<img src=x onerror=alert(1)>', '<script>alert(1)</script>', '"><svg/onload=alert(1)>', '&lt;b&gt;', '\u202Eevil\u202C', 'javascript:alert(1)',
     'مرحبا 123', 'x'.repeat(500), '</td></tr><tr><td>fake donation',
   ];
   for (const name of hostile) {

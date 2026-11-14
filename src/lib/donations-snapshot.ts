@@ -98,17 +98,30 @@ function isPlainText(value: unknown, max: number): value is string {
   return typeof value === 'string' && value.length >= 1 && value.length <= max && value.trim() === value && !FORBIDDEN_TEXT.test(value);
 }
 
-function graphemeCount(value: string): number {
-  if (typeof Intl.Segmenter !== 'function') return [...value].length;
-  return [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(value)].length;
+const MAX_MARKS_PER_GRAPHEME = 2;
+// A hard stop before any segmentation work on an absurd string; the contract caps the raw field at 200 bytes.
+const MAX_NAME_UNITS = 200;
+const MARK = /\p{M}/gu;
+
+/** Grapheme clusters of a name, or `undefined` when one carries more combining marks than the contract allows. */
+function graphemes(value: string): string[] | undefined {
+  const parts =
+    typeof Intl.Segmenter === 'function'
+      ? [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(value)].map((part) => part.segment)
+      : [...value];
+  return parts.every((part) => (part.match(MARK) ?? []).length <= MAX_MARKS_PER_GRAPHEME) ? parts : undefined;
 }
 
-/** The contract's display-name rules (section 2) as a read-side check. */
+/**
+ * The contract's display-name rules (section 2 and its G2 cases) as a read-side check: the allowed character set, at most 20
+ * grapheme clusters, and at most 2 combining marks in one cluster (a stack of marks is how a name draws outside its cell).
+ */
 export function isDisplayName(value: unknown): value is string {
-  if (typeof value !== 'string' || value.length === 0 || value.length > MAX_NAME_GRAPHEMES * 8) return false;
+  if (typeof value !== 'string' || value.length === 0 || value.length > MAX_NAME_UNITS) return false;
   if (value.trim() !== value || value.trim().length === 0) return false;
   if (!NAME_CHARS.test(value)) return false;
-  return graphemeCount(value) <= MAX_NAME_GRAPHEMES;
+  const parts = graphemes(value);
+  return parts !== undefined && parts.length <= MAX_NAME_GRAPHEMES;
 }
 
 function isLocalized(value: unknown): value is LocalizedText {
@@ -156,6 +169,7 @@ function consistent(snapshot: Snapshot): boolean {
   if (received.count < donations.length) return false;
   // Every listed donation is in the totals; when the list is the whole history the totals must match it exactly.
   if (received.count === donations.length && received.totalCents !== sum(donations)) return false;
+  if (received.totalCents < sum(donations)) return false; // a partial list can only be a part of the total
   if (received.count > 0 && received.totalCents < 1) return false;
   // Newest first, each `seq` once (a refund leaves a gap, never a repeat).
   for (let index = 1; index < donations.length; index += 1) {

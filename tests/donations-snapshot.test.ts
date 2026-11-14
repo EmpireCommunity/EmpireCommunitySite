@@ -58,7 +58,7 @@ test('anything that is not exactly the schema is refused whole (fail closed)', (
     ['an unknown expense category', withEdit((s) => { s.out[0].category = 'party'; })],
     ['a justification missing one language', withEdit((s) => { delete s.out[0].justification['en-us']; })],
     ['a control character in a payee', withEdit((s) => { s.out[0].payee = 'Acme\nLtd'; })],
-    ['a bidi override in a justification', withEdit((s) => { s.out[0].justification['pt-br'] = 'a‮b'; })],
+    ['a bidi override in a justification', withEdit((s) => { s.out[0].justification['pt-br'] = 'a\u202Eb'; })],
     ['a source label that is not a plain word', withEdit((s) => { s.sources.received = 'Mercado Pago <b>'; })],
     ['a source that is not text', withEdit((s) => { s.sources.received = 5; })],
     ['owner-declared sections attributed elsewhere', withEdit((s) => { s.sources.out = 'calculated'; })],
@@ -82,6 +82,7 @@ test('figures that do not add up are refused: balance identity, listed totals, s
     ['count lower than the listed rows', withEdit((s) => { s.received.count = 7; })],
     ['seq repeated', withEdit((s) => { s.donations[1].seq = 8; })],
     ['seq not newest first', withEdit((s) => { s.donations.reverse(); })],
+    ['a total below the listed donations when the list is only part of the history', withEdit((s) => { s.received = { totalCents: 1, count: 120, feesCents: 0 }; s.balance.calculatedCents = 1 - 4000; })],
   ];
   for (const [label, input] of bad) assert.equal(parseSnapshot(input), undefined, label);
   const adjusted = withEdit((s) => {
@@ -109,9 +110,9 @@ test('a gap in seq (a refund) is fine and a list longer than it shows (count abo
 test('hostile or disallowed display names fail validation, on any donation row', () => {
   const hostile = [
     '<img src=x onerror=alert(1)>', '<script>alert(1)</script>', '"><svg/onload=alert(1)>', "';DROP TABLE donations;--",
-    '‮evil', 'a‭b', 'zero​width', 'a⁦b⁩', 'line\nbreak', 'tab\there', ' leading', 'trailing ', '   ', '',
+    '\u202Eevil', 'a\u202Db', 'zero\u200Bwidth', 'a\u2066b\u2069', 'line\nbreak', 'tab\there', ' leading', 'trailing ', '   ', '',
     '@admin', 'name.with.dot', 'a:b', 'a/b', 'https://x', 'emoji \u{1F600}', 'a'.repeat(21), '\uD800', 'x\u0000y',
-    ' ', 'a b',
+    '\u2028', 'a\u2029b',
   ];
   for (const name of hostile) {
     assert.equal(isDisplayName(name), false, JSON.stringify(name));
@@ -121,10 +122,12 @@ test('hostile or disallowed display names fail validation, on any donation row',
 });
 
 test('allowed display names pass: any script, digits, the allowed punctuation and graphemes counted not code units', () => {
-  const ok = ['Maria', 'João 10', 'Ana-Clara', "O'Neil", 'a_b', 'Привет', '李小龍', 'مرحبا', 'é'.repeat(20), 'x'.repeat(20), 'á̂'];
+  const ok = ['Maria', 'João 10', 'Ana-Clara', "O'Neil", 'a_b', 'Привет', '李小龍', 'مرحبا', 'e\u0301'.repeat(20), 'x'.repeat(20), 'a\u0301\u0302'];
   for (const name of ok) assert.equal(isDisplayName(name), true, name);
   assert.equal(isDisplayName('x'.repeat(21)), false);
-  assert.equal(isDisplayName('é'.repeat(21)), false);
+  assert.equal(isDisplayName('e\u0301'.repeat(21)), false);
+  assert.equal(isDisplayName('a\u0301\u0302\u0303'), false, 'three combining marks in one grapheme (contract G2)');
+  assert.equal(isDisplayName('a' + '\u0301'.repeat(160)), false, 'a stack of marks is refused by the marks rule, not by a code-unit cap');
 });
 
 test('money, day and time formatting follow the page language and never read the clock', () => {

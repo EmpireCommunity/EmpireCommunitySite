@@ -68,7 +68,7 @@ async function load(root: HTMLElement): Promise<void> {
   if (labels === undefined) return;
   try {
     const response = await fetch(TRANSPARENCY_PATH, { credentials: 'omit', cache: 'default', signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
-    if (response.status !== 200) return unavailable(root);
+    if (!response.ok) return unavailable(root);
     const snapshot = parseSnapshot(await response.json());
     if (snapshot === undefined) return unavailable(root);
     if (hasData(snapshot)) show(root, snapshot, labels);
