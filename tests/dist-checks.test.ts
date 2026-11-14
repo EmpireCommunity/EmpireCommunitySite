@@ -236,6 +236,30 @@ test('check-dist reports D-41 for an invite outside the pt-BR gate, in HTML and 
   }
 });
 
+test('check-dist fails the build when support.yaml says open while the legal texts are pending, and not when it says not-open (P2-09 m4)', () => {
+  const dist = mkdtempSync(join(tmpdir(), 'check-dist-'));
+  const data = (status: string) => {
+    const file = join(dist, `support-${status}.yaml`);
+    writeFileSync(file, `donations:\n  status: ${status}\n`);
+    return file;
+  };
+  const gate = 'donations.status "open" waits for the new Privacy and Terms';
+  const run = (file: string) => spawnSync(process.execPath, ['scripts/check-dist.ts', dist], { encoding: 'utf8', env: { ...process.env, CHECK_DIST_SUPPORT_DATA: file } });
+  try {
+    mkdirSync(join(dist, 'pt-br/join'), { recursive: true });
+    writeFileSync(join(dist, 'pt-br/join/index.html'), '<main></main>');
+    const open = run(data('open'));
+    assert.ok(open.stdout.split('\n').some((line) => line.startsWith('::error file=src/data/support.yaml::') && line.includes(gate)), 'the legal gate is reported for open');
+    assert.equal(open.status, 1, 'and the run exits non-zero');
+    const closed = run(data('not-open'));
+    assert.equal(closed.stdout.includes(gate), false, 'not-open does not trip the gate');
+    const invalid = run(data('opening'));
+    assert.ok(invalid.stdout.includes('donations.status must be "not-open" or "open"'), 'an unknown status is reported');
+  } finally {
+    rmSync(dist, { recursive: true, force: true });
+  }
+});
+
 test('legal pages are scanned on their <main> only, so the shared pt-BR footer may list the channel', () => {
   const page = '<footer>WhatsApp</footer><main><p>texto legal</p></main>';
   assert.equal(whatsappAbsent(mainContent(page), 'pt-br/terms-of-service/index.html').length, 0);

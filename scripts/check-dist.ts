@@ -192,7 +192,10 @@ for (const file of htmlFiles) {
 // A pending flag counts unless it is exactly false (the same reading as the release guard); the parameter type is widened so the
 // flag is not narrowed to its current literal.
 const stillPending = (flag: boolean): boolean => flag !== false;
-const supportStatusResult = supportStatus(parse(read('src/data', 'support.yaml')), stillPending(PENDING.legalPages));
+// `CHECK_DIST_SUPPORT_DATA` points the run at another support data file: a hook for the spawn test that proves an `open` status
+// with the legal texts pending fails the build (tests/dist-checks.test.ts). Unset, the run reads the repository file.
+const supportDataFile = process.env.CHECK_DIST_SUPPORT_DATA ?? 'src/data/support.yaml';
+const supportStatusResult = supportStatus(parse(readFileSync(supportDataFile, 'utf8')), stillPending(PENDING.legalPages));
 add(...supportStatusResult.findings);
 const donationsStatus = supportStatusResult.status;
 const supportFiles = new Set<string>();
