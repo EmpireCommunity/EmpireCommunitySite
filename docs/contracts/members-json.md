@@ -140,10 +140,11 @@ value was ever stored, so a failing first run can be diagnosed without logs:
 - `lastError`: `null` or the code of 2.4 for this run (`out_of_band` included), or **`store_failed`**, a code used in
   this key only, when the run had a record to write and that write threw. The status is built **after** the record
   write was attempted, so it never says `written` for a value that was not stored.
-- `httpStatus`: the HTTP status of the **last attempt** of the run as an integer, or `null` when that attempt got no
-  HTTP response (network error or timeout).
-- The key is one record overwritten on each run, not a log. It holds no visitor data, is never read by the HTTP
-  handler and is never public. It is written after the `members:v1` write was attempted, whether that write succeeded
+- `httpStatus`: the HTTP status of the **last attempt** of the run as an integer from 100 to 599, or `null` when that
+  attempt got no HTTP response (network error or timeout). Every field is one of these closed values: no upstream text
+  and no header ever enters the key.
+- The key is one record overwritten on each run, not a log. It holds no visitor data, is **written only by the Cron** (a
+  public write path would spend the 1,000 daily KV writes), is never read by the HTTP handler and is never public. It is written after the `members:v1` write was attempted, whether that write succeeded
   or threw, and a failure of the status write changes nothing else. If reading `members:v1` throws, the run stops and
   writes neither key, as before.
 
@@ -167,9 +168,9 @@ Two keys and two runs per day make about 4 KV writes per day.
 | Situation | Worker behavior | `lastError` | Public result |
 |---|---|---|---|
 | 200 and valid and in band | write new value, reset counters | `null` | new value |
-| Network error, timeout or HTTP 5xx (a `503` is the relay saying it has no fresh value, 2.11) | up to 2 retries (2 s, then 6 s) inside the same run; then keep value, `consecutiveFailures + 1` | `upstream_unavailable` | last good |
+| Network error, timeout, HTTP 5xx (a `503` is the relay saying it has no fresh value, 2.11) or **HTTP 404** (the relay router is missing or lost its priority and the site answered) | up to 2 retries (2 s, then 6 s) inside the same run; then keep value, `consecutiveFailures + 1` | `upstream_unavailable` | last good |
 | HTTP 429 (the edge rate limit of 2.9) | honor `Retry-After` if 10 s or less (one retry), otherwise stop; keep value, count a failure | `rate_limited` | last good |
-| Any other status below 500 and not 200 or 429 (a 3xx included, never followed; a `404` means the relay route is missing, a `403` an edge refusal) | one attempt, no retry; keep value, count a failure | `invalid_response` | last good |
+| Any other status below 500 and not 200, 404 or 429 (a 3xx included, never followed; a `403` or a challenge page is an edge refusal, its body discarded) | one attempt, no retry; keep value, count a failure | `invalid_response` | last good |
 | 200 but wrong shape, wrong `code`, wrong `guild.id`, count out of bounds, or `fetchedAt` missing or malformed | keep value, count a failure | `invalid_response` | last good |
 | 200 and valid, but `fetchedAt` older than 24 h or more than 5 minutes ahead of the run time | treated as unavailable (same retries); keep value, count a failure | `upstream_unavailable` | last good |
 | In bounds but a jump (`new < last * 0.5` or `new > last * 2`, only when `last >= 50`) | keep value, count a failure, `outOfBandStreak + 1`; at 3 consecutive such runs (36 h) accept the new value and reset. Any run that is not such a jump (in band, or any failure) resets `outOfBandStreak` to 0, so the three runs are really consecutive | `out_of_band` | last good, then new |
@@ -179,10 +180,11 @@ Two keys and two runs per day make about 4 KV writes per day.
 | Workers Free daily limit exceeded (error 1027) | route is **fail open**: Cloudflare bypasses the Worker | n/a | built-in value |
 | Cron stops running (account issue, removed trigger) | nothing detects it | n/a | last good, ageing forever (accepted by D-14) |
 
-The code `invite_not_found` is **no longer produced** (the Worker does not call Discord, and a `404` now means a missing
-relay route); it stays an accepted value of `lastError` so that an older record still parses. A deleted invite now
-shows as `upstream_unavailable` with `httpStatus` 503 once the relay's last value is older than 24 h, and the relay's
-own outcome line says why (2.11).
+The code `invite_not_found` is **no longer produced**: the Worker does not call Discord, and a `404` from the relay
+path means a missing route, never a removed invite, so it must not send an operator to rotate the invite (2.6). It
+stays an accepted value of `lastError` so that an older record still parses. A deleted invite now shows as
+`upstream_unavailable` with `httpStatus` 503 once the relay's last value is older than 24 h, and the relay's own
+outcome line says why (2.11).
 
 There is no alerting channel in v1. Operators diagnose from the stored record and the run status only (2.10):
 `updatedAt` older than 3 days means the Cron is failing, and `lastError` with `httpStatus` says why (see open questions).
@@ -344,8 +346,10 @@ egress; the status code was never recorded), while the same call from the VPS an
 from the VPS and hands the Worker only what it needs. It holds no secret and stands where EmpireBot may stand later
 (section 5).
 
-**Process.** One file, no dependency, run directly by a stock Node image with no build step; source and compose
-template in `deploy/members-source/` of the site repository. Container, deploy and CI rules: [deploy](deploy.md)
+**Process.** One file with no dependency, in `deploy/members-source/` of the site repository beside its Dockerfile
+and compose template. It reaches the host **only inside an image published and attested by the release workflow and
+pulled by digest**, like the site image, never as a loose file: the relay answers on the site's own origin, so its
+code gets the same chain of custody as the pages. Image, container, deploy and CI rules: [deploy](deploy.md)
 section 13.
 
 **Fetching Discord.**
@@ -354,17 +358,24 @@ section 13.
   no `Authorization`, header `User-Agent: EmpireCommunitySite-members/1 (+https://empirecommunity.org)`, redirects
   never followed, timeout 8 s, body read with a 64 KB cap. `DISCORD_INVITE_CODE` is the only setting, a public value
   matching `^[A-Za-z0-9-]{2,32}$`; the process exits at start when it is missing or malformed.
-- A failed cycle is retried **once**, 10 minutes later, then the next cycle is awaited. A 429 whose `Retry-After` is
-  longer than 10 minutes skips that retry.
-- **The relay never calls Discord because of an incoming request.** Visitors cannot spend its rate limit.
+- A failed cycle is retried **once**, 10 minutes later, then the next cycle is awaited. After a **429** there is no
+  retry: the next cycle is awaited.
+- **The relay never calls Discord because of an incoming request**: no lazy refresh and no request-driven path, so
+  visitors cannot spend its rate limit. **A failed fetch never ends the process** (a crash loop would turn restarts
+  into Discord calls). The bound is about 8 calls a day plus one per start.
+- Egress is that one fixed address and nothing else: the code passes through `encodeURIComponent`, TLS verification is
+  never disabled, and the process runs with no proxy variables in its environment.
 - A response replaces the stored value only when it is HTTP 200, a JSON object, `code` equals `DISCORD_INVITE_CODE`,
   `guild.id` is a string matching `^[0-9]{17,20}$` and `approximate_member_count` is an integer from 1 to 1,000,000.
   Anything else leaves the stored value as it is.
-- **Projection only.** The value is kept in memory (nothing on disk) as exactly the four fields below. Every other
-  field of Discord's answer is discarded at once: it carries the inviter's user object, the channel and the server
-  profile, which MUST NOT be republished or stored.
+- **Projection only.** The value is kept in memory (nothing on disk) as exactly the four fields below, **built field
+  by field after the type checks, never by copying or spreading Discord's object**. Every other field of Discord's
+  answer is discarded at once: it carries the inviter's user object, the channel and the server profile, which MUST
+  NOT be republished, stored or logged. The body is serialized once per successful fetch and every request gets that
+  same buffer, so a request costs constant work.
 
-**Serving.** `GET` and `HEAD` on exactly `/data/members-source.json`, listening on port 8080:
+**Serving.** `GET` and `HEAD` when the **raw request target is exactly** `/data/members-source.json`, listening on
+port 8080. The request body is never read and nothing from a request is echoed in any answer:
 
 ```json
 {
@@ -377,19 +388,26 @@ section 13.
 
 | Case | Answer |
 |---|---|
-| A stored value not older than 24 h | `200`, the body above, `Content-Type: application/json; charset=utf-8`, `Cache-Control: no-store`, `X-Content-Type-Options: nosniff` |
-| No stored value yet, or it is older than 24 h | `503`, empty body, `Cache-Control: no-store` |
-| That path with a non-empty query string | `404` |
-| That path with another method | `405` with `Allow: GET, HEAD` |
+| A stored value not older than 24 h | `200`, the body above |
+| No stored value yet, or it is older than 24 h | `503`, empty body |
+| That path with a query string (even an empty `?`), a trailing slash or an encoded variant | `404`, empty body (Traefik's `Path` ignores the query, and the edge and nginx refusals of 2.9 cover `members.json` only) |
+| That path with another method | `405` with `Allow: GET, HEAD`, empty body |
 | `GET /healthz` (container health only; Traefik does not route it) | `200` whenever the process is serving, whatever the state of the value, so a relay without data stays routed and answers 503 itself |
-| Anything else | `404` |
+| Anything else | `404`, empty body |
 
+- **Every answer, whatever its status**, carries `Content-Type: application/json; charset=utf-8`,
+  `X-Content-Type-Options: nosniff`, `Cache-Control: no-store`,
+  `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'` and
+  `Cross-Origin-Resource-Policy: same-origin`: the path is inside the site's origin, so nothing it answers may ever be
+  usable as a page.
+- Server limits, so a flood costs this path only: a small cap on header size, header and request timeouts, a
+  keep-alive timeout and a cap on open connections (64).
 - The field names are Discord's, so the Worker's `parseInvite` applies unchanged and the **identity check stays in the
   Worker** against its own variables. `fetchedAt` is the time of the successful Discord call, in the format of
   `updatedAt`.
 - No `Set-Cookie`, no `Access-Control-*`, no authentication: the body is three public values and a time.
-- **No access log and nothing written per request** (D-20). The process MAY write one line per fetch cycle with the
-  time and the outcome (the HTTP status or an error class), never a response body and never request data.
+- **No access log and nothing written per request** (D-20). The process MAY write one line of fixed vocabulary per
+  scheduled fetch (the outcome and the HTTP status or an error class), never upstream text and never request data.
 - Public exposure: Traefik routes only `Host` `empirecommunity.org` with `Path` `/data/members-source.json` to it
   ([deploy](deploy.md) section 13). Anyone may read it; that is accepted, and the edge rate limit of 2.9 covers it.
 
@@ -481,8 +499,12 @@ or Workers versions in the dashboard, or remove the route (the origin file then 
   `store_failed`, never `written`.
 - Relay (site repository): the projection keeps exactly the four fields and drops the rest of a realistic invite
   answer; an answer with another `code`, a malformed guild id or a count out of bounds does not replace the value;
-  the serving table of 2.11 (200, 503 without a value, 503 past 24 h, 404 with a query, 405, 404 elsewhere). Time and
-  the Discord call are injected.
+  the serving table of 2.11 (200, 503 without a value, 503 past 24 h, 404 with a query, a trailing slash or an encoded
+  variant, 405, 404 elsewhere) with the fixed headers on every status and no body read; no request causes a Discord
+  call; a failed fetch (oversized, non-JSON, redirect, timeout) serves nothing beyond the previous value and does not
+  end the process. Time and the Discord call are injected.
+- Worker upstream: a `404` gives `upstream_unavailable`; a `403` carrying HTML and a 3xx give `invalid_response`; the
+  run status is never written by the request handler, and public answers do not change whatever that key holds.
 - HTTP handler contract: KV hit returns the schema and headers; KV missing or throwing passes through; non-GET gives
   405. Validate the example body against the JSON Schema above.
 - Page: the display rule (89, 100, 888, 12 345, both locales) and "invalid payload leaves the built-in value".
@@ -500,14 +522,18 @@ or Workers versions in the dashboard, or remove the route (the origin file then 
   origin fallback file (2.4, 4); validation of the upstream response by code, guild id, bounds and band (2.5);
   cache keyed on the exact URL (2.7); the integer written with `textContent` only (3); zero runtime dependencies.
 - No Worker logs (D-20, 2.10): there is no per-request record to leak or to retain.
-- **Relay (2.11, B-WK1), to be threat-modelled before it is built**: a new public path on the site domain answered by
+- **Relay (2.11, B-WK1; Project Context note "Threat Model B-WK1", private)**: a new public path on the site domain answered by
   a new container on the VPS; the Worker now trusts a response from its own origin instead of Discord's. Controls
   specified: fixed outbound URL built from one validated public setting and no request input (no request can make it
   call anything); Discord is never called on a request; projection of four fields, nothing else of Discord's answer
   kept or served; no secret, no cookie, no log per request, nothing on disk; exact path and methods; hardened
-  container reachable only through the proxy network ([deploy](deploy.md) section 13); the Worker still checks code,
+  container reachable only through the proxy network, shipped as an attested image by digest
+  ([deploy](deploy.md) section 13); the Worker still checks code,
   guild id, bounds, band and now freshness. Whoever controls the origin already controls the pages; through the relay
-  they gain only the power to publish an integer inside the bounds and the band.
+  they gain only the power to publish an integer inside the bounds and the band. `fetchedAt` is declared by the
+  sender: it shows liveness, not authenticity. The integrity monitor compares the published count with a direct
+  invite lookup ([deploy](deploy.md) section 8), which shows a spoofed or stuck source with no secret. Not adopted
+  now, kept in the backlog: an edge rule that lets only this zone's Workers read the path.
 - Residual, mitigated and not eliminated: a malicious merge or a stolen build token can publish any integer; the
   Workers Scripts permission is account-wide and the token is held by Cloudflare; merge to `main` is the gate (ADR-0004); the account-wide Worker request quota is shared and not bounded by the
   per-IP rate limit (2.9, item 4).

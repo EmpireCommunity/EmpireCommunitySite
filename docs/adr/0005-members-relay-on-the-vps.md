@@ -47,12 +47,17 @@ contract, made on that evidence and not before.
   validator; the public schema does not change.
 - The count now depends on the VPS for fresh values. When the VPS or the relay is down the last value stays, which
   D-14 accepts.
-- One more public path and one more container on the host, with their own compose rules, CI check and deploy
-  procedure (deploy section 13). Each relay deploy needs the owner's OK.
+- One more public path and one more container on the host. Because the path is inside the site's origin, the relay
+  ships as a second image on the site's release path (built, attested and pulled by digest), never as a loose script
+  (threat model B-WK1, item W1); it has its own image and compose rules, CI checks and deploy procedure (deploy
+  section 13). Each relay deploy needs the owner's OK, and the first relay image needs a release tag.
 - The invite code has a third copy, in the relay template. It lives in the same repository as `site.yaml` and CI
   compares the two; the rotation gains one step (members-json 2.6).
-- The error code `invite_not_found` is no longer produced; a deleted invite shows as an unavailable upstream after 24
-  hours, and the relay's own outcome line says why.
+- The error code `invite_not_found` is no longer produced: a 404 from the relay path means a missing route and maps
+  to an unavailable upstream; a deleted invite shows the same way after 24 hours, and the relay's own outcome line
+  says why.
+- The integrity monitor gains a row that compares the published count with a direct invite lookup, which shows a
+  spoofed or stuck source without a secret.
 - This is the shape members-json section 5 planned for EmpireBot: another producer behind the same adapter.
 
 ## Not verified

@@ -107,6 +107,9 @@ branch name or a commit tag) is used for deployment**; the deploy reference is t
 the GitHub Release and in the run summary. The job attaches SBOM and provenance and creates a build provenance
 attestation for that digest with the official GitHub attestation action (pinned by SHA), with `subject-name` `docker.io/empirecommunity/empirecommunity-site-org` (the form GitHub's docs require for Docker Hub) and the attestation also pushed to the registry. The verification in section 6 reads GitHub's attestation store by digest.
 
+**Second image.** The same run builds, checks, publishes and attests the member-count relay image (section 13) under
+the same rules: its own tag, its own digest, its own attestation with the same identity.
+
 **Identity.** The attestation of a valid release has the identity
 `https://github.com/EmpireCommunity/EmpireCommunitySite/.github/workflows/release.yml@refs/tags/vX.Y.Z`. An image built
 from another ref or workflow, a push to `main`, or a different tag has no attestation with that identity and is not
@@ -166,6 +169,7 @@ token or other secret is used. Rows whose site or root target is not live yet wa
 | Root | `/?utm_source=ci` answers `302` to `/en-us/?utm_source=ci` from the (non-Brazilian) runner. The Brazilian case is checked by hand (C-8). |
 | Discord redirect (D-78) | `/discord?utm_source=ci` answers `302` to `/en-us/discord/?utm_source=ci` from the (non-Brazilian) runner, and `/discord/` the same. Under the same `root` launch flag as the row above (warns before launch, blocks after). The Brazilian case is checked by hand (C-10). |
 | Member count | `/data/members.json` validates against the schema, `source` is not `built-in`, and `updatedAt` is not older than 3 days or more than 5 minutes in the future. |
+| Member count agrees with Discord (B-WK1) | Only while `source` is `discord-invite`: one direct invite lookup with counts from the runner; its `approximate_member_count` and the published `members` must be within the band of members-json 2.4 of each other (neither below half nor above double the other). A difference fails the row. **A lookup that does not answer 200 with the configured guild only warns** (whether Discord answers runner addresses is not verified), so this row never turns the monitor red by itself for a refused lookup. |
 | Invite copies agree (members-json 2.6) | The public `wrangler.jsonc` on `main` of the Worker repository carries the same `DISCORD_GUILD_ID` as `src/data/site.yaml` on `main`; a different `DISCORD_INVITE_CODE` fails too, which is expected only between steps 2 and 3 of the rotation and clears on the next run. Reads public raw files only. The Worker is already live, so this row is blocking. |
 | Headers | `/pt-br/` and `/en-us/support/` carry the expected CSP and the other headers of routing-locale section 6. `Strict-Transport-Security` MUST carry exactly one valid `max-age` greater than 0; the contract sets no longer minimum duration. |
 
@@ -244,29 +248,47 @@ section 6). These are the **required controls** for that repository, stated here
 ## 13. Member-count relay on the host (B-WK1, D-82)
 
 What it does and what it answers: [members-json](members-json.md) 2.11; why it exists and what was rejected:
-[ADR-0005](../adr/0005-members-relay-on-the-vps.md). It holds **no secret**. This section holds the
-controls of its files, its container and its deploy.
+[ADR-0005](../adr/0005-members-relay-on-the-vps.md). It holds **no secret**. This section holds the controls of its
+image, its container and its deploy.
 
-**Files.** `deploy/members-source/compose.yml` (the template for the host) and the one relay script beside it, with no
-dependency and no build step. They are not part of the site image: `dist/`, the image and the release by tag
-(sections 4 and 5) do not change, and the relay is **not** released by tag. Its tests run in the normal test job, and
-lint and typecheck cover the script.
+**Why an image.** The relay answers on `empirecommunity.org`, inside the site's own origin: a changed script could
+answer a page on its path and run as the site. So it reaches the host exactly as the site does, **as an image
+published and attested by `release.yml` and pulled by digest** (sections 5 and 6). No script is ever copied to the
+host and no file is mounted into the container.
+
+**Files** (site repository): `deploy/members-source/` holds the one relay script (no dependency, no build step), its
+`Dockerfile` and the compose template `compose.yml`. Its tests run in the normal test job; lint and typecheck cover
+the script. Nothing of it enters the site image, and `dist/` does not change.
+
+**Image rules** (checked by `ci.yml` like those of section 4; CI fails on any violation):
+
+- Base: the official Node image, the major of `.nvmrc`, Alpine variant, **pinned by digest**. The image adds the one
+  script and nothing else: no package install, no `node_modules`, no source or data file of the site.
+- Runs as a non-root user, exposes only 8080, declares no `VOLUME`, and carries **no `traefik.*` label** (the check
+  of section 4 applies to it and to its base).
+- The built image is started in CI and the answers of members-json 2.11 are checked against it with the Discord call
+  replaced: the fixed headers on every status, 404 for a query string, 405 for another method.
+
+**Release.** The same tag builds both images. The relay image is published in the same Docker Hub repository as the
+site image under its own tag, `docker.io/empirecommunity/empirecommunity-site-org:X.Y.Z-members-relay`
+(`X.Y.Z-rc.N-members-relay` for a release candidate), so no new registry repository or credential is needed. **Both
+images are built and checked before either is pushed.** The guard that refuses an existing image tag covers both
+tags; each image gets its own SBOM, provenance and attestation with the identity of section 5; the release carries
+`relay-image-digest.txt` beside `image-digest.txt`; and the release PR sets the tag part of both `image:` lines.
 
 **Compose template requirements** (compose project `empirecommunity-members`, one service):
 
-- `image`: the official Node image, the major of `.nvmrc`, Alpine variant, in the form
-  `docker.io/library/node:<version>-alpine@sha256:<64 hex>`. Unlike the site image, **the digest is real and
-  committed** (the image exists before the change), and it changes only by pull request.
-- The script is the **only mount**: one file, bind-mounted read-only. No named volume, no docker socket, nothing
-  written to disk.
+- `image`: `docker.io/empirecommunity/empirecommunity-site-org:X.Y.Z-members-relay@sha256:<64 hex>`. As for the site,
+  the digest in the repository is a placeholder that is never deployed, and the real one is filled on the host.
+- **No mount of any kind**: no bind mount, no named volume, no docker socket. Nothing is written to disk.
 - A non-root `user`; `read_only: true`; `cap_drop: [ALL]`; `no-new-privileges`; `mem_limit: 64m`; `pids_limit: 64`;
   `restart: unless-stopped`; a healthcheck on `/healthz`; json-file logging with `max-size: 1m` and `max-file: 2`
   (D-20: the relay writes no access log, members-json 2.11).
 - `environment`: exactly one key, `DISCORD_INVITE_CODE`, a public value. No `env_file`, no `secrets`.
 - No published ports. Joined only to the external proxy network, through which it reaches `discord.com` and Traefik
   reaches it.
-- Traefik labels, and no other `traefik.*` key: `traefik.enable`; `traefik.docker.network`; one router, named
-  differently from the site's, whose rule is exactly
+- Traefik labels, **and no other `traefik.*` key** (no middleware, no second router, no other host):
+  `traefik.enable`; `traefik.docker.network`; one router, named differently from the site's, whose rule is exactly
   ``Host(`empirecommunity.org`) && Path(`/data/members-source.json`)``; an explicit `priority` on that router, higher
   than the priority Traefik gives the site's host-only rule; one service port (8080).
 
@@ -274,23 +296,27 @@ lint and typecheck cover the script.
 requirement above holds, and unless `DISCORD_INVITE_CODE` equals `discord.inviteCode` in `src/data/site.yaml`
 (members-json 2.6: the two copies in this repository cannot differ on `main`).
 
-**Host procedure** (Guindaste; **the owner's OK for each deploy**, as in section 6):
+**Host procedure** (Guindaste; **the owner's OK for each deploy**; steps 1 to 3 and 5 of section 6 apply with the
+relay's digest and its own compose file):
 
-1. Take both files from a commit on `main` whose push `CI` run succeeded. Record that commit and the SHA-256 of the
-   script in the private runbook.
-2. On the host, keep a dated backup of the previous two files, place the new ones in the project's compose directory
-   (writable by root only), then pull and start, waiting for health.
-3. Verify from outside: `GET https://empirecommunity.org/data/members-source.json` answers 200 with the configured
-   `code`, the guild id of `site.yaml` and a `fetchedAt` of the last minutes; the same path with a query string
-   answers 404 and with `POST` 405. **The relay router takes the one path and nothing else:** `/healthz` and a page are
-   still answered by the site, and `/data/members.json` still gives its usual answer, the schema of members-json
-   section 1 (from the Worker route, or the site's built-in file through it), never the relay's four-field body.
-4. Record version, date and approver. **Rollback** is the previous two files, or stopping the project: the path then
-   falls to the site, which answers 404, and the Worker keeps the last value (members-json 2.4).
+1. Take the relay digest from the release and **verify its attestation before pulling**, with the tag identity.
+2. Keep a dated backup of the compose file, set the `image:` line to the tag and that digest, pull and start,
+   waiting for health.
+3. Verify: (a) from outside, `GET https://empirecommunity.org/data/members-source.json` answers 200 with the
+   configured `code`, the guild id of `site.yaml` and a `fetchedAt` of the last minutes; the same path with a query
+   string answers 404 and with `POST` 405; (b) **the relay router takes the one path and nothing else**: `/healthz`
+   and a page are still answered by the site, and `/data/members.json` still gives its usual answer, the schema of
+   members-json section 1 (from the Worker route, or the site's built-in file through it), never the relay's
+   four-field body; (c) a request for the relay path sent straight to the origin from an address that is not
+   Cloudflare is refused as it is for the site (the allowlist and the origin certificate hold for the new router
+   too); (d) no access log is written for it.
+4. Record version, digest, date and approver. **Rollback** is the previous tag and digest, or stopping the project:
+   the path then falls to the site, which answers 404, and the Worker keeps the last value (members-json 2.4).
 
-A change of the relay on `main` reaches the host only through this procedure, and the Worker change that depends on
-the relay is merged only after step 3 (members-json section 6).
+A change of the relay reaches the host only through a release and this procedure, and the Worker change that depends
+on the relay is merged only after step 3 (members-json section 6). Until launch the release candidates are what is
+deployed for the owner's review, so the first relay image comes from the next release candidate tag.
 
 **Negative tests** (Ensaio): a pull request that changes the invite code in only one of `site.yaml` and the relay
-template fails CI; so does a template with a published port, a second environment key, another router rule, a
-missing digest or a writable mount.
+template fails CI; so does a template with a published port, a mount, a second environment key, another router rule
+or a middleware label, and an image that carries a `traefik.*` label, runs as root or contains a second file.
