@@ -306,6 +306,11 @@
   unicode-bidi: isolate;
 }
 
+/* Owner-written text on the transparency panel (payee, justification, reason): isolated direction, as the donor name. */
+.text-isolate {
+  unicode-bidi: isolate;
+}
+
 /* Legal text (Termos e Privacidade): the rendered Markdown, one column of up to 72 characters. Clause headings are Title,
    paragraphs Body; the anchor offset keeps a jumped-to clause clear of the top edge. */
 @utility legal-text {

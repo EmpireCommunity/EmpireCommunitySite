@@ -2,7 +2,8 @@
 // page through `textContent` on an element made with `createElement`: there is no `innerHTML`, no `insertAdjacentHTML`,
 // no template string of markup, and no attribute is ever set from snapshot data. The display name is the one field a
 // stranger writes, so its cell isolates direction (`dir="auto"` plus `unicode-bidi: isolate` in global.css) and clips
-// what does not fit (`.donor-name`, fixed maximum width, T-56 V3). The document is a parameter, so the tests can run the
+// what does not fit (`.donor-name`, fixed maximum width, T-56 V3). The owner's own text (payee, justification, reason)
+// isolates its direction too (`.text-isolate`, `dir="auto"`), so a right-to-left line cannot reorder the cells around it. The document is a parameter, so the tests can run the
 // same code against a stand-in that throws on any other way of writing text.
 import { formatCents, formatDay, formatGeneratedAt, formatSigned } from './donations-snapshot.ts';
 import type { Adjustment, Donation, Expense, ExpenseCategory, Snapshot } from './donations-snapshot.ts';
@@ -51,6 +52,13 @@ function textCell(doc: PanelDocument, className: string, text: string): PanelEle
   return cell(doc, className, make(doc, 'span', '', text));
 }
 
+/** Text the owner wrote (a payee, a justification, a reason): its own direction, isolated like the donor name. */
+function ownerTextCell(doc: PanelDocument, className: string, text: string): PanelElement {
+  const span = make(doc, 'span', 'text-isolate', text);
+  span.setAttribute('dir', 'auto');
+  return cell(doc, className, span);
+}
+
 /** An amount with its direction in words for assistive technology and its sign in the text: never colour alone. */
 function amountCell(doc: PanelDocument, direction: 'in' | 'out', cents: number, lang: string, label: string): PanelElement {
   const tone = direction === 'in' ? 'text-livro-entrada' : 'text-livro-saida';
@@ -88,8 +96,8 @@ export function expenseRow(doc: PanelDocument, expense: Expense, lang: string, l
   tr.append(
     textCell(doc, `${CELL} whitespace-nowrap tabular-nums`, formatDay(expense.date, lang)),
     textCell(doc, CELL, labels.categories[expense.category]),
-    textCell(doc, `${CELL} text-papel`, payeeText(expense.payee, labels)),
-    textCell(doc, CELL, expense.justification[locale]),
+    ownerTextCell(doc, `${CELL} text-papel`, payeeText(expense.payee, labels)),
+    ownerTextCell(doc, CELL, expense.justification[locale]),
     amountCell(doc, 'out', expense.cents, lang, labels.spent),
   );
   return tr;
@@ -100,7 +108,7 @@ export function adjustmentRow(doc: PanelDocument, adjustment: Adjustment, lang: 
   const direction = adjustment.cents >= 0 ? 'in' : 'out';
   tr.append(
     textCell(doc, `${CELL} whitespace-nowrap tabular-nums`, formatDay(adjustment.date, lang)),
-    textCell(doc, CELL, adjustment.reason[locale]),
+    ownerTextCell(doc, CELL, adjustment.reason[locale]),
     amountCell(doc, direction, adjustment.cents, lang, direction === 'in' ? labels.received : labels.spent),
   );
   return tr;

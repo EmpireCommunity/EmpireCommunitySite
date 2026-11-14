@@ -57,7 +57,7 @@ const MAX_ROWS = 5000;
 const MAX_TEXT = 500;
 const MAX_PAYEE = 80;
 const DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
-const INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z$/;
+const INSTANT = /^(\d{4}-\d{2}-\d{2})T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,9})?Z$/;
 const HEX = /^[0-9a-f]{16,128}$/;
 const NAME_CHARS = /^[\p{L}\p{M}\p{Nd} _'-]+$/u;
 const DIGIT = /\p{Nd}/gu;
@@ -93,8 +93,11 @@ export function isDay(value: unknown): value is string {
   return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
 }
 
+/** An ISO instant in UTC: a real calendar day (`Date.parse` rolls 02-30 over to March) and a real time of day (hour 24 is out). */
 function isInstant(value: unknown): value is string {
-  return typeof value === 'string' && INSTANT.test(value) && !Number.isNaN(Date.parse(value));
+  if (typeof value !== 'string') return false;
+  const match = INSTANT.exec(value);
+  return match !== null && isDay(match[1]);
 }
 
 function isPlainText(value: unknown, max: number): value is string {
@@ -105,6 +108,16 @@ const MAX_MARKS_PER_GRAPHEME = 2;
 // A hard stop before any segmentation work on an absurd string; the contract caps the raw field at 200 bytes.
 const MAX_NAME_UNITS = 200;
 const MARK = /\p{M}/gu;
+const LETTER = /^\p{L}$/u;
+// Scripts a letter can belong to, tested through Script_Extensions as UTS 39 reads it. A letter of a script not listed here
+// counts as one unlisted script, so it can still not be mixed with a listed one.
+const SCRIPTS = [
+  'Latin', 'Cyrillic', 'Greek', 'Armenian', 'Georgian', 'Hebrew', 'Arabic', 'Syriac', 'Thaana', 'Coptic', 'Cherokee', 'Canadian_Aboriginal',
+  'Devanagari', 'Bengali', 'Gurmukhi', 'Gujarati', 'Oriya', 'Tamil', 'Telugu', 'Kannada', 'Malayalam', 'Sinhala', 'Thai', 'Lao', 'Tibetan',
+  'Myanmar', 'Khmer', 'Mongolian', 'Ethiopic', 'Hangul', 'Hiragana', 'Katakana', 'Bopomofo', 'Han', 'Tifinagh', 'Lisu', 'Vai', 'Osage',
+  'Runic', 'Ogham', 'Glagolitic', 'Gothic', 'Adlam', 'Nko', 'Yi',
+].map((script) => ({ script, test: new RegExp(`^\\p{Script_Extensions=${script}}$`, 'u') }));
+const UNLISTED = 'Unlisted';
 
 /** Without `Intl.Segmenter`: one cluster per base character, each combining mark joined to the character before it. */
 function withoutSegmenter(value: string): string[] {
@@ -127,6 +140,23 @@ function graphemes(value: string): string[] | undefined {
 }
 
 /**
+ * One script only (contract section 2, rule 3, T-56 V2): the letters share one Unicode script, read from Script_Extensions
+ * and ignoring Common and Inherited (digits, marks, space and punctuation). Latin mixed with Cyrillic is refused, and so is
+ * a mix of Japanese scripts (the contract's accepted cost).
+ */
+function singleScript(value: string): boolean {
+  let common: Set<string> | undefined;
+  for (const char of value) {
+    if (!LETTER.test(char)) continue;
+    const scripts = SCRIPTS.filter(({ test }) => test.test(char)).map(({ script }) => script);
+    const set = new Set(scripts.length > 0 ? scripts : [UNLISTED]);
+    common = common === undefined ? set : new Set([...common].filter((script) => set.has(script)));
+    if (common.size === 0) return false;
+  }
+  return true;
+}
+
+/**
  * The contract's display-name rules (section 2 and its G2 cases) as a read-side check: the allowed character set, at most 20
  * grapheme clusters, and at most 2 combining marks in one cluster (a stack of marks is how a name draws outside its cell).
  */
@@ -135,6 +165,7 @@ export function isDisplayName(value: unknown): value is string {
   if (value.trim() !== value || value.trim().length === 0) return false;
   if (!NAME_CHARS.test(value)) return false;
   if ((value.match(DIGIT) ?? []).length > MAX_NAME_DIGITS) return false; // a phone number is not a nickname
+  if (!singleScript(value)) return false; // Latin mixed with look-alike Cyrillic is not one nickname
   const parts = graphemes(value);
   return parts !== undefined && parts.length <= MAX_NAME_GRAPHEMES;
 }

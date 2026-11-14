@@ -110,6 +110,12 @@ test('expense rows translate the category and the person and owner labels and pi
   const text = (payee: string, locale: 'pt-br' | 'en-us'): string[] =>
     (expenseRow(doc, { ...base, payee, justification: { 'pt-br': '<b>pt</b>', 'en-us': '<i>en</i>' } }, 'en-US', locale, labels) as FakeElement).children.map((c) => c.children[0]?.textContent ?? '');
   assert.deepEqual(text('Acme Ltd', 'pt-br').slice(1, 4), ['Domínio', 'Acme Ltd', '<b>pt</b>']);
+  const row = expenseRow(doc, { ...base, payee: '\u202Eevil Ltd', justification: { 'pt-br': '\u0645\u0631\u062D\u0628\u0627', 'en-us': 'x' } }, 'pt-BR', 'pt-br', labels) as FakeElement;
+  for (const index of [2, 3]) {
+    const span = row.children[index]?.children[0];
+    assert.match(span?.className ?? '', /\btext-isolate\b/, 'owner text is direction-isolated');
+    assert.deepEqual(span?.attributes, { dir: 'auto' });
+  }
   assert.equal(text('person', 'en-us')[2], 'Pessoa');
   assert.equal(text('owner', 'en-us')[2], 'Dono');
   assert.equal(text('Acme Ltd', 'en-us')[3], '<i>en</i>');
@@ -118,6 +124,8 @@ test('expense rows translate the category and the person and owner labels and pi
 test('an adjustment row shows its sign and the reason of the page language', () => {
   const minus = adjustmentRow(doc, { date: '2026-12-01', cents: -500, reason: { 'pt-br': 'Correção', 'en-us': 'Correction' } }, 'pt-BR', 'pt-br', labels) as FakeElement;
   assert.equal(minus.children[1]?.children[0]?.textContent, 'Correção');
+  assert.match(minus.children[1]?.children[0]?.className ?? '', /\btext-isolate\b/);
+  assert.deepEqual(minus.children[1]?.children[0]?.attributes, { dir: 'auto' });
   assert.equal((minus.children[2]?.children[0]?.children[1]?.textContent ?? '').replace(/\s/g, ' '), '− R$ 5,00');
 });
 

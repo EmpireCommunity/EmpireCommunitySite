@@ -33,6 +33,11 @@ test('the contract-shaped fixture is accepted and keeps every field', () => {
   assert.ok(hasData(snapshot));
 });
 
+test('the last second of a real day is a valid generatedAt', () => {
+  assert.ok(parseSnapshot(withEdit((s) => { s.generatedAt = '2026-12-31T23:59:59.999Z'; })));
+  assert.ok(parseSnapshot(withEdit((s) => { s.generatedAt = '2028-02-29T00:00:00Z'; })), 'a leap day');
+});
+
 test('an empty but valid snapshot has no data to show', () => {
   const empty = withEdit((s) => {
     s.received = { totalCents: 0, count: 0, feesCents: 0 };
@@ -57,6 +62,10 @@ test('anything that is not exactly the schema is refused whole (fail closed)', (
     ['a time of day in a donation date', withEdit((s) => { s.donations[0].date = '2026-12-03T10:00:00Z'; })],
     ['an impossible day', withEdit((s) => { s.donations[0].date = '2026-02-30'; })],
     ['generatedAt without a zone', withEdit((s) => { s.generatedAt = '2026-12-04T06:30:00'; })],
+    ['generatedAt on an impossible day', withEdit((s) => { s.generatedAt = '2026-02-30T06:30:00.000Z'; })],
+    ['generatedAt in a month 13', withEdit((s) => { s.generatedAt = '2026-13-01T06:30:00Z'; })],
+    ['generatedAt at hour 24', withEdit((s) => { s.generatedAt = '2026-12-04T24:00:00Z'; })],
+    ['generatedAt at minute 60', withEdit((s) => { s.generatedAt = '2026-12-04T06:60:00Z'; })],
     ['cents as a float', withEdit((s) => { s.donations[0].cents = 25.5; })],
     ['cents as a string', withEdit((s) => { s.donations[0].cents = '2500'; })],
     ['zero cents in a donation', withEdit((s) => { s.donations[0].cents = 0; })],
@@ -123,7 +132,7 @@ test('hostile or disallowed display names fail validation, on any donation row',
     '\u202Eevil', 'a\u202Db', 'zero\u200Bwidth', 'a\u2066b\u2069', 'line\nbreak', 'tab\there', ' leading', 'trailing ', '   ', '',
     '@admin', 'name.with.dot', 'a:b', 'a/b', 'https://x', 'emoji \u{1F600}', 'a'.repeat(21), '\uD800', 'x\u0000y',
     '\u2028', 'a\u2029b',
-    'x\u00B2', '\u00BD', 'Maria \u216B', 'a\u2460', '12345', '11 9 8765 4321', 'a1b2c3d4e5',
+    'P\u0430ypal', 'Ivan \u0418\u0432\u0430\u043D', 'a\u03B1', '\u0561b', '\u13A0b', '\u3055\u304F\u3089\u6851', '\u30AB\u3042', 'x\u00B2', '\u00BD', 'Maria \u216B', 'a\u2460', '12345', '11 9 8765 4321', 'a1b2c3d4e5',
   ];
   for (const name of hostile) {
     assert.equal(isDisplayName(name), false, JSON.stringify(name));
@@ -133,7 +142,7 @@ test('hostile or disallowed display names fail validation, on any donation row',
 });
 
 test('allowed display names pass: any script, digits, the allowed punctuation and graphemes counted not code units', () => {
-  const ok = ['1234', 'Ana 2026', '\u0661\u0662\u0663', 'Maria', 'João 10', 'Ana-Clara', "O'Neil", 'a_b', 'Привет', '李小龍', 'مرحبا', 'e\u0301'.repeat(20), 'x'.repeat(20), 'a\u0301\u0302'];
+  const ok = ['\u0440\u0456\u0445', '\u03B1\u03B2\u03B3', '\u3055\u304F\u3089', '\u30AB\u30BF\u30AB\u30CA', '\u6851\u6821', 'Jo\u00E3o 10 Silva', 'Ana 2026 \u00C7a', 'Jos\u00E9 \u00C9mile', '1234', 'Ana 2026', '\u0661\u0662\u0663', 'Maria', 'João 10', 'Ana-Clara', "O'Neil", 'a_b', 'Привет', '李小龍', 'مرحبا', 'e\u0301'.repeat(20), 'x'.repeat(20), 'a\u0301\u0302'];
   for (const name of ok) assert.equal(isDisplayName(name), true, name);
   assert.equal(isDisplayName('x'.repeat(21)), false);
   assert.equal(isDisplayName('e\u0301'.repeat(21)), false);
