@@ -7,6 +7,7 @@
 // the progress text and hides nothing (D-22).
 import type { GetStaticPaths } from 'astro';
 import ArrowLink from '../../components/ArrowLink.astro';
+import DonationsPanel from '../../components/DonationsPanel.astro';
 import Index from '../../components/Index.astro';
 import PageHead from '../../components/PageHead.astro';
 import IndexSection from '../../components/IndexSection.astro';
@@ -28,6 +29,9 @@ const { goal, parts, partDonations } = support;
 const target = formatBrl(goal.targetCents, locale);
 const hasProgress = goal.securedCents > 0;
 const reached = goal.remainingCents === 0;
+// The transparency panel (P2-08) exists only once donations are open. The schema still accepts `not-open` alone (P2-09
+// widens it), so today this is always false: no panel markup and no panel script reach the page.
+const donationsOpen = String(support.donations.status) === 'open';
 ---
 
 <BaseLayout locale={locale} routeKey="support">
@@ -61,6 +65,8 @@ const reached = goal.remainingCents === 0;
       <IndexSection title={t(locale, 'support.donations.title')}>
         <p data-donations="not-open" class="max-w-[72ch] text-body text-papel">{t(locale, 'support.donations.notOpen')}</p>
       </IndexSection>
+
+      {donationsOpen && <DonationsPanel locale={locale} />}
 
       {
         parts.length > 0 && (
