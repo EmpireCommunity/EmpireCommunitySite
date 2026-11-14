@@ -157,3 +157,8 @@ test('expenses and adjustments are shown newest day first whatever order the ser
   assert.deepEqual(firstDates(expenseRows(doc, view, 'en-US', 'en-us', labels) as FakeElement[]), ['12/09/2026', '12/05/2026', '12/02/2026']);
   assert.deepEqual(firstDates(adjustmentRows(doc, view, 'en-US', 'en-us', labels) as FakeElement[]), ['12/04/2026', '12/01/2026']);
 });
+
+test('a zero-cent adjustment is shown as a plain zero, with a plus sign', () => {
+  const row = adjustmentRow(doc, { date: '2026-12-01', cents: 0, reason: { 'pt-br': 'Conferido', 'en-us': 'Checked' } }, 'pt-BR', 'pt-br', labels) as FakeElement;
+  assert.equal((row.children[2]?.children[0]?.children[1]?.textContent ?? '').replace(/\s/g, ' '), '+ R$ 0,00');
+});

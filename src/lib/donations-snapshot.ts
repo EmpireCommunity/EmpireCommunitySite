@@ -79,8 +79,9 @@ function isCents(value: unknown, min: number): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= min && value <= MAX_CENTS;
 }
 
+/** An adjustment is a signed amount in cents; zero is accepted (ruling on P2-08), so one harmless row never hides the panel. */
 function isSignedCents(value: unknown): value is number {
-  return typeof value === 'number' && Number.isSafeInteger(value) && value !== 0 && Math.abs(value) <= MAX_CENTS;
+  return typeof value === 'number' && Number.isSafeInteger(value) && Math.abs(value) <= MAX_CENTS;
 }
 
 export function isDay(value: unknown): value is string {

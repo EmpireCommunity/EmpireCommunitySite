@@ -100,6 +100,9 @@ test('figures that do not add up are refused: balance identity, listed totals, s
     s.balance.calculatedCents = 27500 - 315 - 4000 - 500;
   });
   assert.ok(parseSnapshot(adjusted), 'a signed adjustment that keeps the identity is accepted');
+  const zero = withEdit((s) => { s.adjustments = [{ date: '2026-12-01', cents: 0, reason: { 'pt-br': 'Conferido.', 'en-us': 'Checked.' } }]; });
+  assert.ok(parseSnapshot(zero), 'a zero-cent adjustment does not hide the panel');
+  assert.equal(parseSnapshot(withEdit((s) => { s.adjustments = [{ date: '2026-12-01', cents: 0.5, reason: { 'pt-br': 'a', 'en-us': 'a' } }]; })), undefined, 'cents stay integers');
 });
 
 test('a gap in seq (a refund) is fine and a list longer than it shows (count above the rows) is fine', () => {

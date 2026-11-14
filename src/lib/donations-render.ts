@@ -97,7 +97,7 @@ export function expenseRow(doc: PanelDocument, expense: Expense, lang: string, l
 
 export function adjustmentRow(doc: PanelDocument, adjustment: Adjustment, lang: string, locale: PanelLocale, labels: PanelLabels): PanelElement {
   const tr = make(doc, 'tr', ROW);
-  const direction = adjustment.cents > 0 ? 'in' : 'out';
+  const direction = adjustment.cents >= 0 ? 'in' : 'out';
   tr.append(
     textCell(doc, `${CELL} whitespace-nowrap tabular-nums`, formatDay(adjustment.date, lang)),
     textCell(doc, CELL, adjustment.reason[locale]),
