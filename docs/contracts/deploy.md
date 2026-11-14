@@ -3,7 +3,7 @@
 - Version: 1. Owner: Alicerce. Consumers: Forja (workflows, Dockerfile, checks), Guindaste (host procedure, Cloudflare
   setup, runbook), Sentinela (review), Ensaio (negative tests).
 - Decisions: D-10 (build in CI), D-17 (repository protection model), D-55 (the member-count Worker deploys through Workers Builds from its own repository; it supersedes D-18),
-  D-20 (logging), D-24 (releases by tag, as in EmpireMuse), D-41 and D-78 (the `/discord` gate pages and their integrity rows). Operational steps: `docs/runbook/release.md`
+  D-20 (logging), D-24 (releases by tag, as in EmpireMuse), D-41 and D-78 (the `/discord` gate pages and their integrity rows), D-82 (the member-count relay on the host, section 13). Operational steps: `docs/runbook/release.md`
   (Guindaste); this document holds the controls that runbook must respect. Stack: [ADR-0001](../adr/0001-stack.md). Worker deploy:
   [ADR-0004](../adr/0004-members-worker-workers-builds.md) and section 12.
 - This repository is public. The document states **required controls only**. Account and platform settings that exist
@@ -131,6 +131,9 @@ deployable by the procedure below.
 
 ## 7. Host compose requirements
 
+These are the rules of the **site** service (`deploy/compose.yml`). The member-count relay is a separate compose
+project with its own rules (section 13).
+
 Joined only to the external proxy network; no published ports; no docker socket; no bind mounts; no environment
 secrets (the site has none). `read_only: true`, `tmpfs` for `/tmp`, `cap_drop: [ALL]`, `no-new-privileges`,
 `mem_limit: 32m`, `pids_limit: 64`, healthcheck on `/healthz`, `restart: unless-stopped`.
@@ -201,7 +204,7 @@ Applied to `main` by the owner; the list states the control, not the current set
 Strong authentication on the GitHub, Cloudflare and host provider accounts; the organization-level `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` secrets available to all public projects (D-76), steps in `docs/runbook/release.md`; applying and keeping the repository
 settings of sections 3 and 9; the rule that only the owner creates `v*` tags and that they cannot be moved or deleted (section 5); the Workers Builds setup of ADR-0004 (connection, preview builds off, dedicated trimmed token) and its runbook checklist; keeping failed-run
 notifications on; confirming the approved invite code in the pull request that sets it; the Cloudflare dashboard items copied into
-the runbook (the four redirect rules R1 to R4 of routing-locale section 3, created R1 and R2 first, the `/data/` rules, the Worker route, features off); an explicit OK for each merge to the Worker repository's `main` (section 12).
+the runbook (the four redirect rules R1 to R4 of routing-locale section 3, created R1 and R2 first, the `/data/` rules, the Worker route, features off); an explicit OK for each merge to the Worker repository's `main` (section 12) and for each deploy of the member-count relay on the host (section 13).
 
 D-76 accepts that these organization secrets are no longer limited to `v*` tag runs: a person with write access to
 any public project in scope can read them through a branch workflow. A compromised workflow or action in any such
@@ -237,3 +240,56 @@ section 6). These are the **required controls** for that repository, stated here
 - Negative tests (Ensaio): a pull request that adds a route, `keep_vars`, a second cron or `workers_dev: true` to
   `wrangler.jsonc` fails `Config check`; a workflow that references a Cloudflare secret fails `Workflow lint`; a push
   to a branch other than `main` produces no build in the Workers Builds history.
+
+## 13. Member-count relay on the host (B-WK1, D-82)
+
+What it does and what it answers: [members-json](members-json.md) 2.11; why it exists and what was rejected:
+[ADR-0005](../adr/0005-members-relay-on-the-vps.md). It holds **no secret**. This section holds the
+controls of its files, its container and its deploy.
+
+**Files.** `deploy/members-source/compose.yml` (the template for the host) and the one relay script beside it, with no
+dependency and no build step. They are not part of the site image: `dist/`, the image and the release by tag
+(sections 4 and 5) do not change, and the relay is **not** released by tag. Its tests run in the normal test job, and
+lint and typecheck cover the script.
+
+**Compose template requirements** (compose project `empirecommunity-members`, one service):
+
+- `image`: the official Node image, the major of `.nvmrc`, Alpine variant, in the form
+  `docker.io/library/node:<version>-alpine@sha256:<64 hex>`. Unlike the site image, **the digest is real and
+  committed** (the image exists before the change), and it changes only by pull request.
+- The script is the **only mount**: one file, bind-mounted read-only. No named volume, no docker socket, nothing
+  written to disk.
+- A non-root `user`; `read_only: true`; `cap_drop: [ALL]`; `no-new-privileges`; `mem_limit: 64m`; `pids_limit: 64`;
+  `restart: unless-stopped`; a healthcheck on `/healthz`; json-file logging with `max-size: 1m` and `max-file: 2`
+  (D-20: the relay writes no access log, members-json 2.11).
+- `environment`: exactly one key, `DISCORD_INVITE_CODE`, a public value. No `env_file`, no `secrets`.
+- No published ports. Joined only to the external proxy network, through which it reaches `discord.com` and Traefik
+  reaches it.
+- Traefik labels, and no other `traefik.*` key: `traefik.enable`; `traefik.docker.network`; one router, named
+  differently from the site's, whose rule is exactly
+  ``Host(`empirecommunity.org`) && Path(`/data/members-source.json`)``; an explicit `priority` on that router, higher
+  than the priority Traefik gives the site's host-only rule; one service port (8080).
+
+**CI** (`ci.yml`, the compose template validation of section 4 extended to this second template): fails unless every
+requirement above holds, and unless `DISCORD_INVITE_CODE` equals `discord.inviteCode` in `src/data/site.yaml`
+(members-json 2.6: the two copies in this repository cannot differ on `main`).
+
+**Host procedure** (Guindaste; **the owner's OK for each deploy**, as in section 6):
+
+1. Take both files from a commit on `main` whose push `CI` run succeeded. Record that commit and the SHA-256 of the
+   script in the private runbook.
+2. On the host, keep a dated backup of the previous two files, place the new ones in the project's compose directory
+   (writable by root only), then pull and start, waiting for health.
+3. Verify from outside: `GET https://empirecommunity.org/data/members-source.json` answers 200 with the configured
+   `code`, the guild id of `site.yaml` and a `fetchedAt` of the last minutes; the same path with a query string
+   answers 404 and with `POST` 405; `/data/members.json`, `/healthz` and a page are **still answered by the site**
+   (the relay router takes the one path and nothing else).
+4. Record version, date and approver. **Rollback** is the previous two files, or stopping the project: the path then
+   falls to the site, which answers 404, and the Worker keeps the last value (members-json 2.4).
+
+A change of the relay on `main` reaches the host only through this procedure, and the Worker change that depends on
+the relay is merged only after step 3 (members-json section 6).
+
+**Negative tests** (Ensaio): a pull request that changes the invite code in only one of `site.yaml` and the relay
+template fails CI; so does a template with a published port, a second environment key, another router rule, a
+missing digest or a writable mount.
