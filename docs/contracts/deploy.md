@@ -282,8 +282,9 @@ requirement above holds, and unless `DISCORD_INVITE_CODE` equals `discord.invite
    (writable by root only), then pull and start, waiting for health.
 3. Verify from outside: `GET https://empirecommunity.org/data/members-source.json` answers 200 with the configured
    `code`, the guild id of `site.yaml` and a `fetchedAt` of the last minutes; the same path with a query string
-   answers 404 and with `POST` 405; `/data/members.json`, `/healthz` and a page are **still answered by the site**
-   (the relay router takes the one path and nothing else).
+   answers 404 and with `POST` 405. **The relay router takes the one path and nothing else:** `/healthz` and a page are
+   still answered by the site, and `/data/members.json` still gives its usual answer, the schema of members-json
+   section 1 (from the Worker route, or the site's built-in file through it), never the relay's four-field body.
 4. Record version, date and approver. **Rollback** is the previous two files, or stopping the project: the path then
    falls to the site, which answers 404, and the Worker keeps the last value (members-json 2.4).
 

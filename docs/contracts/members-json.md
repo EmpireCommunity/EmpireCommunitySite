@@ -135,13 +135,17 @@ value was ever stored, so a failing first run can be diagnosed without logs:
 ```
 
 - `at`: the time of the run, same format as `updatedAt`.
-- `outcome`: `written` when the run accepted a new value, `kept` in every other case.
-- `lastError`: `null` or the code of 2.4 for this run (`out_of_band` included).
+- `outcome`: `written` only when the run accepted a new value **and the write of `members:v1` succeeded**; `kept` in
+  every other case.
+- `lastError`: `null` or the code of 2.4 for this run (`out_of_band` included), or **`store_failed`**, a code used in
+  this key only, when the run had a record to write and that write threw. The status is built **after** the record
+  write was attempted, so it never says `written` for a value that was not stored.
 - `httpStatus`: the HTTP status of the **last attempt** of the run as an integer, or `null` when that attempt got no
   HTTP response (network error or timeout).
 - The key is one record overwritten on each run, not a log. It holds no visitor data, is never read by the HTTP
-  handler and is never public. It is written after the `members:v1` write and independently of it: a failure of one
-  write does not stop the other. If reading `members:v1` throws, the run stops and writes neither key, as before.
+  handler and is never public. It is written after the `members:v1` write was attempted, whether that write succeeded
+  or threw, and a failure of the status write changes nothing else. If reading `members:v1` throws, the run stops and
+  writes neither key, as before.
 
 Two keys and two runs per day make about 4 KV writes per day.
 
@@ -473,7 +477,8 @@ or Workers versions in the dashboard, or remove the route (the origin file then 
   wrong code, out of bounds, jump, three-jump acceptance, first run failure, `fetchedAt` malformed, stale and ahead).
   Red first.
 - Run status: written on a success, on a failure and on a first-run failure with no record; carries the status of
-  the last attempt, `null` when there was no HTTP response.
+  the last attempt, `null` when there was no HTTP response; when the write of `members:v1` throws it says `kept` with
+  `store_failed`, never `written`.
 - Relay (site repository): the projection keeps exactly the four fields and drops the rest of a realistic invite
   answer; an answer with another `code`, a malformed guild id or a count out of bounds does not replace the value;
   the serving table of 2.11 (200, 503 without a value, 503 past 24 h, 404 with a query, 405, 404 elsewhere). Time and
