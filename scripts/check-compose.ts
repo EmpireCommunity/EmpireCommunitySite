@@ -10,7 +10,7 @@ type Service = Record<string, unknown> & { labels?: string[] | Record<string, st
 // The rules judge what Docker Compose resolves (merge keys, extends, label_file and interpolation applied), not the YAML text.
 const SERVICE_KEYS = new Set(['image', 'restart', 'read_only', 'tmpfs', 'cap_drop', 'security_opt', 'mem_limit', 'pids_limit', 'networks', 'healthcheck', 'logging', 'labels', 'command', 'entrypoint']);
 const HEALTHCHECK = ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:8080/healthz'];
-const compose = resolveCompose<{ services?: Record<string, Service>; networks?: Record<string, { external?: boolean }> }>(file);
+const compose = resolveCompose<{ services?: Record<string, Service>; networks?: Record<string, { name?: string; external?: boolean }> }>(file);
 
 const problems: string[] = [];
 const fail = (message: string) => problems.push(message);
@@ -53,13 +53,15 @@ if (service === undefined) {
   for (const key of Object.keys(service)) if (!SERVICE_KEYS.has(key)) fail(`${key} is not allowed (no published ports, bind mounts, secrets, docker socket or privilege-widening key)`);
   if (service.command != null || service.entrypoint != null) fail('command and entrypoint are not allowed');
   const serviceNetworks = Array.isArray(service.networks) ? service.networks : Object.keys((service.networks ?? {}) as object);
+  const perNetwork = Array.isArray(service.networks) ? [] : Object.values((service.networks ?? {}) as Record<string, unknown>);
+  if (perNetwork.some((entry) => entry !== null)) fail('the proxy network entry has no options (aliases, ipv4_address, ...)');
   if (JSON.stringify(serviceNetworks) !== '["proxy"]') fail('the service joins only the proxy network');
   const logging = service.logging as { driver?: string; options?: Record<string, string> } | undefined;
   if (logging?.driver !== 'json-file' || logging.options?.['max-size'] !== '1m' || String(logging.options['max-file']) !== '2') {
     fail('logging must be json-file with max-size 1m and max-file 2 (D-20)');
   }
 }
-if (compose.networks?.proxy?.external !== true) fail('the proxy network must be external');
+if (compose.networks?.proxy?.external !== true || (compose.networks.proxy.name ?? 'proxy') !== 'proxy') fail('the proxy network must be external and named proxy');
 
 if (problems.length > 0) {
   for (const problem of problems) console.log(`::error file=${file}::${problem}`);

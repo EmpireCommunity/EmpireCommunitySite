@@ -16,7 +16,7 @@ type Service = Record<string, unknown> & { labels?: string[] | Record<string, st
 export interface RelayCompose {
   name?: unknown;
   services?: Record<string, Service>;
-  networks?: Record<string, { external?: boolean }>;
+  networks?: Record<string, { name?: string; external?: boolean }>;
 }
 
 /** Problems of the relay template against the contract, or an empty list. `siteInviteCode` is `discord.inviteCode` of site.yaml. */
@@ -51,7 +51,7 @@ export function relayComposeProblems(compose: RelayCompose, siteInviteCode: stri
   if (ports.length !== 1 || String(ports[0]?.[1]) !== '8080') fail('exactly one service port, and it must be 8080');
 
   const user = typeof service.user === 'string' || typeof service.user === 'number' ? String(service.user) : '';
-  if (user === '' || /^(?:0|root)(?::.*)?$/.test(user)) fail('user must be set and not root');
+  if (user !== '1000:1000') fail('user must be exactly 1000:1000');
   if (service.read_only !== true) fail('read_only must be true');
   if (JSON.stringify(service.cap_drop) !== '["ALL"]') fail('cap_drop must be [ALL]');
   if (Array.isArray(service.cap_add) ? service.cap_add.length > 0 : service.cap_add !== undefined) fail('cap_add must be empty or absent');
@@ -80,12 +80,14 @@ export function relayComposeProblems(compose: RelayCompose, siteInviteCode: stri
   else if (code !== siteInviteCode) fail('DISCORD_INVITE_CODE must equal discord.inviteCode in src/data/site.yaml (members-json 2.6)');
 
   const serviceNetworks = Array.isArray(service.networks) ? service.networks : Object.keys((service.networks ?? {}) as object);
+  const perNetwork = Array.isArray(service.networks) ? [] : Object.values((service.networks ?? {}) as Record<string, unknown>);
+  if (perNetwork.some((entry) => entry !== null)) fail('the proxy network entry has no options (aliases, ipv4_address, ...)');
   if (JSON.stringify(serviceNetworks) !== '["proxy"]') fail('the service joins only the proxy network');
   const logging = service.logging as { driver?: string; options?: Record<string, string> } | undefined;
   if (logging?.driver !== 'json-file' || logging.options?.['max-size'] !== '1m' || String(logging.options['max-file']) !== '2') {
     fail('logging must be json-file with max-size 1m and max-file 2 (D-20)');
   }
-  if (Object.keys(compose.networks ?? {}).join() !== 'proxy' || compose.networks?.proxy?.external !== true) fail('the only top-level network is the external proxy network, and there is no top-level volume or secret');
+  if (Object.keys(compose.networks ?? {}).join() !== 'proxy' || compose.networks?.proxy?.external !== true || (compose.networks.proxy.name ?? 'proxy') !== 'proxy') fail('the only top-level network is the external proxy network, and there is no top-level volume or secret');
   const extra = Object.keys(compose).filter((key) => !['name', 'services', 'networks'].includes(key));
   if (extra.length > 0) fail(`unexpected top-level key: ${extra.join(', ')}`);
   return problems;

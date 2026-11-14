@@ -7,6 +7,8 @@ import { test } from 'node:test';
 
 // The compose checks judge what Docker Compose resolves, so each case writes a template and runs the real script on it.
 const hasCompose = spawnSync('docker', ['compose', 'version']).status === 0;
+// In CI a missing Docker Compose fails the file instead of skipping every case.
+test('docker compose is available in CI', { skip: process.env.CI === undefined }, () => assert.ok(hasCompose));
 const relay = readFileSync('deploy/members-source/compose.yml', 'utf8');
 const site = readFileSync('deploy/compose.yml', 'utf8');
 const dir = mkdtempSync(join(tmpdir(), 'compose-resolved-'));
@@ -35,6 +37,10 @@ const cases: Array<[string, (text: string) => string, Record<string, string>?]> 
   ['cgroup host', (t) => after(t, '    read_only: true', '    cgroup: host')],
   ['group_add', (t) => after(t, '    read_only: true', '    group_add: ["0"]')],
   ['post_start', (t) => after(t, '    read_only: true', '    post_start:\n      - command: touch /x')],
+  ['a privileged service hidden behind a profile', (t) => `${t.replace(/\nnetworks:/, `\n  hidden:\n    image: alpine\n    profiles: [x]\n    privileged: true\n${SOCKET}\n\nnetworks:`)}`],
+  ['an image written as a variable with a valid default', (t) => t.replace(/image: .*/, (m) => `image: \${IMG:-${m.slice(7)}}`)],
+  ['a network alias', (t) => t.replace(/networks:\n      - proxy/, 'networks:\n      proxy:\n        aliases: [x]')],
+  ['a top-level network renamed', (t) => t.replace('  proxy:\n    external: true', '  proxy:\n    external: true\n    name: other')],
   ['a CMD-SHELL healthcheck chaining a command', (t) => t.replace(/test: \[[^\n]*\]/, 'test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/healthz && touch /x"]')],
 ];
 

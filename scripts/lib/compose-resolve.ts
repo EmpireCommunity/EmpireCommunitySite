@@ -1,10 +1,11 @@
 // What Docker Compose resolves for a template (`docker compose config --format json`): merge keys, anchors, extends,
-// label_file and interpolation are applied. The compose checks judge this output, never the YAML text, so no YAML
+// and label_file are applied; every profile is enabled (a profile-hidden service is still judged) and variables are
+// not interpolated (a value written as a variable fails its exact-value rule instead of passing on a default). The compose checks judge this output, never the YAML text, so no YAML
 // feature can hide a setting from them.
 import { execFileSync } from 'node:child_process';
 
 export function resolveCompose<T>(file: string): T {
-  return JSON.parse(execFileSync('docker', ['compose', '-f', file, 'config', '--format', 'json'], { encoding: 'utf8' })) as T;
+  return JSON.parse(execFileSync('docker', ['compose', '-f', file, '--profile', '*', 'config', '--no-interpolate', '--format', 'json'], { encoding: 'utf8' })) as T;
 }
 
 /** Labels with keys folded to lower case (Traefik reads them case-insensitively) and the keys that collide once folded. */
