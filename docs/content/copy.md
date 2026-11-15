@@ -323,7 +323,7 @@ a quebra de linha do original.
 > **Revisão jurídica necessária antes de receber doações:** Privacidade 2, 3 e 9. Não manter registros de acesso é
 > exceção decidida pelo dono (D-20) e precisa ser conferida diante do Marco Civil da Internet.
 > **Alterado pela D-91 (2026-11-15):** o proxy do servidor mantém registro de acesso por até 90 dias. Os itens 2, 3 e 9
-> foram escritos sob a D-20; a D-93 (2026-11-15) corrigiu os itens 2, 3, 7, 8 e 9 abaixo, nos dois idiomas, e a versão
+> foram escritos sob a D-20; a D-93 (2026-11-15) corrigiu os itens 2, 3, 7, 8, 9 e 10 abaixo, nos dois idiomas, e a versão
 > passou a 1.1. A versão 2.0 (doações, `site-data` §11) continua a ser a do lançamento.
 
 ## Interface das páginas legais
@@ -419,17 +419,18 @@ Vigência: `[PENDING P-12]`
 legal@empirecommunity.org. Esta política vale para o site empirecommunity.org. Os demais serviços da comunidade têm políticas próprias.
 
 **2. O que este site não faz.** O site não tem formulários, contas ou cadastro, não define cookies próprios e não vende
-dados de usuários. O item 3 descreve os registros técnicos, inclusive o registro de acesso da hospedagem, e o item 7 diz
-com quem os dados são compartilhados.
+dados de usuários. O item 3 descreve os registros técnicos, inclusive o registro de acesso do proxy do nosso servidor, e
+o item 7 diz com quem os dados são compartilhados.
 
 **3. Registros técnicos.** O serviço do site, que entrega as páginas, não mantém registros de acesso. Ele guarda apenas
 registros mínimos de erro, para diagnóstico. Esses registros podem conter o endereço de conexão de quem acessava o site
-quando o erro ocorreu, são substituídos em rotação curta e se perdem quando o servidor do site é recriado. Já o proxy da
-hospedagem, que recebe as visitas antes do serviço do site, mantém um registro de acesso das visitas ao site: para cada
-visita ele grava o endereço IP de quem acessou, a hora e o endereço pedido, incluindo a parte depois do ponto de
-interrogação, quando houver. Usamos esse registro para segurança e para prevenir abusos. O serviço automático que
-atualiza o número de membros armazena apenas esse número da comunidade e dados técnicos da própria atualização, sem
-nenhum dado de visitantes.
+quando o erro ocorreu, são substituídos em rotação curta e se perdem quando o servidor do site é recriado. Já o proxy do
+nosso servidor, que recebe as visitas antes do serviço do site, mantém um registro de acesso das visitas ao site: para
+cada visita ele grava o endereço IP de quem acessou, a hora e o endereço pedido, incluindo a parte depois do ponto de
+interrogação, quando houver. Usamos esse registro para segurança e para prevenir abusos. Ele é lido apenas no servidor,
+por quem o opera, não é usado para estatísticas nem para traçar perfis e não é repassado a terceiros. O serviço
+automático que atualiza o número de membros armazena apenas esse número da comunidade e dados técnicos da própria
+atualização, sem nenhum dado de visitantes.
 
 **4. Estatísticas de uso.** Usamos o Cloudflare Web Analytics para saber quantas visitas as páginas do site recebem. A
 página Apoiar e a página de regras da comunidade (/discord) não usam essa ferramenta, e as visitas a elas não são
@@ -445,19 +446,20 @@ e a Cloudflare. A Cloudflare atua como operadora: processa a conexão entre voc�
 fora do controle deste site. Os serviços externos para os quais o site aponta têm termos e políticas de privacidade
 próprios.
 
-**8. Base legal.** Tratamos registros de erro, o registro de acesso da hospedagem e estatísticas com base em legítimo
-interesse, para manter o site funcionando e seguro e para prevenir abusos, e mensagens para atender ao seu pedido de
-contato.
+**8. Base legal.** Tratamos registros de erro, o registro de acesso do proxy do nosso servidor e estatísticas com base
+em legítimo interesse, para manter o site funcionando e seguro e para prevenir abusos, e mensagens para atender ao seu
+pedido de contato.
 
 **9. Por quanto tempo.** O serviço do site não guarda registros de acesso, e os registros de erro são substituídos em
-rotação curta. O registro de acesso do proxy da hospedagem é guardado por até 90 dias, contados do momento em que cada
-linha é gravada, e depois é apagado. A imagem semanal que o provedor da hospedagem faz do servidor copia o disco e pode
-manter linhas desse registro pelo prazo do próprio provedor, fora do controle deste site. Um pedido de remoção não
+rotação curta. O registro de acesso do proxy do nosso servidor é guardado por até 90 dias, contados do momento em que
+cada linha é gravada, e depois é apagado. A imagem semanal que o provedor da hospedagem faz do servidor copia o disco e
+pode manter linhas desse registro pelo prazo do próprio provedor, fora do controle deste site. Um pedido de remoção não
 alcança essas linhas, que expiram pela idade. Os demais dados ficam enquanto estiverem em uso e são apagados a pedido,
 exceto o que a lei obrigar a guardar.
 
-**10. Seus direitos.** Pela LGPD, você pode pedir confirmação do tratamento, acesso, correção, anonimização, portabilidade
-ou eliminação dos seus dados. Basta escrever para legal@empirecommunity.org.
+**10. Seus direitos.** Pela LGPD, você pode pedir confirmação do tratamento, acesso, correção, anonimização,
+portabilidade ou eliminação dos seus dados, com a exceção descrita no item 9. Basta escrever para
+legal@empirecommunity.org.
 
 **11. Pessoas listadas no site.** Só aparecem na página Organização pessoas maiores de idade que deram consentimento
 registrado, e somente com os dados que cada uma autorizou. Para retirar o consentimento ou pedir a remoção, escreva para
@@ -478,15 +480,16 @@ Effective date: `[PENDING P-12]`
 legal@empirecommunity.org. This policy applies to the empirecommunity.org website. The community's other services have their own policies.
 
 **2. What this website does not do.** The website has no forms, accounts or registration, sets no cookies of its own,
-and does not sell user data. Item 3 describes the technical records, including the hosting provider's access log, and
-item 7 says who data is shared with.
+and does not sell user data. Item 3 describes the technical records, including the access log of the proxy on our
+hosting server, and item 7 says who data is shared with.
 
 **3. Technical records.** The website's service, which delivers the pages, keeps no access logs. It keeps only minimal
 error records, for diagnosis. These records may contain the connection address of whoever was accessing the website when
 the error occurred, are replaced on a short rotation, and are lost when the website's server is recreated. The proxy on
-the hosting server, which receives visits before the website's service does, does keep an access log of visits to the
+our hosting server, which receives visits before the website's service does, does keep an access log of visits to the
 website: for each visit it records the visitor's IP address, the time and the address requested, including the part
-after the question mark, when there is one. We use this log for security and to prevent abuse. The automated service
+after the question mark, when there is one. We use this log for security and to prevent abuse. It is read only on the
+server, by those who operate it, is not used for statistics or profiling and is not passed on. The automated service
 that updates the member count stores only that community number and technical data about its own update, with no visitor
 data.
 
@@ -503,17 +506,18 @@ you to the Portuguese or English version. The website does not keep this informa
 Cloudflare acts as a processor: it processes the connection between you and the website and keeps its own records,
 outside this website's control. External services linked from the website have their own terms and privacy policies.
 
-**8. Legal basis.** We process error records, the hosting access log and statistics on the basis of legitimate interest,
-to keep the website running and secure and to prevent abuse, and messages to respond to your contact request.
+**8. Legal basis.** We process error records, the access log of the proxy on our hosting server and statistics on the
+basis of legitimate interest, to keep the website running and secure and to prevent abuse, and messages to respond to
+your contact request.
 
 **9. How long.** The website's service keeps no access logs, and error records are replaced on a short rotation. The
-access log of the proxy on the hosting server is kept for up to 90 days, counted from the moment each line is written,
+access log of the proxy on our hosting server is kept for up to 90 days, counted from the moment each line is written,
 and then deleted. The weekly image that the hosting provider takes of the server copies the disk and may hold lines of
 this log for the provider's own retention, outside this website's control. A removal request does not reach these lines,
 which expire by age. Other data is kept while in use and is deleted on request, except what the law requires us to keep.
 
 **10. Your rights.** Under the LGPD, you may request confirmation of processing, access, correction, anonymization,
-portability or deletion of your data. Just write to legal@empirecommunity.org.
+portability or deletion of your data, with the exception described in item 9. Just write to legal@empirecommunity.org.
 
 **11. People listed on the website.** Only adults who have given recorded consent appear on the Organization page, and
 only with the data each person has authorized. To withdraw consent or request removal, write to

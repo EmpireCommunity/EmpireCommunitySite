@@ -11,11 +11,11 @@ The data controller under the LGPD is Leone Santos Martins, a natural person. Co
 
 ## 2. What this website does not do {#what-the-site-does-not-do}
 
-The website has no forms, accounts or registration, sets no cookies of its own, and does not sell user data. Item 3 describes the technical records, including the hosting provider's access log, and item 7 says who data is shared with.
+The website has no forms, accounts or registration, sets no cookies of its own, and does not sell user data. Item 3 describes the technical records, including the access log of the proxy on our hosting server, and item 7 says who data is shared with.
 
 ## 3. Technical records {#technical-records}
 
-The website's service, which delivers the pages, keeps no access logs. It keeps only minimal error records, for diagnosis. These records may contain the connection address of whoever was accessing the website when the error occurred, are replaced on a short rotation, and are lost when the website's server is recreated. The proxy on the hosting server, which receives visits before the website's service does, does keep an access log of visits to the website: for each visit it records the visitor's IP address, the time and the address requested, including the part after the question mark, when there is one. We use this log for security and to prevent abuse. The automated service that updates the member count stores only that community number and technical data about its own update, with no visitor data.
+The website's service, which delivers the pages, keeps no access logs. It keeps only minimal error records, for diagnosis. These records may contain the connection address of whoever was accessing the website when the error occurred, are replaced on a short rotation, and are lost when the website's server is recreated. The proxy on our hosting server, which receives visits before the website's service does, does keep an access log of visits to the website: for each visit it records the visitor's IP address, the time and the address requested, including the part after the question mark, when there is one. We use this log for security and to prevent abuse. It is read only on the server, by those who operate it, is not used for statistics or profiling and is not passed on. The automated service that updates the member count stores only that community number and technical data about its own update, with no visitor data.
 
 ## 4. Usage statistics {#statistics}
 
@@ -35,15 +35,15 @@ Only the providers needed to run the website: the hosting provider and Cloudflar
 
 ## 8. Legal basis {#legal-basis}
 
-We process error records, the hosting access log and statistics on the basis of legitimate interest, to keep the website running and secure and to prevent abuse, and messages to respond to your contact request.
+We process error records, the access log of the proxy on our hosting server and statistics on the basis of legitimate interest, to keep the website running and secure and to prevent abuse, and messages to respond to your contact request.
 
 ## 9. How long {#retention}
 
-The website's service keeps no access logs, and error records are replaced on a short rotation. The access log of the proxy on the hosting server is kept for up to 90 days, counted from the moment each line is written, and then deleted. The weekly image that the hosting provider takes of the server copies the disk and may hold lines of this log for the provider's own retention, outside this website's control. A removal request does not reach these lines, which expire by age. Other data is kept while in use and is deleted on request, except what the law requires us to keep.
+The website's service keeps no access logs, and error records are replaced on a short rotation. The access log of the proxy on our hosting server is kept for up to 90 days, counted from the moment each line is written, and then deleted. The weekly image that the hosting provider takes of the server copies the disk and may hold lines of this log for the provider's own retention, outside this website's control. A removal request does not reach these lines, which expire by age. Other data is kept while in use and is deleted on request, except what the law requires us to keep.
 
 ## 10. Your rights {#rights}
 
-Under the LGPD, you may request confirmation of processing, access, correction, anonymization, portability or deletion of your data. Just write to legal@empirecommunity.org.
+Under the LGPD, you may request confirmation of processing, access, correction, anonymization, portability or deletion of your data, with the exception described in item 9. Just write to legal@empirecommunity.org.
 
 ## 11. People listed on the website {#people-listed}
 
