@@ -473,7 +473,10 @@ effectiveDate: <launch day>     # YYYY-MM-DD, identical in both locales; absent 
   fails on a file without it (and on any difference between the two locales).
 - **The launch PR carries the Privacy text at version 2.0 before it sets the dates and flips the flag (D-91).** The
   version 1.0 Privacy files were written under D-20 and say that no access log is kept, so they MUST NOT receive an
-  `effectiveDate`. Order inside the launch PR: (1) the Privacy text of both locales is replaced by version 2.0, which
+  `effectiveDate`. Version 1.1 (D-93, 2026-11-15) corrects the live v1 text in both locales: it declares the host
+  proxy's access log (address, time, requested address with its query, security and abuse prevention, legitimate
+  interest, up to 90 days from each line's write time, the provider's image, Cloudflare as processor) and still has no
+  `effectiveDate`; it does not replace version 2.0, which the launch PR still carries. Order inside the launch PR: (1) the Privacy text of both locales is replaced by version 2.0, which
   covers the access log as the "Logs" item below requires, and the owner approves it; (2) the 90-day bound of that log
   is in place and checked on the host (routing-locale section 6); (3) only then the launch day is set in all four
   files and `PENDING.legalPages` becomes `false`. The flag itself checks only that an `effectiveDate` exists, so
