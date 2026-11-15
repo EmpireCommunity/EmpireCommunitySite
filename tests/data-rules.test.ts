@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import { headingIds, legalIssues, type LegalDoc } from '../src/lib/legal-rules.ts';
+import { assertUniqueServerOrder, sortGameServers } from '../src/lib/game-server-order.ts';
 import { assertSingleFounder } from '../src/lib/team-rules.ts';
 import { parseEntryList, parseSingleDocument } from '../src/lib/yaml-entries.ts';
 
@@ -39,6 +40,34 @@ describe('team founder uniqueness (site-data section 9)', () => {
     assert.doesNotThrow(() => assertSingleFounder([]));
     assert.doesNotThrow(() => assertSingleFounder([{ isFounder: true }, { isFounder: false }, {}]));
     assert.throws(() => assertSingleFounder([{ isFounder: true }, { isFounder: true }]), /at most one/);
+  });
+});
+
+describe('game server order (site-data section 7)', () => {
+  const entry = (id: string, name: string, status: string, order: number) => ({ id, name, status, order });
+  const servers = [
+    entry('factorio', 'Factorio', 'coming-soon', 40),
+    entry('palworld', 'Palworld', 'coming-soon', 20),
+    entry('minecraft', 'Minecraft', 'live', 10),
+    entry('project-zomboid', 'Project Zomboid', 'coming-soon', 30),
+  ];
+
+  test('live first, then ascending order, whatever the input order', () => {
+    const expected = ['minecraft', 'palworld', 'project-zomboid', 'factorio'];
+    assert.deepEqual(sortGameServers(servers).map((s) => s.id), expected);
+    assert.deepEqual(sortGameServers([...servers].reverse()).map((s) => s.id), expected);
+    // A live server with a larger order still comes before a coming-soon one with a smaller order.
+    assert.equal(sortGameServers([entry('a', 'A', 'coming-soon', 1), entry('b', 'B', 'live', 99)])[0]?.id, 'b');
+    // Name is the last key if the order ever ties.
+    assert.deepEqual(sortGameServers([entry('b', 'B', 'live', 1), entry('a', 'A', 'live', 1)]).map((s) => s.id), ['a', 'b']);
+  });
+
+  test('two servers with the same order fail and the message names both ids and the value', () => {
+    assert.doesNotThrow(() => assertUniqueServerOrder(servers));
+    assert.throws(
+      () => assertUniqueServerOrder([...servers, entry('satisfactory', 'Satisfactory', 'coming-soon', 20)]),
+      /"palworld" and "satisfactory" share order 20/,
+    );
   });
 });
 

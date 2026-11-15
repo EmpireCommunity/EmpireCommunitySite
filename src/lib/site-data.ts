@@ -78,7 +78,5 @@ export async function getTeam(locale: Locale): Promise<{ founder: TeamPerson | u
   return { founder: people.find((person) => person.isFounder), members: people.filter((person) => !person.isFounder) };
 }
 
-/** Live servers first, then the others by name: the data collection has no order field, so the order is explicit here. */
-export function sortGameServers<T extends { name: string; status: string }>(servers: readonly T[]): T[] {
-  return [...servers].sort((a, b) => Number(a.status !== 'live') - Number(b.status !== 'live') || a.name.localeCompare(b.name));
-}
+// Live servers first, then the owner's `order` (section 7); every page that lists servers uses this one function.
+export { sortGameServers } from './game-server-order.ts';
