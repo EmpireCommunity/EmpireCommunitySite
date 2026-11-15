@@ -143,9 +143,12 @@ secrets (the site has none). `read_only: true`, `tmpfs` for `/tmp`, `cap_drop: [
 
 **Logging (D-20, amended by D-91):** json-file driver with `max-size: 1m` and `max-file: 2`, so the minimal error log is short-lived and
 disappears when the container is recreated. The site container writes no access log. **The proxy on the host does
-(D-91):** visitor address, time and requested address, no request header, kept up to 90 days (routing-locale section 6,
-site-data section 11). Bounding that log to 90 days is a host control of the runbook (Guindaste), and it MUST be in
-place before the Privacy text that states the figure is published.
+(D-91):** visitor address, time and requested address, no request header (routing-locale section 6, site-data section
+11). **Its retention is a commitment that is not in place yet:** no line older than 90 days, counted from the moment
+the line is written, held by a daily rotation that removes rotated files at 88 days (routing-locale section 6; the
+owner's OK is pending). Today that log is limited by size only, which bounds the age of no line. The bound is a host
+control of the runbook (Guindaste), and it MUST be in place and checked before the Privacy text that states the
+figure is published.
 
 ## 8. Integrity monitor (`integrity.yml`, secret-free)
 

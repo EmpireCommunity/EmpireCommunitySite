@@ -330,14 +330,20 @@ add_header Cross-Origin-Opener-Policy "same-origin" always;
 - **The proxy on the host, in front of nginx, keeps an access log (D-91, 2026-11-15).** A line is the proxy's default
   set of fields with every request header dropped: the visitor's address (taken from the header Cloudflare forwards),
   the time, the host, the method, the path with its query string, the status, sizes and durations, and connection
-  fields that are not personal. It is kept **up to 90 days** in our own copy: Guindaste bounds it on the host (a
-  rotated file whose old parts are removed before 90 days) so that no line can outlive that, and until that bound
-  exists the log is limited by size only. The VPS provider's weekly image may hold lines for the provider's own
-  retention. Purpose, basis and what the Privacy text must say are in site-data section 11. Adding a request header
+  fields that are not personal.
+- **Retention of that log: a commitment, not yet in place.** No line stays in our own copy for more than **90 days,
+  counted from the moment the line is written**. The mechanism that will hold it is Guindaste's plan, with the owner's
+  OK pending: the proxy writes the log to a file on the host; that file is rotated every day, so the active file never
+  holds a line older than a day and a rotated file holds one day of lines; and a rotated file is removed once it is 88
+  days old, checked every day, so the oldest line of any file is under 90 days old when the file goes. **Today none of
+  this exists:** the log is limited by size only, which bounds the age of no line, neither as a floor nor as a
+  ceiling. The bound MUST be in place and checked on the host before the Privacy text that states the figure (version
+  2.0) is published. The VPS provider's weekly image may hold lines for the provider's own retention. Purpose, basis and what the Privacy text must say are in site-data section 11. Adding a request header
   or a body to that log, or sending it off the host, changes this section and the Privacy text and needs the owner's
   decision; a dated, rotated file on the host is not such a change.
 - The rule that this site promises no retention period for access logs, and that no contract may state one, is
-  withdrawn by D-91: the figure is up to 90 days and the Privacy text states it.
+  withdrawn by D-91: the figure is up to 90 days from each line's write time, and the Privacy text states it once the
+  bound above is in place.
 
 ### HTTP header test (required check)
 
