@@ -322,6 +322,8 @@ a quebra de linha do original.
 >
 > **Revisão jurídica necessária antes de receber doações:** Privacidade 2, 3 e 9. Não manter registros de acesso é
 > exceção decidida pelo dono (D-20) e precisa ser conferida diante do Marco Civil da Internet.
+> **Alterado pela D-91 (2026-11-15):** o proxy do servidor mantém registro de acesso por até 90 dias. Os itens 2, 3 e 9
+> abaixo foram escritos sob a D-20 e mudam na versão 2.0 (`site-data` §11).
 
 ## Interface das páginas legais
 

@@ -481,13 +481,15 @@ effectiveDate: <launch day>     # YYYY-MM-DD, identical in both locales; absent 
   short-rotated error log (see ADR-0001 and routing-locale section 6). **The proxy on the host, in front of it, keeps
   an access log (D-91).** For every request to the site it records the visitor's address, the time and the address
   requested with its query string, and no request header (no User-Agent, no Referer, no cookie). Purpose: security and
-  abuse handling. Basis: legitimate interest. Retention: **90 days**, bounded on the host (routing-locale section 6).
-  It is read only on the host and is never exported or used for analytics. On the Support page the query string of a
+  abuse handling. Basis: legitimate interest. Retention: **up to 90 days** in our own copy, bounded on the host
+  (routing-locale section 6). The VPS provider's weekly image copies the host disk and may hold lines for the
+  provider's own retention, outside this site's control. It is read only on the host and is never exported or used for analytics. On the Support page the query string of a
   donor's return carries Mercado Pago identifiers, so a line can tie an address to a payment (donations contract
-  section 7.5). **The Privacy text, version 2.0, MUST say this, with the figure, and MUST NOT say that no access log
-  is kept.** The earlier rule that no text or contract may state a retention period for access logs is withdrawn. The
-  published version 1 still says that the server keeps no access logs, which D-91 found untrue for the host; version
-  2.0 replaces it (the P2-09 copy writes it, the owner approves). D-20 was decided by the owner, and a legal review of the log-keeping obligations that may apply to the site (Marco Civil da Internet) is to be done before
+  section 7.5). **The Privacy text, version 2.0, MUST say this, with the figure ("up to 90 days") and the provider's
+  image, and MUST NOT say that no access log is kept.** It also says that a removal request does not reach these
+  lines, which expire by age. The earlier rule that no text or contract may state a retention period for access logs
+  is withdrawn. Version 1 was written under D-20 alone; version 2.0 replaces its sentences about access logs (the
+  P2-09 copy writes it, the owner approves). D-20 was decided by the owner, and a legal review of the log-keeping obligations that may apply to the site (Marco Civil da Internet) is to be done before
   donations open (D-28; depends on the owner).
 - Cloudflare, as processor of the connection, keeps its own records outside this site's control; the Privacy text
   names it and says so plainly without describing its internals (D-91). The proxy on the host is not such a third

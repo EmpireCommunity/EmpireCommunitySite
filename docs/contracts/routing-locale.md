@@ -327,14 +327,17 @@ add_header Cross-Origin-Opener-Policy "same-origin" always;
 - No access log in the site container (nginx). The error log is the minimal `error` level to stdout, kept by a size-capped,
   short-rotated json-file driver (limits in [deploy](deploy.md)) and lost when the container is recreated. It can
   contain a client address when an error occurs; the Privacy text says so (site-data section 11).
-- **The proxy on the host, in front of nginx, keeps an access log (D-91, 2026-11-15).** A line holds the visitor's
-  address (taken from the header Cloudflare forwards), the time, the host, the method, the path with its query string,
-  the status, sizes and durations, and no request header. It is kept **90 days**: Guindaste bounds it on the host so
-  that no line can outlive that, and until that bound exists the log is limited by size only. Purpose, basis and what
-  the Privacy text must say are in site-data section 11. Adding a request header or a body to that log changes this
-  section and the Privacy text and needs the owner's decision.
+- **The proxy on the host, in front of nginx, keeps an access log (D-91, 2026-11-15).** A line is the proxy's default
+  set of fields with every request header dropped: the visitor's address (taken from the header Cloudflare forwards),
+  the time, the host, the method, the path with its query string, the status, sizes and durations, and connection
+  fields that are not personal. It is kept **up to 90 days** in our own copy: Guindaste bounds it on the host (a
+  rotated file whose old parts are removed before 90 days) so that no line can outlive that, and until that bound
+  exists the log is limited by size only. The VPS provider's weekly image may hold lines for the provider's own
+  retention. Purpose, basis and what the Privacy text must say are in site-data section 11. Adding a request header
+  or a body to that log, or sending it off the host, changes this section and the Privacy text and needs the owner's
+  decision; a dated, rotated file on the host is not such a change.
 - The rule that this site promises no retention period for access logs, and that no contract may state one, is
-  withdrawn by D-91: the figure is 90 days and the Privacy text states it.
+  withdrawn by D-91: the figure is up to 90 days and the Privacy text states it.
 
 ### HTTP header test (required check)
 

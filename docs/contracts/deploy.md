@@ -143,7 +143,7 @@ secrets (the site has none). `read_only: true`, `tmpfs` for `/tmp`, `cap_drop: [
 
 **Logging (D-20, amended by D-91):** json-file driver with `max-size: 1m` and `max-file: 2`, so the minimal error log is short-lived and
 disappears when the container is recreated. The site container writes no access log. **The proxy on the host does
-(D-91):** visitor address, time and requested address, no request header, kept 90 days (routing-locale section 6,
+(D-91):** visitor address, time and requested address, no request header, kept up to 90 days (routing-locale section 6,
 site-data section 11). Bounding that log to 90 days is a host control of the runbook (Guindaste), and it MUST be in
 place before the Privacy text that states the figure is published.
 

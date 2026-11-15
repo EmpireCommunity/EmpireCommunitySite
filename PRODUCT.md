@@ -45,7 +45,8 @@ GitHub, muitas vezes pelo celular. O site é estático e funciona sem JavaScript
 - Seção sem dado real não é renderizada.
 - Pessoa só aparece com consentimento registrado.
 - Infraestrutura só em nível geral: sem localização, especificação detalhada, portas, topologia, backup ou monitoramento.
-- Sem cookies próprios e sem registros de acesso na origem.
+- Sem cookies próprios. O contêiner do site não grava registros de acesso; o proxy do servidor mantém um registro de
+  acesso por até 90 dias, descrito na Política de Privacidade (D-91, `site-data` §11).
 
 **Doações fora do lançamento (D-28):** o site abre sem receber dinheiro e sem indicar forma de enviar. Doações e o painel
 de transparência abrem juntos depois, com contrato, modelo de ameaças e revisão jurídica.
