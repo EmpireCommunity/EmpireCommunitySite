@@ -490,8 +490,9 @@ effectiveDate: <launch day>     # YYYY-MM-DD, identical in both locales; absent 
   an access log (D-91).** For every request to the site it records the visitor's address, the time and the address
   requested with its query string, and no request header (no User-Agent, no Referer, no cookie). Purpose: security and
   abuse handling. Basis: legitimate interest. Retention: **up to 90 days, counted from the moment each line is
-  written**, in our own copy. That bound is a commitment that is not in place yet; its mechanism and the present
-  state are in routing-locale section 6, and it MUST hold before the Privacy text states the figure. The VPS provider's weekly image copies the host disk and may hold lines for the
+  written**, in our own copy. That bound is in place since D-94 (a line lives about 81 days) and a daily check on
+  the host verifies it; the mechanism is in routing-locale section 6, and the bound and its check MUST hold while the
+  Privacy text states the figure. The VPS provider's weekly image copies the host disk and may hold lines for the
   provider's own retention, outside this site's control. It is read only on the host and is never exported or used for analytics. On the Support page the query string of a
   donor's return carries Mercado Pago identifiers, so a line can tie an address to a payment (donations contract
   section 7.5). **The Privacy text, version 2.0, MUST say this, with the figure ("up to 90 days") and the provider's
