@@ -471,22 +471,41 @@ effectiveDate: <launch day>     # YYYY-MM-DD, identical in both locales; absent 
   files and flips `PENDING.legalPages` to `false` in the same change. The schema keeps the field optional; while the
   flag is `true` an absent date renders nothing and `check-dist` only warns, and once the flag is `false` the build
   fails on a file without it (and on any difference between the two locales).
+- **The launch PR carries the Privacy text at version 2.0 before it sets the dates and flips the flag (D-91).** The
+  version 1.0 Privacy files were written under D-20 and say that no access log is kept, so they MUST NOT receive an
+  `effectiveDate`. Order inside the launch PR: (1) the Privacy text of both locales is replaced by version 2.0, which
+  covers the access log as the "Logs" item below requires, and the owner approves it; (2) the 90-day bound of that log
+  is in place and checked on the host (routing-locale section 6); (3) only then the launch day is set in all four
+  files and `PENDING.legalPages` becomes `false`. The flag itself checks only that an `effectiveDate` exists, so
+  steps 1 and 2 are a **human gate** of the launch PR, with the owner as required reviewer. A build check that refuses
+  the flip while the Privacy `version` is below 2.0 is a backlog item (Vitral), not built here.
 - Both locales exist for both slugs (C-3). **Headings carry explicit ids** (`## Controller {#controller}`); the build
   fails unless both locales have the same heading ids in the same order, the same `version` and the same
   `effectiveDate`. Semantic equality of the text ("identical content in both languages") is a human review in the PR
   with the owner as required reviewer; it cannot be automated.
 - Rendered with `version` and `effectiveDate` visible. Markdown is rendered **without raw HTML** (parser option),
   and a fixture test with an embedded `<script>` proves it is escaped or dropped.
-- **Logs (D-20).** The site keeps **no access log at the origin** and only a minimal, short-rotated error log (see
-  ADR-0001 and routing-locale section 6). The Privacy text must say exactly that and must not promise a fixed
-  retention period for access logs, and no contract for this site may state one. This was decided by the owner
-  (D-20), and a legal review of the log-keeping obligations that may apply to the site (Marco Civil da Internet) is to be done before
+- **Logs (D-20, amended by D-91 on 2026-11-15).** The site container keeps **no access log** and only a minimal,
+  short-rotated error log (see ADR-0001 and routing-locale section 6). **The proxy on the host, in front of it, keeps
+  an access log (D-91).** For every request to the site it records the visitor's address, the time and the address
+  requested with its query string, and no request header (no User-Agent, no Referer, no cookie). Purpose: security and
+  abuse handling. Basis: legitimate interest. Retention: **up to 90 days, counted from the moment each line is
+  written**, in our own copy. That bound is a commitment that is not in place yet; its mechanism and the present
+  state are in routing-locale section 6, and it MUST hold before the Privacy text states the figure. The VPS provider's weekly image copies the host disk and may hold lines for the
+  provider's own retention, outside this site's control. It is read only on the host and is never exported or used for analytics. On the Support page the query string of a
+  donor's return carries Mercado Pago identifiers, so a line can tie an address to a payment (donations contract
+  section 7.5). **The Privacy text, version 2.0, MUST say this, with the figure ("up to 90 days") and the provider's
+  image, and MUST NOT say that no access log is kept.** It also says that a removal request does not reach these
+  lines, which expire by age. The earlier rule that no text or contract may state a retention period for access logs
+  is withdrawn. Version 1 was written under D-20 alone; version 2.0 replaces its sentences about access logs (the
+  P2-09 copy writes it, the owner approves). D-20 was decided by the owner, and a legal review of the log-keeping obligations that may apply to the site (Marco Civil da Internet) is to be done before
   donations open (D-28; depends on the owner).
-- Other processors keep their own records outside this site's control (Cloudflare for the connection, the edge proxy
-  layer in front of the origin); the Privacy text says so plainly without describing their internals.
+- Cloudflare, as processor of the connection, keeps its own records outside this site's control; the Privacy text
+  names it and says so plainly without describing its internals (D-91). The proxy on the host is not such a third
+  party: its log is ours and is the one described above.
 - Content requirements for the drafter (the drafter is not the architect and the owner is not a lawyer, so Regente
   explains in plain language): contacts, forum Goiânia-GO, LGPD and Marco Civil da Internet, what the site collects (no
-  accounts, no forms, no cookies set by the site, no access log at the origin), Cloudflare as processor of the
+  accounts, no forms, no cookies set by the site; the access log of the host proxy described above), Cloudflare as processor of the
   connection (CDN, country detection at the edge for the language redirect, Web Analytics on the pages that carry it),
   a generic clause that external services linked from the site have their own terms and privacy policies, how to ask
   for removal of personal data, and the team member consent and the public git history notice.

@@ -65,7 +65,10 @@ file in it is empty and its `package.json` has no dependencies.
 - **Logging (D-20):** the site has no login or forms, so the origin keeps **no access log** (`access_log off`) and
   only a minimal error log to stdout, with a small size-capped, short-rotated json-file driver that is lost when the
   container is recreated. No contract or text for this site promises a fixed retention period for access logs; the
-  Privacy page must describe this truthfully (see site-data section 11).
+  Privacy page must describe this truthfully (see site-data section 11). **Amended by D-91 (2026-11-15):** this holds
+  for the site container only. The proxy on the host keeps an access log (visitor address, time, requested address),
+  to be kept at most 90 days from each line's write time (a bound not in place yet) and declared in the Privacy text; the sentence about no promised retention no longer holds (site-data
+  section 11, routing-locale section 6).
 
 ### 4. Content and data modeling
 

@@ -3,7 +3,7 @@
 - Version: 1. Owner: Alicerce. Consumers: Forja (workflows, Dockerfile, checks), Guindaste (host procedure, Cloudflare
   setup, runbook), Sentinela (review), Ensaio (negative tests).
 - Decisions: D-10 (build in CI), D-17 (repository protection model), D-55 (the member-count Worker deploys through Workers Builds from its own repository; it supersedes D-18),
-  D-20 (logging), D-24 (releases by tag, as in EmpireMuse), D-41 and D-78 (the `/discord` gate pages and their integrity rows), D-82 (the member-count relay on the host, section 13). Operational steps: `docs/runbook/release.md`
+  D-20 (logging, amended by D-91), D-24 (releases by tag, as in EmpireMuse), D-41 and D-78 (the `/discord` gate pages and their integrity rows), D-82 (the member-count relay on the host, section 13). Operational steps: `docs/runbook/release.md`
   (Guindaste); this document holds the controls that runbook must respect. Stack: [ADR-0001](../adr/0001-stack.md). Worker deploy:
   [ADR-0004](../adr/0004-members-worker-workers-builds.md) and section 12.
 - This repository is public. The document states **required controls only**. Account and platform settings that exist
@@ -141,9 +141,14 @@ Joined only to the external proxy network; no published ports; no docker socket;
 secrets (the site has none). `read_only: true`, `tmpfs` for `/tmp`, `cap_drop: [ALL]`, `no-new-privileges`,
 `mem_limit: 32m`, `pids_limit: 64`, healthcheck on `/healthz`, `restart: unless-stopped`.
 
-**Logging (D-20):** json-file driver with `max-size: 1m` and `max-file: 2`, so the minimal error log is short-lived and
-disappears when the container is recreated. The origin writes no access log. No contract for this site promises a
-fixed retention period for access logs.
+**Logging (D-20, amended by D-91):** json-file driver with `max-size: 1m` and `max-file: 2`, so the minimal error log is short-lived and
+disappears when the container is recreated. The site container writes no access log. **The proxy on the host does
+(D-91):** visitor address, time and requested address, no request header (routing-locale section 6, site-data section
+11). **Its retention is a commitment that is not in place yet:** no line older than 90 days, counted from the moment
+the line is written, held by a daily rotation that removes rotated files at 88 days (routing-locale section 6; the
+owner's OK is pending). Today that log is limited by size only, which bounds the age of no line. The bound is a host
+control of the runbook (Guindaste), and it MUST be in place and checked before the Privacy text that states the
+figure is published.
 
 ## 8. Integrity monitor (`integrity.yml`, secret-free)
 
@@ -312,7 +317,8 @@ relay's digest and its own compose file):
    members-json section 1 (from the Worker route, or the site's built-in file through it), never the relay's
    four-field body; (c) a request for the relay path sent straight to the origin from an address that is not
    Cloudflare is refused as it is for the site (the allowlist and the origin certificate hold for the new router
-   too); (d) no access log is written for it.
+   too); (d) the relay writes no access log of its own (the host proxy records the Worker's request like any other,
+   D-91; the caller is the Worker, so that line holds no visitor data).
 4. Record version, digest, date and approver. **Rollback** is the previous tag and digest, or stopping the project:
    the path then falls to the site, which answers 404, and the Worker keeps the last value (members-json 2.4).
 
