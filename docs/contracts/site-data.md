@@ -187,9 +187,28 @@ whatsapp:                                 # pt-BR only; optional
   status: live                            # live | coming-soon
   summary: { pt-br: ..., en-us: ... }     # max 160
   howToJoin: { pt-br: ..., en-us: ... }   # max 200; required when live, forbidden otherwise
+  order: 10                               # required; integer 0 to 10000; unique in the file
 ```
 
-- Live today: Minecraft. Coming soon: Palworld, Project Zomboid, Factorio (owner's list).
+- Live today: Minecraft. Coming soon: Palworld, Project Zomboid, Factorio (owner's list), **in that order**.
+- **`order` (B-T60).** The order of the list is the owner's and is written in the data, because a collection has no
+  order of its own (`getCollection` returns entries by id, which put Factorio first).
+  - **Schema** (`src/schemas/game-servers.ts`, `GameServerSchema`): `order: z.number().int().min(0).max(10_000)`, the
+    same type as `projects.yaml`. It is **required on every entry**, live or coming soon. A missing value, a string, a
+    fraction or a value out of range is a schema error, and the build fails with the file, the entry id and the field
+    (section 1).
+  - **Unique in the file.** Two entries with the same `order` fail the build: a cross-entry rule passed as `validate`
+    to the collection's `yamlLoader` in `src/content.config.ts` (as `team.yaml` does for the founder), whose message
+    names both ids and the value. A duplicate would silently bring the alphabetical order back, which is the defect
+    this field removes. Projects still allow a tie; this file does not.
+  - **How pages sort.** Every page that lists servers (the Home section and the game servers page) uses the one
+    function `sortGameServers` in `src/lib/site-data.ts`: **live servers first, then ascending `order`**. Because
+    `order` is unique there is no tie; the comparator still ends with `name`, so the result can never depend on the
+    order of the file or of the loader. No page sorts servers on its own.
+  - **Values today:** `minecraft` 10, `palworld` 20, `project-zomboid` 30, `factorio` 40. Steps of 10 leave room; a
+    new server takes any free value, and nothing else is renumbered.
+  - **Tests:** the schema case of `tests/schemas.test.ts` gains `order` (missing and non-integer refused); one case
+    for the sort (live first, then `order`, whatever the input order) and one for the duplicate rule.
 - No server address, IP or port is published unless the owner approves it. Default: not in the schema (exposure and
   attack surface; live status belongs to `empirecommunity.cloud`, out of scope).
 - The sentence about requesting games ("on Discord or WhatsApp", en-US "on Discord") is built from the
