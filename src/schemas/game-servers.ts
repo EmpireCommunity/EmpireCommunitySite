@@ -9,6 +9,8 @@ export const GameServerSchema = z
     status: z.enum(['live', 'coming-soon']),
     summary: Localized(160),
     howToJoin: Localized(200).optional(),
+    // The owner's order of the list; unique in the file (assertUniqueServerOrder). Same type as projects.yaml.
+    order: z.number().int().min(0).max(10_000),
   })
   .superRefine((server, ctx) => {
     if (server.status === 'live' && server.howToJoin === undefined) {

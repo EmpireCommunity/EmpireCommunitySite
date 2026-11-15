@@ -6,6 +6,7 @@ import { glob } from 'astro/loaders';
 import type { Loader } from 'astro/loaders';
 import { z } from 'astro/zod';
 import { PENDING } from '../scripts/lib/pending.ts';
+import { assertUniqueServerOrder } from './lib/game-server-order.ts';
 import { assertLegalParity, type LegalDoc } from './lib/legal-rules.ts';
 import { assertSingleFounder } from './lib/team-rules.ts';
 import { parseEntryList, parseSingleDocument } from './lib/yaml-entries.ts';
@@ -43,7 +44,7 @@ const projects = defineCollection({
 });
 
 const gameServers = defineCollection({
-  loader: yamlLoader({ path: 'src/data/game-servers.yaml', parse: parseEntryList }),
+  loader: yamlLoader({ path: 'src/data/game-servers.yaml', parse: parseEntryList, validate: assertUniqueServerOrder }),
   schema: GameServerSchema,
 });
 

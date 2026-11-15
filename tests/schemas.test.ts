@@ -66,12 +66,24 @@ describe('entity rules', () => {
     assert.equal(ProjectSchema.safeParse({ ...project, status: 'live', url: 'https://example.org/' }).success, true);
   });
 
-  const server = { id: 'minecraft', name: 'Minecraft', summary: both('x') };
+  const server = { id: 'minecraft', name: 'Minecraft', summary: both('x'), order: 10 };
   test('game server howToJoin required when live, forbidden otherwise', () => {
     assert.equal(GameServerSchema.safeParse({ ...server, status: 'live' }).success, false);
     assert.equal(GameServerSchema.safeParse({ ...server, status: 'live', howToJoin: both('x') }).success, true);
     assert.equal(GameServerSchema.safeParse({ ...server, status: 'coming-soon', howToJoin: both('x') }).success, false);
     assert.equal(GameServerSchema.safeParse({ ...server, status: 'live', howToJoin: both('x'), address: '1.2.3.4' }).success, false);
+  });
+
+  test('game server order is required, an integer from 0 to 10000 (site-data section 7)', () => {
+    const coming = { ...server, status: 'coming-soon' };
+    assert.equal(GameServerSchema.safeParse(coming).success, true);
+    const withoutOrder: Record<string, unknown> = { ...coming };
+    delete withoutOrder['order'];
+    for (const bad of [withoutOrder, { ...coming, order: '10' }, { ...coming, order: 1.5 }, { ...coming, order: -1 }, { ...coming, order: 10_001 }]) {
+      assert.equal(GameServerSchema.safeParse(bad).success, false);
+    }
+    assert.equal(GameServerSchema.safeParse({ ...coming, order: 0 }).success, true);
+    assert.equal(GameServerSchema.safeParse({ ...coming, order: 10_000 }).success, true);
   });
 
   test('WhatsApp channel is pt-br only (C-1); Discord has no stored URL (D-78)', () => {

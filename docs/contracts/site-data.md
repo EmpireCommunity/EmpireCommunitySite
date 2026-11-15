@@ -193,8 +193,6 @@ whatsapp:                                 # pt-BR only; optional
 - Live today: Minecraft. Coming soon: Palworld, Project Zomboid, Factorio (owner's list), **in that order**.
 - **`order` (B-T60).** The order of the list is the owner's and is written in the data, because a collection has no
   order of its own (`getCollection` returns entries by id, which put Factorio first).
-  **Not built yet:** this bullet is the target of B-T60. Until its change lands, the schema has no `order`, the data
-  file carries none and the pages sort live first and then by name; that change removes this sentence.
   - **Schema** (`src/schemas/game-servers.ts`, `GameServerSchema`): `order: z.number().int().min(0).max(10_000)`, the
     same type as `projects.yaml`. It is **required on every entry**, live or coming soon. A missing value, a string, a
     fraction or a value out of range is a schema error, and the build fails with the file, the entry id and the field
