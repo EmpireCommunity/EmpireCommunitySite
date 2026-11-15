@@ -537,7 +537,7 @@ Não usar o widget do Discord: ele expõe nomes de membros online (R-3 do Risks 
 | O-2 | Fechada por D-41 e D-78 | As regras da comunidade ficam em `/pt-br/discord/` e `/en-us/discord/`, §7.10 |
 | O-3 | Termos e Privacidade são rascunho em linguagem simples, feito sem advogado | Publicar assim é aceitável para um site sem coleta de dados, mas vale uma revisão jurídica pontual antes de receber doações, incluindo os registros de acesso (D-20, alterada pela D-91: o proxy do servidor mantém registro de acesso por até 90 dias) |
 
-**Conferir na implementação**, porque a Política de Privacidade afirma: nenhum registro de acesso no contêiner do site e registros de erro em rotação curta (D-20); o registro de acesso do proxy do servidor, por até 90 dias, a partir da versão 2.0 (D-91, `site-data` §11); ausência de
+**Conferir na implementação**, porque a Política de Privacidade afirma: nenhum registro de acesso no contêiner do site e registros de erro em rotação curta (D-20); o registro de acesso do proxy do servidor, por até 90 dias, a partir da versão 1.1 (D-93; D-91, `site-data` §11); ausência de
 cookies próprios; país identificado pela Cloudflare sem armazenamento pelo site. A Cloudflare informa que o Web Analytics
 não usa cookies nem armazenamento local e descarta o IP. Em um texto de 2025 ela ressalva que essa caracterização não se
 aplica ao tráfego da União Europeia e do Reino Unido; só importa se esse público crescer.
