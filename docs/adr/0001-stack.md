@@ -67,7 +67,7 @@ file in it is empty and its `package.json` has no dependencies.
   container is recreated. No contract or text for this site promises a fixed retention period for access logs; the
   Privacy page must describe this truthfully (see site-data section 11). **Amended by D-91 (2026-11-15):** this holds
   for the site container only. The proxy on the host keeps an access log (visitor address, time, requested address),
-  to be kept at most 90 days from each line's write time (a bound not in place yet) and declared in the Privacy text; the sentence about no promised retention no longer holds (site-data
+  kept at most 90 days from each line's write time (a bound in place and checked daily since D-94) and declared in the Privacy text; the sentence about no promised retention no longer holds (site-data
   section 11, routing-locale section 6).
 
 ### 4. Content and data modeling

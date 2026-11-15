@@ -331,19 +331,22 @@ add_header Cross-Origin-Opener-Policy "same-origin" always;
   set of fields with every request header dropped: the visitor's address (taken from the header Cloudflare forwards),
   the time, the host, the method, the path with its query string, the status, sizes and durations, and connection
   fields that are not personal.
-- **Retention of that log: a commitment, not yet in place.** No line stays in our own copy for more than **90 days,
-  counted from the moment the line is written**. The mechanism that will hold it is Guindaste's plan, with the owner's
-  OK pending: the proxy writes the log to a file on the host; that file is rotated every day, so the active file never
-  holds a line older than a day and a rotated file holds one day of lines; and a rotated file is removed once it is 88
-  days old, checked every day, so the oldest line of any file is under 90 days old when the file goes. **Today none of
-  this exists:** the log is limited by size only, which bounds the age of no line, neither as a floor nor as a
-  ceiling. The bound MUST be in place and checked on the host before the Privacy text that states the figure (version
-  2.0) is published. The VPS provider's weekly image may hold lines for the provider's own retention. Purpose, basis and what the Privacy text must say are in site-data section 11. Adding a request header
+- **Retention of that log: in place since D-94.** No line stays in our own copy for more than **90 days, counted
+  from the moment the line is written**. The proxy writes the log to a file on the host; that file is rotated every
+  day, an empty day included, so the active file never holds a line older than a day and a rotated file holds one day
+  of lines; 80 rotated files are kept, and a rotated file is also removed once it is 80 days old. So a line lives
+  **about 81 days** when every daily run happens, each missed run adds one day, and up to eight missed runs still stay
+  under 90. **The bound is verified, not assumed:** a daily check on the host reads the time of the first line of
+  every file of that log, the oldest line of an append-only file, and alerts the owner when a first line is older
+  than 89 days, when a first-line time cannot be read or when the rotation has stalled. Its message carries counts
+  only, never a log line. Before D-94 the log was limited by size only, which bounds the age of no line. **The bound
+  and its check gate the Privacy text that states the figure (version 2.0)**, and they stay in place while that text
+  is published. The VPS provider's weekly image may hold lines for the provider's own retention. Purpose, basis and what the Privacy text must say are in site-data section 11. Adding a request header
   or a body to that log, or sending it off the host, changes this section and the Privacy text and needs the owner's
   decision; a dated, rotated file on the host is not such a change.
 - The rule that this site promises no retention period for access logs, and that no contract may state one, is
-  withdrawn by D-91: the figure is up to 90 days from each line's write time, and the Privacy text states it once the
-  bound above is in place.
+  withdrawn by D-91: the figure is up to 90 days from each line's write time, and the Privacy text states it with
+  the bound and the check above in place.
 
 ### HTTP header test (required check)
 
