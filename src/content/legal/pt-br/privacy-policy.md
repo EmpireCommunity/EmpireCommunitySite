@@ -2,7 +2,7 @@
 title: Política de Privacidade
 slug: privacy-policy
 locale: pt-br
-version: "1.0"
+version: "1.1"
 ---
 
 ## 1. Quem é responsável {#controller}
@@ -11,11 +11,11 @@ O controlador dos dados, nos termos da LGPD, é Leone Santos Martins, pessoa fí
 
 ## 2. O que este site não faz {#what-the-site-does-not-do}
 
-O site não tem formulários, contas ou cadastro, não define cookies próprios, não mantém registros de acesso e não vende dados de usuários. O item 7 diz com quem os dados são compartilhados.
+O site não tem formulários, contas ou cadastro, não define cookies próprios e não vende dados de usuários. O item 3 descreve os registros técnicos, inclusive o registro de acesso da hospedagem, e o item 7 diz com quem os dados são compartilhados.
 
 ## 3. Registros técnicos {#technical-records}
 
-O servidor do site não mantém registros de acesso. Ele guarda apenas registros mínimos de erro, para diagnóstico. Esses registros podem conter o endereço de conexão de quem acessava o site quando o erro ocorreu, são substituídos em rotação curta e se perdem quando o servidor do site é recriado. O serviço automático que atualiza o número de membros armazena apenas esse número da comunidade e dados técnicos da própria atualização, sem nenhum dado de visitantes.
+O serviço do site, que entrega as páginas, não mantém registros de acesso. Ele guarda apenas registros mínimos de erro, para diagnóstico. Esses registros podem conter o endereço de conexão de quem acessava o site quando o erro ocorreu, são substituídos em rotação curta e se perdem quando o servidor do site é recriado. Já o proxy da hospedagem, que recebe as visitas antes do serviço do site, mantém um registro de acesso das visitas ao site: para cada visita ele grava o endereço IP de quem acessou, a hora e o endereço pedido, incluindo a parte depois do ponto de interrogação, quando houver. Usamos esse registro para segurança e para prevenir abusos. O serviço automático que atualiza o número de membros armazena apenas esse número da comunidade e dados técnicos da própria atualização, sem nenhum dado de visitantes.
 
 ## 4. Estatísticas de uso {#statistics}
 
@@ -31,15 +31,15 @@ Se você nos escrever, usaremos o que você enviar para responder.
 
 ## 7. Com quem os dados são compartilhados {#sharing}
 
-Apenas com os fornecedores necessários para o site funcionar: a hospedagem e a Cloudflare. A Cloudflare processa a conexão entre você e o site e mantém registros próprios, fora do controle deste site. Os serviços externos para os quais o site aponta têm termos e políticas de privacidade próprios.
+Apenas com os fornecedores necessários para o site funcionar: a hospedagem e a Cloudflare. A Cloudflare atua como operadora: processa a conexão entre você e o site e mantém registros próprios, fora do controle deste site. Os serviços externos para os quais o site aponta têm termos e políticas de privacidade próprios.
 
 ## 8. Base legal {#legal-basis}
 
-Tratamos registros de erro e estatísticas com base em legítimo interesse, para manter o site funcionando e seguro, e mensagens para atender ao seu pedido de contato.
+Tratamos registros de erro, o registro de acesso da hospedagem e estatísticas com base em legítimo interesse, para manter o site funcionando e seguro e para prevenir abusos, e mensagens para atender ao seu pedido de contato.
 
 ## 9. Por quanto tempo {#retention}
 
-O servidor do site não guarda registros de acesso, e os registros de erro são substituídos em rotação curta. Os demais dados ficam enquanto estiverem em uso e são apagados a pedido, exceto o que a lei obrigar a guardar.
+O serviço do site não guarda registros de acesso, e os registros de erro são substituídos em rotação curta. O registro de acesso do proxy da hospedagem é guardado por até 90 dias, contados do momento em que cada linha é gravada, e depois é apagado. A imagem semanal que o provedor da hospedagem faz do servidor copia o disco e pode manter linhas desse registro pelo prazo do próprio provedor, fora do controle deste site. Um pedido de remoção não alcança essas linhas, que expiram pela idade. Os demais dados ficam enquanto estiverem em uso e são apagados a pedido, exceto o que a lei obrigar a guardar.
 
 ## 10. Seus direitos {#rights}
 
