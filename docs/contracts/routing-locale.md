@@ -218,8 +218,8 @@ on**, static target. The `/data/` custom and rate-limit rules of members-json 2.
 
 ## 6. nginx (`nginxinc/nginx-unprivileged`, port 8080)
 
-The image ships its own `nginx.conf` and one server block. Logging follows D-20: **no access log**, a minimal error
-log to stdout.
+The image ships its own `nginx.conf` and one server block. Logging follows D-20: **no access log** in nginx, a minimal error
+log to stdout. The proxy on the host keeps its own access log (D-91, "Logging" below).
 
 ```
 # nginx.conf (main context)
@@ -322,12 +322,19 @@ add_header Cross-Origin-Opener-Policy "same-origin" always;
   location and is served directly with 200 and no redirect; `/discord/` is served by `location /`. Both return the
   chooser. Behind Cloudflare with R3 and R4 on, neither reaches the origin.
 
-### Logging (D-20)
+### Logging (D-20, amended by D-91)
 
-- No access log at the origin. The error log is the minimal `error` level to stdout, kept by a size-capped,
+- No access log in the site container (nginx). The error log is the minimal `error` level to stdout, kept by a size-capped,
   short-rotated json-file driver (limits in [deploy](deploy.md)) and lost when the container is recreated. It can
   contain a client address when an error occurs; the Privacy text says so (site-data section 11).
-- This site makes **no promise of a fixed retention period for access logs**, and no contract may state one.
+- **The proxy on the host, in front of nginx, keeps an access log (D-91, 2026-11-15).** A line holds the visitor's
+  address (taken from the header Cloudflare forwards), the time, the host, the method, the path with its query string,
+  the status, sizes and durations, and no request header. It is kept **90 days**: Guindaste bounds it on the host so
+  that no line can outlive that, and until that bound exists the log is limited by size only. Purpose, basis and what
+  the Privacy text must say are in site-data section 11. Adding a request header or a body to that log changes this
+  section and the Privacy text and needs the owner's decision.
+- The rule that this site promises no retention period for access logs, and that no contract may state one, is
+  withdrawn by D-91: the figure is 90 days and the Privacy text states it.
 
 ### HTTP header test (required check)
 

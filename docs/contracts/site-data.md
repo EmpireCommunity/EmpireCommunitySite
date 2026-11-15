@@ -477,16 +477,24 @@ effectiveDate: <launch day>     # YYYY-MM-DD, identical in both locales; absent 
   with the owner as required reviewer; it cannot be automated.
 - Rendered with `version` and `effectiveDate` visible. Markdown is rendered **without raw HTML** (parser option),
   and a fixture test with an embedded `<script>` proves it is escaped or dropped.
-- **Logs (D-20).** The site keeps **no access log at the origin** and only a minimal, short-rotated error log (see
-  ADR-0001 and routing-locale section 6). The Privacy text must say exactly that and must not promise a fixed
-  retention period for access logs, and no contract for this site may state one. This was decided by the owner
-  (D-20), and a legal review of the log-keeping obligations that may apply to the site (Marco Civil da Internet) is to be done before
+- **Logs (D-20, amended by D-91 on 2026-11-15).** The site container keeps **no access log** and only a minimal,
+  short-rotated error log (see ADR-0001 and routing-locale section 6). **The proxy on the host, in front of it, keeps
+  an access log (D-91).** For every request to the site it records the visitor's address, the time and the address
+  requested with its query string, and no request header (no User-Agent, no Referer, no cookie). Purpose: security and
+  abuse handling. Basis: legitimate interest. Retention: **90 days**, bounded on the host (routing-locale section 6).
+  It is read only on the host and is never exported or used for analytics. On the Support page the query string of a
+  donor's return carries Mercado Pago identifiers, so a line can tie an address to a payment (donations contract
+  section 7.5). **The Privacy text, version 2.0, MUST say this, with the figure, and MUST NOT say that no access log
+  is kept.** The earlier rule that no text or contract may state a retention period for access logs is withdrawn. The
+  published version 1 still says that the server keeps no access logs, which D-91 found untrue for the host; version
+  2.0 replaces it (the P2-09 copy writes it, the owner approves). D-20 was decided by the owner, and a legal review of the log-keeping obligations that may apply to the site (Marco Civil da Internet) is to be done before
   donations open (D-28; depends on the owner).
-- Other processors keep their own records outside this site's control (Cloudflare for the connection, the edge proxy
-  layer in front of the origin); the Privacy text says so plainly without describing their internals.
+- Cloudflare, as processor of the connection, keeps its own records outside this site's control; the Privacy text
+  names it and says so plainly without describing its internals (D-91). The proxy on the host is not such a third
+  party: its log is ours and is the one described above.
 - Content requirements for the drafter (the drafter is not the architect and the owner is not a lawyer, so Regente
   explains in plain language): contacts, forum Goiânia-GO, LGPD and Marco Civil da Internet, what the site collects (no
-  accounts, no forms, no cookies set by the site, no access log at the origin), Cloudflare as processor of the
+  accounts, no forms, no cookies set by the site; the access log of the host proxy described above), Cloudflare as processor of the
   connection (CDN, country detection at the edge for the language redirect, Web Analytics on the pages that carry it),
   a generic clause that external services linked from the site have their own terms and privacy policies, how to ask
   for removal of personal data, and the team member consent and the public git history notice.
