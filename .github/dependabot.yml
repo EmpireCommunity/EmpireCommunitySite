@@ -24,6 +24,16 @@ updates:
     groups:
       docker:
         patterns: ['*']
+  # Tracker for the BuildKit builder image of release.yml (.github/buildkit/Dockerfile); scripts/check-workflows.ts keeps the two equal.
+  - package-ecosystem: docker
+    directory: /.github/buildkit
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      buildkit:
+        patterns: ['*']
   - package-ecosystem: github-actions
     directory: /
     schedule:

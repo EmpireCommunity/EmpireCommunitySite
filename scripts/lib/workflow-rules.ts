@@ -12,6 +12,20 @@ const EXPRESSION = /\$\{\{([\s\S]*?)\}\}/g;
 const EVENT_DATA = /\bgithub\s*(?:\.\s*(?:event|head_ref|base_ref|ref(?:_name)?)\b|\[)|\btoJSON\(\s*github\s*\)/i;
 const unsafeInRun = (run: string) => [...run.matchAll(EXPRESSION)].some((match) => EVENT_DATA.test(match[1] ?? ''));
 
+// The BuildKit builder image of every setup-buildx-action step must equal the reference of the tracker Dockerfile
+// (.github/buildkit/Dockerfile), which is the file Dependabot's docker ecosystem updates.
+export const trackerRef = (dockerfile: string): string | undefined => /^FROM\s+(\S+)\s*$/m.exec(dockerfile)?.[1];
+
+export function checkBuildkitPin(file: string, workflow: Workflow, tracked: string | undefined): WorkflowFinding[] {
+  const steps = Object.values(workflow.jobs ?? {}).flatMap((job) => job.steps ?? []);
+  const buildx = steps.filter((step) => step.uses?.startsWith('docker/setup-buildx-action@'));
+  return buildx.flatMap((step) =>
+    tracked !== undefined && step.with?.['driver-opts'] === `image=${tracked}`
+      ? []
+      : [{ file, message: 'setup-buildx-action driver-opts must be image=<the FROM reference of .github/buildkit/Dockerfile>' }],
+  );
+}
+
 export function checkWorkflow(file: string, workflow: Workflow): WorkflowFinding[] {
   const problems: WorkflowFinding[] = [];
   const fail = (message: string) => problems.push({ file, message });
