@@ -10,12 +10,10 @@ import { test } from 'node:test';
 async function membersReads(source: 'built-in' | 'discord'): Promise<number> {
   let reads = 0;
   const server = createServer((request, response) => {
-    if (request.url === '/data/members.json') {
-      reads += 1;
-      response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=600', 'x-content-type-options': 'nosniff' });
-      return response.end(JSON.stringify({ schema: 1, discord: { members: 900, updatedAt: '2026-11-16T00:00:00Z', source } }));
-    }
-    response.writeHead(404); response.end();
+    if (request.url !== '/data/members.json') { response.writeHead(404); response.end(); return; }
+    reads += 1;
+    response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=600', 'x-content-type-options': 'nosniff' });
+    response.end(JSON.stringify({ schema: 1, discord: { members: 900, updatedAt: '2026-11-16T00:00:00Z', source } }));
   });
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
   try {
