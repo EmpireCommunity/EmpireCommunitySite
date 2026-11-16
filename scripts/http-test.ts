@@ -8,6 +8,7 @@ import { INTEGRITY_PENDING } from './lib/integrity-pending.ts';
 import { DEFAULT_CSP, SUPPORT_CSP, PERMISSIONS_POLICY, htmlCharsetProblem } from './lib/security-headers.ts';
 import { PENDING } from './lib/pending.ts';
 import { isIntendedEdgeBlock } from './lib/edge-block.ts';
+import { membersAnswerSide, workerMembersProblems } from './lib/members-headers.ts';
 
 const base = (process.env.BASE_URL ?? '').replace(/\/$/, '');
 const publicUrl = process.env.PUBLIC === '1';
@@ -59,16 +60,24 @@ await checkPath({ path: '/healthz', status: [200], csp: DEFAULT_CSP, cache: 'no-
 // members.json is served by the Worker in production; the origin fallback may not exist yet. Either way the headers
 // are there: a 200 carries the location's cache value, and a 404 is served from the 404 page (no-cache).
 const membersProbe = await fetch(`${base}/data/members.json`, { redirect: 'manual' });
-await membersProbe.arrayBuffer();
+const membersText = await membersProbe.text();
 // Once the build generates the fallback (PENDING.membersFallback false) a 404 is a failure, not an allowed outcome.
 const membersOk = membersProbe.status === 200;
-await checkPath({
-  path: '/data/members.json',
-  status: PENDING.membersFallback ? [membersOk ? 200 : 404] : [200],
-  csp: DEFAULT_CSP,
-  // Origin file: max-age=300. At the public URL the Worker may answer with its documented max-age=600 (members-json 1).
-  cache: membersOk ? (publicUrl ? ['public, max-age=300', 'public, max-age=600'] : 'public, max-age=300') : NO_CACHE,
-});
+let membersBody: unknown;
+try { membersBody = JSON.parse(membersText); } catch { membersBody = undefined; }
+if (publicUrl && membersOk && membersAnswerSide(membersBody) === 'worker') {
+  // MEMBERS-HDR: at the public URL the Worker answers with its own header set (members-json section 1), not the origin's
+  // page headers; it is checked on this very answer, so a later request cannot be answered by the other side.
+  for (const problem of workerMembersProblems(membersProbe.status, membersProbe.headers)) fail('GET /data/members.json (Worker)', problem);
+} else {
+  // The origin fallback file (members-json section 4): the origin's headers and max-age=300, at the public URL too.
+  await checkPath({
+    path: '/data/members.json',
+    status: PENDING.membersFallback ? [membersOk ? 200 : 404] : [200],
+    csp: DEFAULT_CSP,
+    cache: membersOk ? 'public, max-age=300' : NO_CACHE,
+  });
+}
 
 // A query string never reaches the file (members-json 2.9).
 const members = await checkPath({ path: '/data/members.json?x=1', status: [404], csp: DEFAULT_CSP, cache: NO_CACHE });
