@@ -222,7 +222,7 @@ jobs:
           build-args: |
             VERSION=${{ needs.verify.outputs.version }}
             REVISION=${{ github.sha }}
-          sbom: true
+          sbom: generator=docker/buildkit-syft-scanner:1.12.1@sha256:873a7458c3c8ac8e32c7b796c10e1600b07b963d2aa000a72a2d97aaaa2d6315
           provenance: mode=max
 
       - name: Validate the published digest
@@ -257,7 +257,7 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: ${{ env.IMAGE }}:${{ needs.verify.outputs.version }}${{ env.RELAY_TAG_SUFFIX }}
-          sbom: true
+          sbom: generator=docker/buildkit-syft-scanner:1.12.1@sha256:873a7458c3c8ac8e32c7b796c10e1600b07b963d2aa000a72a2d97aaaa2d6315
           provenance: mode=max
 
       - name: Validate the relay digest
