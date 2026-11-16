@@ -9,6 +9,10 @@ release happens and which version it gets. The release PR (`chore/release-X.Y.Z`
 
 ## [Unreleased]
 
+### Fixed
+
+- The public header test checks `/data/members.json` against the side that answered it (MEMBERS-HDR, members-json sections 1 and 4). At the public URL the member-count Worker answers with its own header set, so `scripts/http-test.ts` reads the body: when `discord.source` is not `built-in` it checks the Worker set on that same answer (`200`, `Content-Type: application/json; charset=utf-8`, `nosniff`, `Cache-Control: public, max-age=600` only, no `Set-Cookie`, no `Access-Control-*`) instead of the origin's page headers (CSP, Permissions-Policy, COOP, Referrer-Policy, HSTS), which the Worker answer never carried. The origin fallback (`built-in`) keeps the origin check, now with `max-age=300` only at the public URL too; runs against the origin are unchanged. The rule lives in `scripts/lib/members-headers.ts` with its tests. Both branches check the one answer the probe fetched (`checkPath` takes it), so a second request can never be answered by the other side (Crivo and CodeRabbit); a test runs the script against a throwaway server and counts one read of the path per branch. The run still fails on the Worker's `Cache-Control: public, max-age=14400`: that is the zone's Browser Cache TTL rewriting the Worker's `max-age=600` (owner action B-CF-TTL), and the failure is correct until then.
+
 ### Added
 
 - Explicit order of the game servers (B-T60, site-data section 7). `GameServerSchema` gains a required `order` (integer 0 to 10000), written in `game-servers.yaml` as minecraft 10, palworld 20, project-zomboid 30, factorio 40; `game-servers.yaml` fails the build when two servers share an `order` (`assertUniqueServerOrder`, passed as `validate` to the loader, the message names both ids and the value); `sortGameServers` sorts live servers first, then ascending `order`, then `name`. Home and the game servers page now list the coming-soon servers as Palworld, Project Zomboid, Factorio (the collection returned them by id, which put Factorio first). Tests: schema case, sort case and duplicate case.
