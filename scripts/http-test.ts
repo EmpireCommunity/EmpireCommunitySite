@@ -26,8 +26,9 @@ const fail = (where: string, message: string) => problems.push(`${where}: ${mess
 
 type Expectation = { path: string; status: number[]; csp: string; cache: string | string[] };
 
-async function checkPath(expected: Expectation, init: RequestInit = {}): Promise<Response> {
-  const response = await fetch(`${base}${expected.path}`, { redirect: 'manual', ...init });
+/** `probed`: an answer already fetched for this path (its status and headers are checked, never its body). */
+async function checkPath(expected: Expectation, init: RequestInit = {}, probed?: Response): Promise<Response> {
+  const response = probed ?? await fetch(`${base}${expected.path}`, { redirect: 'manual', ...init });
   const where = `${init.method ?? 'GET'} ${expected.path}`;
   // The edge refuses a query on /data/members.json before the origin sees it: the header contract does not apply.
   if (isIntendedEdgeBlock({ publicUrl, path: expected.path, status: response.status, hasContractCsp: response.headers.get('content-security-policy') === expected.csp })) return response;
@@ -70,13 +71,14 @@ if (publicUrl && membersOk && membersAnswerSide(membersBody) === 'worker') {
   // page headers; it is checked on this very answer, so a later request cannot be answered by the other side.
   for (const problem of workerMembersProblems(membersProbe.status, membersProbe.headers)) fail('GET /data/members.json (Worker)', problem);
 } else {
-  // The origin fallback file (members-json section 4): the origin's headers and max-age=300, at the public URL too.
+  // The origin fallback file (members-json section 4): the origin's headers and max-age=300, at the public URL too. The
+  // probe's own answer is checked (Crivo and CodeRabbit on PR 50): a second request could be answered by the Worker.
   await checkPath({
     path: '/data/members.json',
     status: PENDING.membersFallback ? [membersOk ? 200 : 404] : [200],
     csp: DEFAULT_CSP,
     cache: membersOk ? 'public, max-age=300' : NO_CACHE,
-  });
+  }, {}, membersProbe);
 }
 
 // A query string never reaches the file (members-json 2.9).
