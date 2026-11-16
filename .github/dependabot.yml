@@ -29,6 +29,8 @@ updates:
     directory: /.github/buildkit
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 14
     groups:
       buildkit:
         patterns: ['*']
