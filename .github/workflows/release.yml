@@ -26,7 +26,7 @@ env:
 jobs:
   verify:
     name: Release guards
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -130,7 +130,7 @@ jobs:
   publish:
     name: Publish image
     needs: verify
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: read
@@ -301,7 +301,7 @@ jobs:
   github-release:
     name: GitHub Release
     needs: [verify, publish]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: write

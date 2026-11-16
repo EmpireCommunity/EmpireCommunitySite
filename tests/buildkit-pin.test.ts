@@ -28,3 +28,15 @@ test('the buildx builder and the SBOM generator must equal the references Depend
   assert.equal(checkBuildkitPin('w.yml', workflow(`image=${builder}`, 'generator=docker/buildkit-syft-scanner:1.12.0@sha256:' + 'e'.repeat(64)), tracked).length, 1);
   assert.equal(checkBuildkitPin('w.yml', workflow(`image=${builder}`, `generator=${generator}`), []).length, 2);
 });
+
+test('an SBOM job without a setup-buildx step, an attests input with type=sbom and a run step with another --sbom are refused', () => {
+  const withSteps = (...steps: object[]) => ({ jobs: { release: { steps } } });
+  const push = { uses: sha('build-push-action'), with: { sbom: `generator=${generator}` } };
+  const buildx = { uses: sha('setup-buildx-action'), with: { 'driver-opts': `image=${builder}` } };
+  assert.equal(checkBuildkitPin('w.yml', withSteps(buildx, push), tracked).length, 0);
+  assert.equal(checkBuildkitPin('w.yml', withSteps(push), tracked).length, 1);
+  assert.equal(checkBuildkitPin('w.yml', withSteps(buildx, { uses: sha('build-push-action'), with: { sbom: false, attests: 'type=sbom' } }), tracked).length, 1);
+  assert.equal(checkBuildkitPin('w.yml', withSteps(buildx, { run: 'docker buildx build --push --sbom=true .' }), tracked).length, 1);
+  assert.equal(checkBuildkitPin('w.yml', withSteps(buildx, { run: `docker buildx build --sbom=generator=${generator} .` }), tracked).length, 0);
+  assert.equal(checkBuildkitPin('w.yml', withSteps(buildx, { run: 'docker buildx build --load --sbom=false .' }), tracked).length, 0);
+});

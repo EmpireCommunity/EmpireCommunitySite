@@ -22,12 +22,28 @@ export function checkBuildkitPin(file: string, workflow: Workflow, tracked: stri
   const generator = tracked.find((ref) => ref.startsWith('docker/buildkit-syft-scanner:'));
   const steps = Object.values(workflow.jobs ?? {}).flatMap((job) => job.steps ?? []);
   const problems: WorkflowFinding[] = [];
+  const attached = (sbom: unknown) => sbom !== undefined && sbom !== false && sbom !== 'false';
+  for (const job of Object.values(workflow.jobs ?? {})) {
+    const jobSteps = job.steps ?? [];
+    const attachesSbom = jobSteps.some((step) => step.uses?.startsWith('docker/build-push-action@') && attached(step.with?.['sbom']));
+    if (attachesSbom && !jobSteps.some((step) => step.uses?.startsWith('docker/setup-buildx-action@'))) {
+      problems.push({ file, message: 'a job whose build-push-action attaches an SBOM needs a setup-buildx-action step (the pinned builder)' });
+    }
+  }
   for (const step of steps) {
+    if (step.uses?.startsWith('docker/build-push-action@') && /type=sbom/.test(String(step.with?.['attests'] ?? ''))) {
+      problems.push({ file, message: 'build-push-action attests must not carry type=sbom: it brings back the default SBOM generator; use the sbom input' });
+    }
+    for (const [, value] of (step.run ?? '').matchAll(/docker\s+buildx\s+build\b[^\n]*?--sbom(?:=(\S*))?/g)) {
+      if (value !== 'false' && (generator === undefined || value !== `generator=${generator}`)) {
+        problems.push({ file, message: 'a docker buildx build run step must use --sbom=false or --sbom=generator=<the tracked generator>' });
+      }
+    }
     if (step.uses?.startsWith('docker/setup-buildx-action@') && (builder === undefined || step.with?.['driver-opts'] !== `image=${builder}`)) {
       problems.push({ file, message: 'setup-buildx-action driver-opts must be image=<the moby/buildkit FROM reference of .github/buildkit/Dockerfile>' });
     }
     const sbom = step.with?.['sbom'];
-    if (step.uses?.startsWith('docker/build-push-action@') && sbom !== undefined && sbom !== false && sbom !== 'false'
+    if (step.uses?.startsWith('docker/build-push-action@') && attached(sbom)
       && (generator === undefined || sbom !== `generator=${generator}`)) {
       problems.push({ file, message: 'build-push-action sbom must be generator=<the buildkit-syft-scanner FROM reference of .github/buildkit/Dockerfile>' });
     }
