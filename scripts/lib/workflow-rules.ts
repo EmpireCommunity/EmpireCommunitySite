@@ -12,18 +12,27 @@ const EXPRESSION = /\$\{\{([\s\S]*?)\}\}/g;
 const EVENT_DATA = /\bgithub\s*(?:\.\s*(?:event|head_ref|base_ref|ref(?:_name)?)\b|\[)|\btoJSON\(\s*github\s*\)/i;
 const unsafeInRun = (run: string) => [...run.matchAll(EXPRESSION)].some((match) => EVENT_DATA.test(match[1] ?? ''));
 
-// The BuildKit builder image of every setup-buildx-action step must equal the reference of the tracker Dockerfile
-// (.github/buildkit/Dockerfile), which is the file Dependabot's docker ecosystem updates.
-export const trackerRef = (dockerfile: string): string | undefined => /^FROM\s+(\S+)\s*$/m.exec(dockerfile)?.[1];
+// The BuildKit builder image of every setup-buildx-action step, and the SBOM generator image of every build-push-action that
+// attaches an SBOM, must equal the references of the tracker Dockerfile (.github/buildkit/Dockerfile): the file Dependabot's
+// docker ecosystem updates.
+export const trackerRefs = (dockerfile: string): string[] => [...dockerfile.matchAll(/^FROM\s+(\S+)\s*$/gm)].map((match) => match[1] ?? '');
 
-export function checkBuildkitPin(file: string, workflow: Workflow, tracked: string | undefined): WorkflowFinding[] {
+export function checkBuildkitPin(file: string, workflow: Workflow, tracked: string[]): WorkflowFinding[] {
+  const builder = tracked.find((ref) => ref.startsWith('moby/buildkit:'));
+  const generator = tracked.find((ref) => ref.startsWith('docker/buildkit-syft-scanner:'));
   const steps = Object.values(workflow.jobs ?? {}).flatMap((job) => job.steps ?? []);
-  const buildx = steps.filter((step) => step.uses?.startsWith('docker/setup-buildx-action@'));
-  return buildx.flatMap((step) =>
-    tracked !== undefined && step.with?.['driver-opts'] === `image=${tracked}`
-      ? []
-      : [{ file, message: 'setup-buildx-action driver-opts must be image=<the FROM reference of .github/buildkit/Dockerfile>' }],
-  );
+  const problems: WorkflowFinding[] = [];
+  for (const step of steps) {
+    if (step.uses?.startsWith('docker/setup-buildx-action@') && (builder === undefined || step.with?.['driver-opts'] !== `image=${builder}`)) {
+      problems.push({ file, message: 'setup-buildx-action driver-opts must be image=<the moby/buildkit FROM reference of .github/buildkit/Dockerfile>' });
+    }
+    const sbom = step.with?.['sbom'];
+    if (step.uses?.startsWith('docker/build-push-action@') && sbom !== undefined && sbom !== false && sbom !== 'false'
+      && (generator === undefined || sbom !== `generator=${generator}`)) {
+      problems.push({ file, message: 'build-push-action sbom must be generator=<the buildkit-syft-scanner FROM reference of .github/buildkit/Dockerfile>' });
+    }
+  }
+  return problems;
 }
 
 export function checkWorkflow(file: string, workflow: Workflow): WorkflowFinding[] {
