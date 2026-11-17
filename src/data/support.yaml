@@ -1,12 +1,12 @@
-# Support page data (docs/contracts/site-data.md section 10). The site receives no money and shows no way to send any
-# (D-28): the schema is strict, so a payment field fails the build.
+# Support page data (docs/contracts/site-data.md section 10). Money goes only through the donations service, never through
+# this file (donations contract section 2): the schema is strict, so a payment field fails the build.
 # The server parts and their values (P-02) are owner content, verified on the date below; the value already secured (P-03)
 # is derived from them at load: the sum of quantity x unit price over the purchased and donated parts, never money
 # received. No part has a photo yet (none was supplied). Never add placeholder values.
 schemaVersion: 1
 verified: { on: 2026-11-12, by: owner }
 donations:
-  status: not-open
+  status: open
 goal:
   id: xeon-server
   title:
