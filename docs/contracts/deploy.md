@@ -124,13 +124,21 @@ deployable by the procedure below.
    deploy. The identity pins the workflow **and** the tag. Whether the verifying tool needs a read-only token on the
    host is **not verified**; if it does, verify on the owner's machine and carry only the verified digest, so the
    host stores no GitHub credential.
-3. Only then, on the host, keep a dated backup of the compose file, set the `image:` line to
-   `...:X.Y.Z@sha256:<digest>` (the **digest is filled here**, not in the repository), pull and start.
+3. Only then, on the host, keep a dated backup of the compose file (`site.compose.yml`, in `history/`, see "Host layout" below), set the `image:` line to
+   `...:X.Y.Z@sha256:<digest>` (the **digest is filled here**, not in the repository), pull and start **only the `site` service**
+   (`docker compose pull site`, `docker compose up -d --wait site`).
 4. Check the public site with the HTTP header test (`BASE_URL=https://empirecommunity.org PUBLIC=1`) and, once it
    exists, the integrity check of section 8.
 5. Record in the runbook (private): version, digest, date, who approved. **Rollback** is the previous verified
    tag and digest from the backup; a version purged under the withdrawal runbook (site-data 9.1) is never a rollback
    target.
+
+**Host layout (ONE-COMPOSE, owner order).** The host runs everything of the site as ONE Compose project, `empirecommunity-site`, in ONE folder,
+`/root/docker/empirecommunity-site/` (mode 0700). Its `compose.yml` only `include`s three files: `site.compose.yml` (the template of this section, copied
+as it is and filled at deploy), `members.compose.yml` (the relay template of section 13) and `donations.compose.yml` (the Donations service, validated by its own
+repository). Each template keeps its own `name:` and is still validated alone by its own check, so nothing in this repository's checks changes. Commands on the host
+**name the service** (`site` or `relay`), because a bare `docker compose down` or `up --force-recreate` would act on the other services of the project too.
+Dated copies of the compose files go to `history/` of that folder. The Donations side of the layout is in its runbook (`docs/runbook/ops.md` sections 1 and 1a).
 
 ## 7. Host compose requirements
 
@@ -282,7 +290,7 @@ images are built and checked before either is pushed.** The guard that refuses a
 tags; each image gets its own SBOM, provenance and attestation with the identity of section 5; the release carries
 `relay-image-digest.txt` beside `image-digest.txt`; and the release PR sets the tag part of both `image:` lines.
 
-**Compose template requirements** (compose project `empirecommunity-members`, one service):
+**Compose template requirements** (the template names the compose project `empirecommunity-members` and has one service; on the host the file is `members.compose.yml`, included by the one project of section 6, "Host layout"):
 
 - `image`: `docker.io/empirecommunity/empirecommunity-site-org:X.Y.Z-members-relay@sha256:<64 hex>`. As for the site,
   the digest in the repository is a placeholder that is never deployed, and the real one is filled on the host.
@@ -309,8 +317,8 @@ relay's digest and its own compose file):
    pulling**, with the tag identity. Both images share one repository, subject name and identity, so the attestation
    proves the workflow and the tag, **not which of the two images a digest is**: a swapped digest passes it. That
    fails safe (the site image answers 404 on the relay path) and **step 3a is the identity check**.
-2. Keep a dated backup of the compose file, set the `image:` line to the tag and that digest, pull and start,
-   waiting for health.
+2. Keep a dated backup of the compose file (`members.compose.yml`), set the `image:` line to the tag and that digest, pull and start
+   **only the `relay` service** (`docker compose pull relay`, `docker compose up -d --wait relay`), waiting for health.
 3. Verify: (a) from outside, `GET https://empirecommunity.org/data/members-source.json` answers 200 with the
    configured `code`, the guild id of `site.yaml` and a `fetchedAt` of the last minutes; the same path with a query
    string answers 404 and with `POST` 405; (b) **the relay router takes the one path and nothing else**: `/healthz`

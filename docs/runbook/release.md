@@ -63,12 +63,12 @@ may change the setting nor whether existing tags become mutable again: check a t
 2. Verify before pulling (on the owner's machine if the host should not hold a GitHub credential):
    `gh attestation verify oci://docker.io/empirecommunity/empirecommunity-site-org@sha256:<digest> --repo EmpireCommunity/EmpireCommunitySite --cert-identity https://github.com/EmpireCommunity/EmpireCommunitySite/.github/workflows/release.yml@refs/tags/vX.Y.Z --cert-oidc-issuer https://token.actions.githubusercontent.com`.
    Any failure aborts.
-A deploy of the member-count relay is a separate procedure with its own compose project, `relay-image-digest.txt` and the checks a to d
+A deploy of the member-count relay is a separate procedure with its own compose file (`members.compose.yml`, service `relay`), `relay-image-digest.txt` and the checks a to d
 of `docs/contracts/deploy.md` section 13 (owner OK for each deploy); both attestations share one identity, so check the digest is the
 relay's (step 3a) and not the site's.
 
-3. On the host: dated backup of the compose file beside it, set `image:` to `...:X.Y.Z@sha256:<digest>`,
-   `docker compose up -d --wait`, then run the HTTP header test against the public URL
+3. On the host: dated backup of the compose file (`site.compose.yml`, copy in `history/`), set `image:` to `...:X.Y.Z@sha256:<digest>`,
+   `docker compose pull site` and `docker compose up -d --wait site` (the project also runs the relay and the Donations service: always name the service), then run the HTTP header test against the public URL
    (`BASE_URL=https://empirecommunity.org PUBLIC=1 node scripts/http-test.ts`) and check the site.
 4. Record digest, date and approver in the private runbook.
 5. **Rollback** is the previous tag@digest from the backup, same steps. A version purged under the withdrawal

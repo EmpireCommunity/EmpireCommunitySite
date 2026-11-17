@@ -9,6 +9,10 @@ release happens and which version it gets. The release PR (`chore/release-X.Y.Z`
 
 ## [Unreleased]
 
+### Changed
+
+- Host layout (ONE-COMPOSE; owner order; Guindaste; docs only): the host runs the site, the members relay and the Donations service as one Compose project, `empirecommunity-site`, in one folder, `/root/docker/empirecommunity-site/`, whose `compose.yml` includes `site.compose.yml`, `members.compose.yml` and `donations.compose.yml`. `docs/contracts/deploy.md` (section 6 "Host layout", section 13) and `docs/runbook/release.md` say so and tell every host command to name its service (`site` or `relay`). The templates, the checks and the images are unchanged.
+
 ### Fixed
 
 - The public header test checks `/data/members.json` against the side that answered it (MEMBERS-HDR, members-json sections 1 and 4). At the public URL the member-count Worker answers with its own header set, so `scripts/http-test.ts` reads the body: when `discord.source` is not `built-in` it checks the Worker set on that same answer (`200`, `Content-Type: application/json; charset=utf-8`, `nosniff`, `Cache-Control: public, max-age=600` only, no `Set-Cookie`, no `Access-Control-*`) instead of the origin's page headers (CSP, Permissions-Policy, COOP, Referrer-Policy, HSTS), which the Worker answer never carried. The origin fallback (`built-in`) keeps the origin check, now with `max-age=300` only at the public URL too; runs against the origin are unchanged. The rule lives in `scripts/lib/members-headers.ts` with its tests. Both branches check the one answer the probe fetched (`checkPath` takes it), so a second request can never be answered by the other side (Crivo and CodeRabbit); a test runs the script against a throwaway server and counts one read of the path per branch. The run still fails on the Worker's `Cache-Control: public, max-age=14400`: that is the zone's Browser Cache TTL rewriting the Worker's `max-age=600` (owner action B-CF-TTL), and the failure is correct until then.
