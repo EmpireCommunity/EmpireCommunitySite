@@ -54,7 +54,7 @@ What the donations service keeps and for how long:
 - An approved donation (amount, fee, status, payment method, approval date and time, Mercado Pago identifiers and public name): 5 years, as a tax record; after that, the record is anonymized. The public name goes earlier if you ask.
 - Mercado Pago's technical notices about payments: 90 days.
 
-We treat Mercado Pago identifiers as personal data: they stay on our server only and are not exported.
+We treat Mercado Pago identifiers as personal data: they stay on our server and in our encrypted backups (below) and are not exported in any other way.
 
 We make one backup a night. Our own copies are kept 14 days on the server and 14 days in external storage, encrypted before they leave the server. On top of that, the weekly image that the hosting provider takes of the server copies the disk and may hold this data for the provider's own retention, outside this website's control. A removed name or a deleted order can remain in those copies until they expire.
 

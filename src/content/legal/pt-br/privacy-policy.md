@@ -54,7 +54,7 @@ O que o serviço de doações guarda e por quanto tempo:
 - Doação aprovada (valor, taxa, situação, forma de pagamento, data e hora da aprovação, identificadores do Mercado Pago e nome público): 5 anos, como registro fiscal; depois disso, o registro é anonimizado. O nome público sai antes, se você pedir.
 - Avisos técnicos do Mercado Pago sobre pagamentos: 90 dias.
 
-Tratamos os identificadores do Mercado Pago como dados pessoais: ficam só no nosso servidor e não são exportados.
+Tratamos os identificadores do Mercado Pago como dados pessoais: ficam no nosso servidor e nas nossas cópias de segurança criptografadas (abaixo) e não são exportados de nenhuma outra forma.
 
 Fazemos uma cópia de segurança por noite. As nossas cópias ficam 14 dias no servidor e 14 dias em um armazenamento externo, criptografadas antes de sair do servidor. Além disso, a imagem semanal que o provedor da hospedagem faz do servidor copia o disco e pode manter esses dados pelo prazo do próprio provedor, fora do controle deste site. Um nome retirado ou um pedido apagado pode continuar nessas cópias até elas vencerem.
 
