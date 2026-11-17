@@ -50,9 +50,10 @@ O serviço de doações usa o endereço de conexão só na memória, para limita
 
 O que o serviço de doações guarda e por quanto tempo:
 
-- Pedido de doação não pago (valor e nome público): apagado 14 dias depois de expirar. O pedido expira 30 minutos depois de criado.
-- Doação aprovada (valor, taxa, situação, forma de pagamento, data e hora da aprovação, identificadores do Mercado Pago e nome público): 5 anos, como registro fiscal; depois disso, o registro é anonimizado. O nome público sai antes, se você pedir.
+- Pedido de doação não pago (valor, nome público e identificador do pedido no Mercado Pago): apagado 14 dias depois de expirar. O pedido expira 30 minutos depois de criado.
+- Doação aprovada (valor, situação, forma de pagamento, data e hora da aprovação, identificadores do Mercado Pago e nome público): 5 anos, como registro fiscal; depois disso, o registro é anonimizado. O nome público sai antes, se você pedir.
 - Avisos técnicos do Mercado Pago sobre pagamentos: 90 dias.
+- Alertas internos e registros de anomalias: 90 dias depois de resolvidos ou enviados.
 
 Tratamos os identificadores do Mercado Pago como dados pessoais: ficam no nosso servidor e nas nossas cópias de segurança criptografadas (abaixo) e não são exportados de nenhuma outra forma.
 
@@ -60,13 +61,21 @@ Fazemos uma cópia de segurança por noite. As nossas cópias ficam 14 dias no s
 
 Para retirar seu nome da lista, escreva para legal@empirecommunity.org ou abra um ticket no Discord da comunidade, informando o dia e o valor da doação. O nome é apagado e sai da página em poucos minutos. O restante do registro da doação é mantido pelo prazo fiscal acima. Cópias feitas fora do nosso controle, como capturas de tela ou arquivos de terceiros, não podem ser recolhidas.
 
+O dia e o valor servem para localizar a doação, e basta isso para retirar o nome. Para outros pedidos sobre a doação, como acesso ou correção, confirmamos antes que o pedido é seu pelo Mercado Pago. Um pedido por ticket no Discord fica visível para a equipe que atende os tickets e guardado no Discord; se preferir que só o responsável saiba, use o e-mail.
+
 ## 8. Com quem os dados são compartilhados {#sharing}
 
-Apenas com os fornecedores necessários para o site funcionar: a hospedagem, a Cloudflare e, nas doações, o Mercado Pago. A Cloudflare atua como operadora: processa a conexão entre você e o site, mantém registros próprios, fora do controle deste site, e também guarda as nossas cópias de segurança criptografadas. Os serviços externos para os quais o site aponta têm termos e políticas de privacidade próprios.
+Apenas com os fornecedores necessários para o site funcionar: a hospedagem, a Cloudflare e, nas doações, o Mercado Pago e o Discord (alertas internos). A Cloudflare atua como operadora: processa a conexão entre você e o site, mantém registros próprios, fora do controle deste site, e também guarda as nossas cópias de segurança criptografadas. Os serviços externos para os quais o site aponta têm termos e políticas de privacidade próprios.
+
+Os alertas internos do serviço de doações chegam a um canal privado no Discord, lido só pelo responsável. Eles trazem apenas o tipo do alerta e números internos, como o número de uma doação na lista ou o código interno de um pedido, que o responsável consegue ligar a um pagamento no painel do Mercado Pago. Nunca trazem nome, valor nem dados de quem pagou. Essas mensagens ficam no Discord até o responsável apagá-las.
+
+Alguns desses fornecedores, como a Cloudflare e o Discord, tratam dados fora do Brasil, conforme os termos e as políticas de cada um.
 
 ## 9. Base legal {#legal-basis}
 
-Tratamos registros de erro, o registro de acesso do proxy do nosso servidor e estatísticas com base em legítimo interesse, para manter o site funcionando e seguro e para prevenir abusos, e mensagens para atender ao seu pedido de contato. Publicamos o nome público com base no seu consentimento, que você pode retirar a qualquer momento (item 7). Guardamos o registro de cada doação aprovada para cumprir obrigação legal.
+Tratamos registros de erro, o registro de acesso do proxy do nosso servidor e estatísticas com base em legítimo interesse, para manter o site funcionando e seguro e para prevenir abusos, e mensagens e tickets para atender ao seu pedido de contato. Publicamos o nome público com base no seu consentimento, que você pode retirar a qualquer momento (item 7). Guardamos o registro de cada doação aprovada para cumprir obrigação legal.
+
+Guardamos os pedidos de doação não pagos, os avisos técnicos do Mercado Pago, os registros internos de verificação e as cópias de segurança com base em legítimo interesse: confirmar cada pagamento contra o que foi pedido, detectar erros, fraudes e abusos e recuperar os dados em caso de falha, pelos prazos do item 7. O nome público informado num pedido não pago segue o seu consentimento.
 
 ## 10. Por quanto tempo {#retention}
 
@@ -74,7 +83,7 @@ O serviço do site não guarda registros de acesso, e os registros de erro são 
 
 ## 11. Seus direitos {#rights}
 
-Pela LGPD, você pode pedir confirmação do tratamento, acesso, correção, anonimização, portabilidade ou eliminação dos seus dados, com as exceções descritas nos itens 7 e 10. Basta escrever para legal@empirecommunity.org.
+Pela LGPD, você pode pedir confirmação do tratamento, acesso, correção, anonimização, portabilidade ou eliminação dos seus dados, com as exceções descritas nos itens 7 e 10. Basta escrever para legal@empirecommunity.org. Você também pode peticionar contra o controlador, em relação aos seus dados, perante a Autoridade Nacional de Proteção de Dados (ANPD) (LGPD, art. 18, § 1º).
 
 ## 12. Pessoas listadas no site {#people-listed}
 

@@ -50,23 +50,32 @@ The donations service uses the connection address only in memory, to limit repea
 
 What the donations service keeps and for how long:
 
-- An unpaid donation order (amount and public name): deleted 14 days after it expires. An order expires 30 minutes after it is created.
-- An approved donation (amount, fee, status, payment method, approval date and time, Mercado Pago identifiers and public name): 5 years, as a tax record; after that, the record is anonymized. The public name goes earlier if you ask.
+- An unpaid donation request (amount, public name and the Mercado Pago order id): deleted 14 days after it expires. A request expires 30 minutes after it is created.
+- An approved donation (amount, status, payment method, approval date and time, Mercado Pago identifiers and public name): 5 years, as a tax record; after that, the record is anonymized. The public name goes earlier if you ask.
 - Mercado Pago's technical notices about payments: 90 days.
+- Internal alerts and anomaly records: 90 days after they are resolved or sent.
 
 We treat Mercado Pago identifiers as personal data: they stay on our server and in our encrypted backups (below) and are not exported in any other way.
 
-We make one backup a night. Our own copies are kept 14 days on the server and 14 days in external storage, encrypted before they leave the server. On top of that, the weekly image that the hosting provider takes of the server copies the disk and may hold this data for the provider's own retention, outside this website's control. A removed name or a deleted order can remain in those copies until they expire.
+We make one backup a night. Our own copies are kept 14 days on the server and 14 days in external storage, encrypted before they leave the server. On top of that, the weekly image that the hosting provider takes of the server copies the disk and may hold this data for the provider's own retention, outside this website's control. A removed name or a deleted request can remain in those copies until they expire.
 
 To have your name taken off the list, write to legal@empirecommunity.org or open a ticket on the community's Discord, giving the day and the amount of the donation. The name is erased and leaves the page within a few minutes. The rest of the donation record is kept for the tax period above. Copies made outside our control, such as screenshots or third-party archives, cannot be recalled.
 
+The day and the amount locate the donation, and that is enough to remove the name. For other requests about the donation, such as access or correction, we first confirm through Mercado Pago that the request is yours. A request by Discord ticket is visible to the team that handles tickets and is kept on Discord; if you prefer that only the controller knows, use e-mail.
+
 ## 8. Who data is shared with {#sharing}
 
-Only the providers needed to run the website: the hosting provider, Cloudflare and, for donations, Mercado Pago. Cloudflare acts as a processor: it processes the connection between you and the website, keeps its own records, outside this website's control, and also stores our encrypted backups. External services linked from the website have their own terms and privacy policies.
+Only the providers needed to run the website: the hosting provider, Cloudflare and, for donations, Mercado Pago and Discord (internal alerts). Cloudflare acts as a processor: it processes the connection between you and the website, keeps its own records, outside this website's control, and also stores our encrypted backups. External services linked from the website have their own terms and privacy policies.
+
+Internal alerts of the donation service go to a private Discord channel that only the controller reads. They carry only the kind of alert and internal numbers, such as the number of a donation on the list or the internal code of a request, which the controller can link to a payment in the Mercado Pago panel. They never carry a name, an amount or payer data. These messages stay on Discord until the controller deletes them.
+
+Some of these providers, such as Cloudflare and Discord, process data outside Brazil under their own terms and policies.
 
 ## 9. Legal basis {#legal-basis}
 
-We process error records, the access log of the proxy on our hosting server and statistics on the basis of legitimate interest, to keep the website running and secure and to prevent abuse, and messages to respond to your contact request. We publish the public name on the basis of your consent, which you can withdraw at any time (item 7). We keep the record of each approved donation to comply with a legal obligation.
+We process error records, the access log of the proxy on our hosting server and statistics on the basis of legitimate interest, to keep the website running and secure and to prevent abuse, and messages and tickets to answer your request. We publish the public name on the basis of your consent, which you can withdraw at any time (item 7). We keep the record of each approved donation to comply with a legal obligation.
+
+We keep unpaid donation requests, the technical notices from Mercado Pago, internal verification records and backups on the basis of legitimate interest: to check each payment against what was requested, to detect errors, fraud and abuse, and to recover the data after a failure, for the periods in item 7. A public name entered in an unpaid request rests on your consent.
 
 ## 10. How long {#retention}
 
@@ -74,7 +83,7 @@ The website's service keeps no access logs, and error records are replaced on a 
 
 ## 11. Your rights {#rights}
 
-Under the LGPD, you may request confirmation of processing, access, correction, anonymization, portability or deletion of your data, with the exceptions described in items 7 and 10. Just write to legal@empirecommunity.org.
+Under the LGPD, you may request confirmation of processing, access, correction, anonymization, portability or deletion of your data, with the exceptions described in items 7 and 10. Just write to legal@empirecommunity.org. You may also petition the National Data Protection Authority (ANPD) against the controller regarding your data (LGPD, art. 18, § 1).
 
 ## 12. People listed on the website {#people-listed}
 
