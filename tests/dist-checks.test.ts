@@ -8,6 +8,7 @@ import {
   analyticsBeacon, staleDates, discordLinks, gateCss, hasEffectiveDate, legalMarkdownHtml, hreflangReciprocity, headerLogoLink, htmlLang, mainContent, inlineExecutable, languageSelector, membersFallback, paymentGuard, personData, whatsappAbsent, whatsappInviteLink,
 } from '../scripts/lib/dist-checks.ts';
 import { checkWorkflow } from '../scripts/lib/workflow-rules.ts';
+import { PENDING } from '../scripts/lib/pending.ts';
 
 const errors = (findings: { level?: string }[]) => findings.filter((f) => f.level === 'error').length;
 
@@ -236,7 +237,10 @@ test('check-dist reports D-41 for an invite outside the pt-BR gate, in HTML and 
   }
 });
 
-test('check-dist fails the build when support.yaml says open while the legal texts are pending, and not when it says not-open (P2-09 m4)', () => {
+// The gate rule itself (open refused while pending, accepted once launched) is unit-tested with both flag values in
+// tests/donations-checks.test.ts; this run checks that check-dist wires it to the real PENDING.legalPages.
+test('check-dist passes the real PENDING.legalPages to the open gate: open fails while the legal texts are pending, not after; not-open never (P2-09 m4)', () => {
+  const pending = PENDING.legalPages !== false;
   const dist = mkdtempSync(join(tmpdir(), 'check-dist-'));
   const data = (status: string) => {
     const file = join(dist, `support-${status}.yaml`);
@@ -249,8 +253,9 @@ test('check-dist fails the build when support.yaml says open while the legal tex
     mkdirSync(join(dist, 'pt-br/join'), { recursive: true });
     writeFileSync(join(dist, 'pt-br/join/index.html'), '<main></main>');
     const open = run(data('open'));
-    assert.ok(open.stdout.split('\n').some((line) => line.startsWith('::error file=src/data/support.yaml::') && line.includes(gate)), 'the legal gate is reported for open');
-    assert.equal(open.status, 1, 'and the run exits non-zero');
+    const gated = open.stdout.split('\n').some((line) => line.startsWith('::error file=src/data/support.yaml::') && line.includes(gate));
+    assert.equal(gated, pending, pending ? 'the legal gate is reported for open' : 'open passes the legal gate once the texts are launched');
+    if (pending) assert.equal(open.status, 1, 'and the run exits non-zero');
     const closed = run(data('not-open'));
     assert.equal(closed.stdout.includes(gate), false, 'not-open does not trip the gate');
     const invalid = run(data('opening'));

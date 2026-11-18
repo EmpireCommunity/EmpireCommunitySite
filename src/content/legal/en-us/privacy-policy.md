@@ -2,20 +2,21 @@
 title: Privacy Policy
 slug: privacy-policy
 locale: en-us
-version: "1.1"
+version: "2.0"
+effectiveDate: 2026-11-17
 ---
 
 ## 1. Who is responsible {#controller}
 
-The data controller under the LGPD is Leone Santos Martins, a natural person. Contact: legal@empirecommunity.org. This policy applies to the empirecommunity.org website. The community's other services have their own policies.
+The data controller under the LGPD is Leone Santos Martins, a natural person. Contact: legal@empirecommunity.org. This policy applies to the empirecommunity.org website, including donations made through the Support page. The community's other services have their own policies.
 
 ## 2. What this website does not do {#what-the-site-does-not-do}
 
-The website has no forms, accounts or registration, sets no cookies of its own, and does not sell user data. Item 3 describes the technical records, including the access log of the proxy on our hosting server, and item 7 says who data is shared with.
+The website has no accounts or registration, sets no cookies of its own, and does not sell user data. Its only form is the donation form on the Support page (item 7). Item 3 describes the technical records, including the access log of the proxy on our hosting server, and item 8 says who data is shared with.
 
 ## 3. Technical records {#technical-records}
 
-The website's service, which delivers the pages, keeps no access logs. It keeps only minimal error records, for diagnosis. These records may contain the connection address of whoever was accessing the website when the error occurred, are replaced on a short rotation, and are lost when the website's server is recreated. The proxy on our hosting server, which receives visits before the website's service does, does keep an access log of visits to the website: for each visit it records the visitor's IP address, the time and the address requested, including the part after the question mark, when there is one. We use this log for security and to prevent abuse. It is read only on the server, by those who operate it, is not used for statistics or profiling and is not passed on. The automated service that updates the member count stores only that community number and technical data about its own update, with no visitor data.
+The website's service, which delivers the pages, keeps no access logs. It keeps only minimal error records, for diagnosis. These records may contain the connection address of whoever was accessing the website when the error occurred, are replaced on a short rotation, and are lost when the website's server is recreated. The donations service does not log the requests it receives either. The proxy on our hosting server, which receives visits before the website's service and the donations service do, does keep an access log: for each visit it records the visitor's IP address, the time and the address requested, including the part after the question mark, when there is one. It does not record what you type in the donation form. When you come back from Mercado Pago to the Support page, Mercado Pago adds payment identifiers to the address, so a line of this log can tie an IP address and a time to a payment. We use this log for security and to prevent abuse. It is read only on the server, by those who operate it, is not used for statistics or profiling and is not passed on. The automated service that updates the member count stores only that community number and technical data about its own update, with no visitor data.
 
 ## 4. Usage statistics {#statistics}
 
@@ -29,26 +30,65 @@ When you open the main address, Cloudflare identifies the country of your connec
 
 If you write to us, we will use what you send in order to reply.
 
-## 7. Who data is shared with {#sharing}
+## 7. Donations {#donations}
 
-Only the providers needed to run the website: the hosting provider and Cloudflare. Cloudflare acts as a processor: it processes the connection between you and the website and keeps its own records, outside this website's control. External services linked from the website have their own terms and privacy policies.
+Money donations are paid on Mercado Pago, which has its own terms of use and privacy policy. You give your payment details on the Mercado Pago website, never on this website.
 
-## 8. Legal basis {#legal-basis}
+On this website, the only personal data we ask for is the public name, which is optional. We do not ask for email, ID number, phone or payment details, and the public name is not sent to Mercado Pago.
 
-We process error records, the access log of the proxy on our hosting server and statistics on the basis of legitimate interest, to keep the website running and secure and to prevent abuse, and messages to respond to your contact request.
+To confirm a payment, our donations service queries Mercado Pago. The answer may carry the payer's data, such as name, email, ID number and Pix details. That data only passes through the service's memory and is dropped at once: it is not stored and does not appear in any record.
 
-## 9. How long {#retention}
+For each approved donation, we publish on the Support page the day (no time of day), the amount and the public name, or "anonymous". The amount and the day are public even for anonymous donations. The list updates a few minutes after each approved payment, so anyone following the page can see roughly when each donation was made. We never publish the time of day, the payment method, Mercado Pago identifiers or the payer's data.
 
-The website's service keeps no access logs, and error records are replaced on a short rotation. The access log of the proxy on our hosting server is kept for up to 90 days, counted from the moment each line is written, and then deleted. The weekly image that the hosting provider takes of the server copies the disk and may hold lines of this log for the provider's own retention, outside this website's control. A removal request does not reach these lines, which expire by age. Other data is kept while in use and is deleted on request, except what the law requires us to keep.
+You choose the public name; it can be a nickname and is never required. An automatic filter refuses some names. An accepted name is published without prior review, and the owner can take it off the list at any time.
 
-## 10. Your rights {#rights}
+A donation that is fully refunded or charged back leaves the list and the totals. Each donation gets a number in the published data, and that number is never reused. So anyone following the data can notice that one specific donation, named or anonymous, was refunded or charged back.
 
-Under the LGPD, you may request confirmation of processing, access, correction, anonymization, portability or deletion of your data, with the exception described in item 9. Just write to legal@empirecommunity.org.
+When you come back from Mercado Pago, the page address may carry payment identifiers added by Mercado Pago. The Support page does not read those identifiers or pass them on, but the proxy's access log (item 3) records the address requested, with them.
 
-## 11. People listed on the website {#people-listed}
+The donations service uses the connection address only in memory, to limit repeated attempts, and never stores it. The Support page and the donations service use no cookies and no usage statistics.
+
+What the donations service keeps and for how long:
+
+- An unpaid donation request (amount, public name and the Mercado Pago order id): deleted 14 days after it expires. A request expires 30 minutes after it is created.
+- An approved donation (amount, status, payment method, approval date and time, Mercado Pago identifiers and public name): 5 years, as a tax record; after that, the record is anonymized. The public name goes earlier if you ask.
+- Mercado Pago's technical notices about payments: 90 days.
+- Internal alerts and anomaly records: 90 days after they are resolved or sent.
+
+We treat Mercado Pago identifiers as personal data: they stay on our server and in our encrypted backups (below) and are not exported in any other way.
+
+We make one backup a night. Our own copies are kept 14 days on the server and 14 days in external storage, encrypted before they leave the server. On top of that, the weekly image that the hosting provider takes of the server copies the disk and may hold this data for the provider's own retention, outside this website's control. A removed name or a deleted request can remain in those copies until they expire.
+
+To have your name taken off the list, write to legal@empirecommunity.org or open a ticket on the community's Discord, giving the day and the amount of the donation. The name is erased and leaves the page within a few minutes. The rest of the donation record is kept for the tax period above. Copies made outside our control, such as screenshots or third-party archives, cannot be recalled.
+
+The day and the amount locate the donation, and that is enough to remove the name. For other requests about the donation, such as access or correction, we first confirm through Mercado Pago that the request is yours. A request by Discord ticket is visible to the team that handles tickets and is kept on Discord; if you prefer that only the controller knows, use e-mail.
+
+## 8. Who data is shared with {#sharing}
+
+Only the providers needed to run the website: the hosting provider, Cloudflare and, for donations, Mercado Pago and Discord (internal alerts). Cloudflare acts as a processor: it processes the connection between you and the website, keeps its own records, outside this website's control, and also stores our encrypted backups. External services linked from the website have their own terms and privacy policies.
+
+Internal alerts of the donation service go to a private Discord channel that only the controller reads. They carry only the kind of alert and internal numbers, such as the number of a donation on the list or the internal code of a request, which the controller can link to a payment in the Mercado Pago panel. They never carry a name, an amount or payer data. These messages stay on Discord until the controller deletes them.
+
+Some of these providers, such as Cloudflare and Discord, process data outside Brazil under their own terms and policies.
+
+## 9. Legal basis {#legal-basis}
+
+We process error records, the access log of the proxy on our hosting server and statistics on the basis of legitimate interest, to keep the website running and secure and to prevent abuse, and messages and tickets to answer your request. We publish the public name on the basis of your consent, which you can withdraw at any time (item 7). We keep the record of each approved donation to comply with a legal obligation.
+
+We keep unpaid donation requests, the technical notices from Mercado Pago, internal verification records and backups on the basis of legitimate interest: to check each payment against what was requested, to detect errors, fraud and abuse, and to recover the data after a failure, for the periods in item 7. A public name entered in an unpaid request rests on your consent.
+
+## 10. How long {#retention}
+
+The website's service keeps no access logs, and error records are replaced on a short rotation. The access log of the proxy on our hosting server is kept for up to 90 days, counted from the moment each line is written, and then deleted. The weekly image that the hosting provider takes of the server copies the disk and may hold lines of this log for the provider's own retention, outside this website's control. A removal request does not reach these lines, which expire by age. The donation periods are in item 7. Other data is kept while in use and is deleted on request, except what the law requires us to keep.
+
+## 11. Your rights {#rights}
+
+Under the LGPD, you may request confirmation of processing, access, correction, anonymization, portability or deletion of your data, with the exceptions described in items 7 and 10. Just write to legal@empirecommunity.org. You may also petition the National Data Protection Authority (ANPD) against the controller regarding your data (LGPD, art. 18, § 1).
+
+## 12. People listed on the website {#people-listed}
 
 Only adults who have given recorded consent appear on the Organization page, and only with the data each person has authorized. To withdraw consent or request removal, write to legal@empirecommunity.org; we remove that data from the website and from the files we publish. This website's code and data are in a public repository on GitHub, which keeps the history of every change. Because of this, even after removal, what was already published remains in that history and in copies of the repository made by other people. Each person is told this before being listed.
 
-## 12. Changes {#changes}
+## 13. Changes {#changes}
 
 This policy may change, and the effective date will be updated.
