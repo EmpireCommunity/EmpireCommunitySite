@@ -9,6 +9,10 @@ release happens and which version it gets. The release PR (`chore/release-X.Y.Z`
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-17
+
+First public release: the site opens with the member-count relay and the donations service (the v1.0.0 tag failed its release guards and published nothing; 1.0.1 is the first published version).
+
 ### Changed
 
 - Host layout (ONE-COMPOSE; owner order; Guindaste; docs only): the host runs the site, the members relay and the Donations service as one Compose project, `empirecommunity-site`, in one folder, `/root/docker/empirecommunity-site/`, whose `compose.yml` includes `site.compose.yml`, `members.compose.yml` and `donations.compose.yml`. `docs/contracts/deploy.md` (section 6 "Host layout", section 13) and `docs/runbook/release.md` say so and tell every host command to name its service (`site` or `relay`). The templates, the checks and the images are unchanged.

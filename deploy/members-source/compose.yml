@@ -7,7 +7,7 @@ name: empirecommunity-members
 
 services:
   relay:
-    image: docker.io/empirecommunity/empirecommunity-site-org:0.0.0-members-relay@sha256:0000000000000000000000000000000000000000000000000000000000000000
+    image: docker.io/empirecommunity/empirecommunity-site-org:1.0.1-members-relay@sha256:0000000000000000000000000000000000000000000000000000000000000000
     user: "1000:1000"
     restart: unless-stopped
     read_only: true
